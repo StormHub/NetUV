@@ -1,0 +1,74 @@
+{
+  "name": "NetUV.Core.Tests.Performance",
+  "version": "0.1.0",
+  "title": "NetUV: Libuv based network library performance tests.",
+  "description": "NetUV Performance",
+  "language": "en-US",
+  "authors": [
+    "Johnny Z"
+  ],
+  "packOptions": {
+    "tags": [ "socket", "tcp", "protocol", "libuv", "network" ],
+    "projectUrl": "https://github.com/StormHub/NetUV",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/StormHub/NetUV"
+    }
+  },
+
+  "buildOptions": {
+    "keyFile": "../../NetUV.snk",
+    "emitEntryPoint": true
+  },
+
+  "dependencies": {
+    "NetUV.Core": {
+      "target": "project"
+    }
+  },
+
+  "frameworks": {
+    "netcoreapp1.1": {
+      "buildOptions": {
+        "define": [
+          "NO_EVENTARGS_CONSTRAINT",
+          "HAS_EDI",
+          "HAS_WINRT",
+          "HAS_PROGRESS",
+          "PREFER_ASYNC",
+          "HAS_AWAIT",
+          "HAS_APTCA",
+          "NO_REMOTING",
+          "NO_SERIALIZABLE",
+          "CRIPPLED_REFLECTION",
+          "PLIB",
+          "USE_TIMER_SELF_ROOT",
+          "XUNIT"
+        ]
+      },
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+          "version": "1.1.0",
+          "type": "platform"
+        }
+      }
+    },
+    "net461": {
+      "buildOptions": {
+        "define": [
+          "NO_EVENTARGS_CONSTRAINT",
+          "HAS_EDI",
+          "HAS_WINRT",
+          "HAS_PROGRESS",
+          "PREFER_ASYNC",
+          "HAS_AWAIT",
+          "HAS_APTCA",
+          "USE_TIMER_SELF_ROOT",
+          "DESKTOPCLR",
+          "DESKTOPCLR46",
+          "XUNIT"
+        ]
+      }
+    }
+  }
+}

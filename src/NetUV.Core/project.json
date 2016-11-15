@@ -1,0 +1,76 @@
+{
+  "name": "NetUV.Core",
+  "version": "0.1.0",
+  "title": "NetUV: Libuv .NET/Core wrapper",
+  "description": "Libuv managed wrapper",
+  "language": "en-US",
+  "authors": [
+    "Johnny Z"
+  ],
+  "packOptions": {
+    "tags": [ "socket", "tcp", "protocol", "libuv", "network" ],
+    "projectUrl": "https://github.com/StormHub/NetUV",
+    "licenseUrl": "https://github.com/NetUV/LICENSE.txt",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/StormHub/NetUV"
+    }
+  },
+  "buildOptions": {
+    "keyFile": "../../NetUV.snk",
+    "allowUnsafe": true,
+    "nowarn": [
+      "CS1591"
+    ]
+  },
+  "dependencies": {
+    "NETStandard.Library": "1.6.1",
+    "Libuv": "1.9.1",
+    "Microsoft.Extensions.Logging": "1.1.0",
+    "Microsoft.Extensions.Logging.Console": "1.1.0",
+    "Microsoft.Extensions.Configuration": "1.1.0",
+    "Microsoft.Extensions.Configuration.FileExtensions": "1.1.0",
+    "Microsoft.Extensions.Configuration.Json": "1.1.0",
+    "System.Runtime.CompilerServices.Unsafe": "4.3.0",
+    "System.Net.NameResolution": "4.3.0"
+  },
+  "frameworks": {
+    "net46": {
+      "dependencies": {
+        "System.AppContext": "4.3.0"
+      }
+    },
+    "netstandard1.3": {
+      "dependencies": {
+        "System.Diagnostics.Contracts": "4.3.0",
+        "System.Threading.Thread": "4.3.0",
+        "System.Diagnostics.StackTrace": "4.3.0"
+      }
+    },
+    "netcoreapp1.0": {
+      "dependencies": {
+        "System.Diagnostics.Contracts": "4.3.0",
+        "System.Threading.Thread": "4.3.0",
+        "System.Diagnostics.StackTrace": "4.3.0",
+        "System.AppContext": "4.3.0"
+      }
+    },
+    "uap10.0": {
+      "imports": [ "dotnet5.4" ],
+      "dependencies": {
+        "Microsoft.TargetingPack.Private.WinRT": {
+          "version": "1.0.1",
+          "type": "build"
+        },
+        "Microsoft.NETCore.UniversalWindowsPlatform": {
+          "version": "5.3.0",
+          "type": "build"
+        },
+        "System.AppContext": "4.3.0"
+      },
+      "System.Diagnostics.Contracts": "4.3.0",
+      "System.Threading.Thread": "4.3.0",
+      "System.Diagnostics.StackTrace": "4.3.0"
+    }
+  }
+}
