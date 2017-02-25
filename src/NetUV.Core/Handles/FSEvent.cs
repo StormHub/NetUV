@@ -17,7 +17,7 @@ namespace NetUV.Core.Handles
     [Flags]
     public enum FSEventMask
     {
-        None = 0,
+        Default = 0,
 
         /*
         * By default, if the fs event watcher is given a directory name, we will
@@ -67,7 +67,9 @@ namespace NetUV.Core.Handles
             : base(loop, uv_handle_type.UV_FS_EVENT)
         { }
 
-        public FSEvent Start(string path, FSEventMask mask, Action<FSEvent, FileSystemEvent> callback)
+        public FSEvent Start(string path, 
+            Action<FSEvent, FileSystemEvent> callback, 
+            FSEventMask mask = FSEventMask.Default)
         {
             Contract.Requires(!string.IsNullOrEmpty(path));
             Contract.Requires(callback != null);
@@ -81,12 +83,6 @@ namespace NetUV.Core.Handles
 
         public string GetPath()
         {
-            if (this.eventCallback == null)
-            {
-                throw new InvalidOperationException(
-                    $"{this.HandleType} {this.InternalHandle} is not started.");
-            }
-
             this.Validate();
             return NativeMethods.FSEventGetPath(this.InternalHandle);
         }

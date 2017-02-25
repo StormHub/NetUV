@@ -73,7 +73,7 @@ namespace NetUV.Core.Native
                 int result = uv_fs_poll_getpath(handle, buf, ref length);
                 ThrowIfError(result);
 
-                path = Marshal.PtrToStringUni(buf, length.ToInt32());
+                path = Marshal.PtrToStringAnsi(buf, length.ToInt32());
             }
             finally
             {
@@ -133,7 +133,7 @@ namespace NetUV.Core.Native
                 int result = uv_fs_event_getpath(handle, buf, ref length);
                 ThrowIfError(result);
 
-                path = Marshal.PtrToStringUni(buf, length.ToInt32());
+                path = Marshal.PtrToStringAnsi(buf, length.ToInt32());
             }
             finally
             {

@@ -13,7 +13,7 @@ namespace NetUV.Core.Tests
     public sealed class RefTests : IDisposable
     {
         const int Port = 9887;
-
+        const int HighResolutionTimePeriod = 10000000;
         Loop loop;
         int closeCount;
         int callbackCount;
@@ -29,7 +29,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
         }
 
         [Fact]
@@ -52,7 +52,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(idle);
@@ -67,7 +67,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(async);
@@ -82,7 +82,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(prepare);
@@ -118,7 +118,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(check);
@@ -133,7 +133,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(timer);
@@ -148,7 +148,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(timer);
@@ -159,13 +159,13 @@ namespace NetUV.Core.Tests
         {
             FSEvent fsEvent = this.loop
                 .CreateFSEvent()
-                .Start(".", FSEventMask.None, this.OnFSEvent);
+                .Start(".", this.OnFSEvent);
             fsEvent.RemoveReference();
 
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(fsEvent);
@@ -184,7 +184,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(fsPoll);
@@ -201,7 +201,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(tcp);
@@ -218,7 +218,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             listener.Close(this.OnClose);
@@ -300,7 +300,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(pipe);
@@ -316,7 +316,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             listener.Close(this.OnClose);
@@ -377,7 +377,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(udp);
@@ -395,7 +395,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(udp);
@@ -416,7 +416,7 @@ namespace NetUV.Core.Tests
             long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
             diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < 5000000);  // High resolution 
+            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(1, this.callbackCount);
 
             this.CloseHandle(udp);
