@@ -1,0 +1,11 @@
+version: 0.1.{build}
+pull_requests:
+  do_not_increment_build_number: true
+build_script:
+- cmd: powershell .\build.ps1 --target=PR
+deploy: off
+branches:
+  only:
+  - dev
+build:
+  verbosity: minimal
