@@ -58,10 +58,6 @@
     "uap10.0": {
       "imports": [ "dotnet5.4" ],
       "dependencies": {
-        "Microsoft.TargetingPack.Private.WinRT": {
-          "version": "1.0.1",
-          "type": "build"
-        },
         "Microsoft.NETCore.UniversalWindowsPlatform": {
           "version": "5.3.0",
           "type": "build"
