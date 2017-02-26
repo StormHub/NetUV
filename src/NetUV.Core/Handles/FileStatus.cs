@@ -10,22 +10,22 @@ namespace NetUV.Core.Handles
     {
         internal FileStatus(uv_stat_t stat)
         {
-            this.Device = (long)stat.st_dev;
-            this.Mode = (long)stat.st_mode;
-            this.LinkCount = (long)stat.st_nlink;
+            this.Device = stat.st_dev;
+            this.Mode = stat.st_mode;
+            this.LinkCount = stat.st_nlink;
 
-            this.UserIdentifier = (long)stat.st_uid;
-            this.GroupIdentifier = (long)stat.st_gid;
+            this.UserIdentifier = stat.st_uid;
+            this.GroupIdentifier = stat.st_gid;
 
-            this.DeviceType = (long)stat.st_rdev;
-            this.Inode = (long)stat.st_ino;
+            this.DeviceType = stat.st_rdev;
+            this.Inode = stat.st_ino;
 
-            this.Size = (long)stat.st_size;
-            this.BlockSize = (long)stat.st_blksize;
-            this.Blocks = (long)stat.st_blocks;
+            this.Size = stat.st_size;
+            this.BlockSize = stat.st_blksize;
+            this.Blocks = stat.st_blocks;
 
-            this.Flags = (long)stat.st_flags;
-            this.FileGeneration = (long)stat.st_gen;
+            this.Flags = stat.st_flags;
+            this.FileGeneration = stat.st_gen;
 
             this.LastAccessTime = stat.st_atim;
             this.LastModifyTime = stat.st_mtim;

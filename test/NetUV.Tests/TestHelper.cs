@@ -34,6 +34,17 @@ namespace NetUV.Core.Tests
             
             return fileName;
         }
+        public static void CreateFile(string fullName)
+        {
+            if (File.Exists(fullName))
+            {
+                return;
+            }
+            using (File.Create(fullName))
+            {
+                // NOP
+            }
+        }
 
         public static string[] GetFiles(string directory) => 
             Directory.Exists(directory) ? Directory.GetFiles(directory) : new string[0];

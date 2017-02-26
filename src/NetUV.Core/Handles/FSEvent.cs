@@ -47,15 +47,18 @@ namespace NetUV.Core.Handles
 
     public struct FileSystemEvent
     {
-        internal FileSystemEvent(string fileName, FSEventType eventType)
+        internal FileSystemEvent(string fileName, FSEventType eventType, Exception error)
         {
             this.FileName = fileName;
             this.EventType = eventType;
+            this.Error = error;
         }
 
         public string FileName { get; }
 
         public FSEventType EventType { get; }
+
+        public Exception Error { get; }
     }
 
     public sealed class FSEvent : ScheduleHandle
@@ -92,13 +95,13 @@ namespace NetUV.Core.Handles
             Log.TraceFormat("{0} {1} callback", this.HandleType, this.InternalHandle);
             try
             {
+                OperationException error = null;
                 if (status < 0)
                 {
-                    OperationException error = NativeMethods.CreateError((uv_err_code)status);
-                    throw error;
+                    error = NativeMethods.CreateError((uv_err_code)status);
                 }
 
-                var fileSystemEvent = new FileSystemEvent(fileName, (FSEventType)events);
+                var fileSystemEvent = new FileSystemEvent(fileName, (FSEventType)events, error);
                 this.eventCallback?.Invoke(this, fileSystemEvent);
             }
             catch (Exception exception)
