@@ -52,7 +52,7 @@ Task("Restore-NuGet-Packages")
 {
   var settings = new DotNetCoreRestoreSettings
   {
-    Verbose = false,
+    Verbose = true,
     Verbosity = DotNetCoreRestoreVerbosity.Warning
   };
 
@@ -67,7 +67,7 @@ Task("Compile")
 {
   DotNetCoreBuild("./**/project.json", new DotNetCoreBuildSettings {
       Configuration = configuration,
-      Verbose = false
+      Verbose = true
     });
 });
 
@@ -85,7 +85,7 @@ Task("Test")
       DotNetCoreTest(project.GetDirectory().FullPath, new DotNetCoreTestSettings
         {
           Configuration = configuration,
-          Verbose = false
+          Verbose = true
         });
   }
 });
@@ -123,6 +123,27 @@ Task("Publish-NuGet")
       Source = source,
       ApiKey = apiKey
     });
+  }
+});
+
+///////////////////////////////////////////////////////////////
+
+Task("Benchmark")
+  .Description("Runs benchmarks")
+  .IsDependentOn("Compile")
+  .Does(() =>
+{
+  var libraries = GetFiles("./test/**/bin/" + configuration + "/net461/win7-x64/*.Performance.exe");
+  CreateDirectory(outputPerfResults);
+
+  foreach (var lib in libraries)
+  {
+    Information("Benchmark: {0}", lib);
+    int result = StartProcess(lib, new ProcessSettings { WorkingDirectory = lib.GetDirectory() } );
+    if (result != 0)
+    {
+      throw new CakeException($"Benchmark failed. {lib}");
+    }
   }
 });
 
@@ -236,6 +257,7 @@ Task("Mono")
 
 Task("PR")
   .IsDependentOn("Test")
+  .IsDependentOn("Benchmark")
   .IsDependentOn("Package-NuGet");
 
 Task("Nightly")
