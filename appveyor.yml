@@ -11,7 +11,7 @@ branches:
 notifications:
 - provider: GitHubPullRequest
   auth_token:
-    secure: aab474b807c09fc88e96750671bf4c1612d4b5ee
+    secure: piw+WL560Al3Ss5q76/t2BjHN/uhQ6tFKji96lTAzsFN0X2QhNk6XacPo+Zf6iWY
   on_build_success: true
   on_build_failure: true
   on_build_status_changed: true
