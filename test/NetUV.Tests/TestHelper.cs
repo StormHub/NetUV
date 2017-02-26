@@ -34,6 +34,15 @@ namespace NetUV.Core.Tests
             
             return fileName;
         }
+
+        public static FileStream OpenTempFile()
+        {
+            string directory = CreateTempDirectory();
+            string fileName = Path.Combine(directory, Path.GetRandomFileName());
+            FileStream file = File.Open(fileName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+            return file;
+        }
+
         public static void CreateFile(string fullName)
         {
             if (File.Exists(fullName))
