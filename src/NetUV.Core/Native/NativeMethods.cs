@@ -72,7 +72,7 @@ namespace NetUV.Core.Native
         UV_ENOTCONN = -4053,
         UV_ENOTDIR,
         UV_ENOTEMPTY,
-        UV_ENOTSOCK,
+        UV_ENOTSOCK = -4050,
         UV_ENOTSUP,
         UV_EPERM,
         UV_EPIPE = -4047,
