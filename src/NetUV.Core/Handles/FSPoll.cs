@@ -9,15 +9,18 @@ namespace NetUV.Core.Handles
 
     public struct FSPollStatus
     {
-        internal FSPollStatus(FileStatus previous, FileStatus current)
+        internal FSPollStatus(FileStatus previous, FileStatus current, Exception error)
         {
             this.Previous = previous;
             this.Current = current;
+            this.Error = error;
         }
 
         public FileStatus Previous { get; }
 
         public FileStatus Current { get; }
+
+        public Exception Error { get; }
     }
 
     public sealed class FSPoll : ScheduleHandle
@@ -44,12 +47,6 @@ namespace NetUV.Core.Handles
 
         public string GetPath()
         {
-            if (this.pollCallback == null)
-            {
-                throw new InvalidOperationException(
-                    $"{this.HandleType} {this.InternalHandle} is not started.");
-            }
-
             this.Validate();
             return NativeMethods.FSPollGetPath(this.InternalHandle);
         }
@@ -59,13 +56,13 @@ namespace NetUV.Core.Handles
             Log.TraceFormat("{0} {1} callback", this.HandleType, this.InternalHandle);
             try
             {
+                OperationException error = null;
                 if (status < 0)
                 {
-                    OperationException error = NativeMethods.CreateError((uv_err_code)status);
-                    throw error;
+                    error = NativeMethods.CreateError((uv_err_code)status);
                 }
 
-                this.pollCallback?.Invoke(this, new FSPollStatus(prev, curr));
+                this.pollCallback?.Invoke(this, new FSPollStatus(prev, curr, error));
             }
             catch (Exception exception)
             {

@@ -17,35 +17,47 @@ namespace NetUV.Core.Native
     {
         static readonly DateTime StartDateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        public IntPtr tv_sec;
-        public IntPtr tv_nsec;
+        public long tv_sec;
+        public long tv_nsec;
 
-        public static implicit operator DateTime(uv_timespec_t timespec) => 
-            StartDateTime.AddTicks(
-                TimeSpan.TicksPerSecond * (long)timespec.tv_sec 
-                + (long)timespec.tv_nsec / 100);
+        public static implicit operator DateTime(uv_timespec_t timespec)
+        {
+            long ticks = TimeSpan.TicksPerSecond * timespec.tv_sec
+                + timespec.tv_nsec / 100;
+
+            DateTime time = StartDateTime;
+            try
+            {
+                return time.AddTicks(ticks);
+            }
+            catch
+            {
+                // Invalid time values, sometimes happens on Window
+                // platform
+                return StartDateTime;
+            }
+        }
     }
 
     [StructLayout(LayoutKind.Sequential)]
     struct uv_stat_t
     {
-        public ulong st_dev;
-        public ulong st_mode;
-        public ulong st_nlink;
-        public ulong st_uid;
-        public ulong st_gid;
-        public ulong st_rdev;
-        public ulong st_ino;
-        public ulong st_size;
-        public ulong st_blksize;
-        public ulong st_blocks;
-        public ulong st_flags;
-        public ulong st_gen;
+        public long st_dev;
+        public long st_mode;
+        public long st_nlink;
+        public long st_uid;
+        public long st_gid;
+        public long st_rdev;
+        public long st_ino;
+        public long st_size;
+        public long st_blksize;
+        public long st_blocks;
+        public long st_flags;
+        public long st_gen;
         public uv_timespec_t st_atim;
         public uv_timespec_t st_mtim;
         public uv_timespec_t st_ctim;
         public uv_timespec_t st_birthtim;
-
 
         public static implicit operator FileStatus(uv_stat_t stat) => new FileStatus(stat);
     }
