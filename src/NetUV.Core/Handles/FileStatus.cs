@@ -27,11 +27,10 @@ namespace NetUV.Core.Handles
             this.Flags = stat.st_flags;
             this.FileGeneration = stat.st_gen;
 
-            this.LastAccessTime = stat.st_atim;
-            this.LastModifyTime = stat.st_mtim;
-            this.LastChangeTime = stat.st_ctim;
-
-            this.CreateTime = stat.st_birthtim;
+            this.LastAccessTime = (DateTime)stat.st_atim;
+            this.LastModifyTime = (DateTime)stat.st_mtim;
+            this.LastChangeTime = (DateTime)stat.st_ctim;
+            this.CreateTime = (DateTime)stat.st_birthtim;
         }
 
         public long Device { get; }
