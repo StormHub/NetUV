@@ -27,6 +27,16 @@ namespace NetUV.Core.Handles
             : this(loop, ByteBufferAllocator.Default)
         { }
 
+        internal Udp(LoopContext loop, ByteBufferAllocator allocator)
+            : base(loop, uv_handle_type.UV_UDP)
+        {
+            Contract.Requires(allocator != null);
+
+            this.allocator = allocator;
+            this.bufferQueue = new BufferQueue();
+            this.sendRequestPool = new WriteRequestPool(uv_req_type.UV_UDP_SEND);
+        }
+
         public int GetSendBufferSize()
         {
             this.Validate();
@@ -55,14 +65,10 @@ namespace NetUV.Core.Handles
             return NativeMethods.ReceiveBufferSize(this.InternalHandle, value);
         }
 
-        internal Udp(LoopContext loop, ByteBufferAllocator allocator)
-            : base(loop, uv_handle_type.UV_UDP)
+        public IntPtr GetFileDescriptor()
         {
-            Contract.Requires(allocator != null);
-
-            this.allocator = allocator;
-            this.bufferQueue = new BufferQueue();
-            this.sendRequestPool = new WriteRequestPool(uv_req_type.UV_UDP_SEND);
+            this.Validate();
+            return NativeMethods.GetFileDescriptor(this.InternalHandle);
         }
 
         public void RegisterReceiveAction(Action<Udp, IDatagramReadCompletion> action)

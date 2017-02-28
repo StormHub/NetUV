@@ -30,14 +30,13 @@ namespace NetUV.Core.Tests
             Tcp tcp1 = this.loop.CreateTcp().Bind(endPoint);
             Tcp tcp2 = this.loop.CreateTcp().Bind(endPoint);
 
-            StreamListener<Tcp> listener = tcp1.Listen(OnConnection);
+            tcp1.Listen(OnConnection);
             Assert.Throws<OperationException>(() => tcp2.Listen(OnConnection));
 
             tcp1.CloseHandle(this.OnClose);
             tcp2.CloseHandle(this.OnClose);
             this.loop.RunDefault();
             Assert.Equal(2, this.closeCalled);
-            listener.Dispose();
         }
 
         [Theory]
@@ -96,9 +95,10 @@ namespace NetUV.Core.Tests
         [Fact]
         public void ListenWithoutBind()
         {
-            Tcp tcp = this.loop.CreateTcp();
-            StreamListener<Tcp> listener = tcp.Listen(OnConnection);
-            listener.Dispose();
+            Tcp tcp = this.loop
+                .CreateTcp()
+                .Listen(OnConnection);
+            tcp.Dispose();
         }
 
         static void OnConnection(Tcp tcp, Exception exception) =>

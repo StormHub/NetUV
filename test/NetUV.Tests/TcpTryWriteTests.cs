@@ -14,7 +14,7 @@ namespace NetUV.Core.Tests
     {
         const int Port = 9884;
         Loop loop;
-        StreamListener<Tcp> server;
+        Tcp server;
         int connectionCount;
         int connectedCount;
         int closeCount;
@@ -45,7 +45,7 @@ namespace NetUV.Core.Tests
             if (exception != null)
             {
                 tcp.CloseHandle(this.OnClose);
-                this.server.Close(this.OnClose);
+                this.server.CloseHandle(this.OnClose);
 
                 return;
             }
@@ -123,7 +123,7 @@ namespace NetUV.Core.Tests
                 || completion.Completed)
             {
                 tcp.CloseHandle(this.OnClose);
-                this.server.Close(this.OnClose);
+                this.server.CloseHandle(this.OnClose);
             }
             else
             {

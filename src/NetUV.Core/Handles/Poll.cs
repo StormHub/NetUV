@@ -10,21 +10,45 @@ namespace NetUV.Core.Handles
     [Flags]
     public enum PollMask
     {
-        Readable   = 1, // UV_READABLE
+        None = 0,
+        Readable = 1, // UV_READABLE
         Writable   = 2, // UV_WRITABLE
         Disconnect = 4  // UV_DISCONNECT
     };
 
+    public struct PollStatus
+    {
+        internal PollStatus(PollMask mask, Exception error)
+        {
+            this.Mask = mask;
+            this.Error = error;
+        }
+
+        public PollMask Mask { get; }
+
+        public Exception Error { get; }
+    }
+
     public sealed class Poll : ScheduleHandle
     {
         internal static readonly uv_poll_cb PollCallback = OnPollCallback;
-        Action<Poll, PollMask> pollCallback;
+        Action<Poll, PollStatus> pollCallback;
 
         internal Poll(LoopContext loop, int fd)
             : base(loop, uv_handle_type.UV_POLL, fd)
         { }
 
-        public Poll Start(PollMask eventMask, Action<Poll, PollMask> callback)
+        internal Poll(LoopContext loop, IntPtr handle)
+            : base(loop, uv_handle_type.UV_POLL, handle)
+        { }
+
+        public IntPtr GetFileDescriptor()
+        {
+            this.Validate();
+            return NativeMethods.GetFileDescriptor(this.InternalHandle);
+        }
+
+        public Poll Start(PollMask eventMask, Action<Poll, PollStatus> callback)
         {
             Contract.Requires(callback != null);
 
@@ -40,13 +64,18 @@ namespace NetUV.Core.Handles
             Log.TraceFormat("{0} {1} callback", this.HandleType, this.InternalHandle);
             try
             {
+                OperationException error = null;
+                var mask = PollMask.None;
                 if (status < 0)
                 {
-                    OperationException error = NativeMethods.CreateError((uv_err_code)status);
-                    throw error;
+                    error = NativeMethods.CreateError((uv_err_code)status);
+                }
+                else
+                {
+                    mask = (PollMask)events;
                 }
 
-                this.pollCallback?.Invoke(this, (PollMask)events);
+                this.pollCallback?.Invoke(this, new PollStatus(mask, error));
             }
             catch (Exception exception)
             {

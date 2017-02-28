@@ -93,10 +93,30 @@ namespace NetUV.Core.Handles
             return new Async(this.handle, callback);
         }
 
-        public Poll CreatePoll(int fd)
+        public Poll CreatePoll(int fileDescriptor)
         {
+            if (Platform.IsWindows)
+            {
+                throw new InvalidOperationException(
+                    "Poll handle file descriptor is not supported on Windows platform");
+            }
             this.handle.Validate();
-            return new Poll(this.handle, fd);
+
+            return new Poll(this.handle, fileDescriptor);
+        }
+
+        public Poll CreatePoll(IntPtr socket)
+        {
+            Contract.Requires(socket != IntPtr.Zero);
+
+            if (!Platform.IsWindows)
+            {
+                throw new InvalidOperationException(
+                    "Poll handle socket is not supported on non Windows platform");
+            }
+            this.handle.Validate();
+
+            return new Poll(this.handle, socket);
         }
 
         public Signal CreateSignal()

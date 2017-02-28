@@ -11,7 +11,7 @@ namespace NetUV.Core.Tests
     public sealed class PipeGetSockNameTests : IDisposable
     {
         Loop loop;
-        StreamListener<Pipe> listener;
+        Pipe listener;
         int connectionError;
         int connectedCount;
         int closeCount;
@@ -70,7 +70,7 @@ namespace NetUV.Core.Tests
                 }
             }
 
-            this.listener.Close(this.OnClose);
+            this.listener.CloseHandle(this.OnClose);
             pipe.CloseHandle(this.OnClose);
         }
 

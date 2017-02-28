@@ -39,6 +39,8 @@ namespace NetUV.Core.Handles
 
         public bool IsValid => this.handle.IsValid;
 
+        public object UserToken { get; set; }
+
         internal IntPtr InternalHandle => this.handle.Handle;
 
         internal uv_handle_type HandleType { get; }
@@ -57,6 +59,7 @@ namespace NetUV.Core.Handles
             finally
             {
                 this.closeCallback = null;
+                this.UserToken = null;
             }
         } 
 

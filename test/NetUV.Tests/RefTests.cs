@@ -212,7 +212,7 @@ namespace NetUV.Core.Tests
         {
             Tcp tcp = this.loop.CreateTcp();
             var anyEndPoint = new IPEndPoint(IPAddress.Loopback, IPEndPoint.MinPort);
-            StreamListener<Tcp> listener = tcp.Listen(anyEndPoint, this.OnConnection);
+            tcp.Listen(anyEndPoint, this.OnConnection);
 
             tcp.RemoveReference();
             long diff = this.loop.NowInHighResolution;
@@ -221,7 +221,7 @@ namespace NetUV.Core.Tests
             Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
-            listener.Close(this.OnClose);
+            tcp.CloseHandle(this.OnClose);
         }
 
         [Fact]
@@ -229,14 +229,12 @@ namespace NetUV.Core.Tests
         {
             Tcp tcp = this.loop.CreateTcp();
             var anyEndPoint = new IPEndPoint(IPAddress.Loopback, IPEndPoint.MinPort);
-            StreamListener<Tcp> listener = tcp.Listen(anyEndPoint, this.OnConnection);
+            tcp.Listen(anyEndPoint, this.OnConnection);
             tcp.RemoveReference();
             tcp.CloseHandle(this.OnClose);
 
             this.loop.RunDefault();
             Assert.Equal(1, this.closeCount);
-
-            listener.Close(this.OnClose);
         }
 
         void OnConnection(StreamHandle stream, Exception exception) => this.callbackCount++;
@@ -309,8 +307,9 @@ namespace NetUV.Core.Tests
         [Fact]
         public void PipeListen()
         {
-            Pipe pipe = this.loop.CreatePipe();
-            StreamListener<Pipe> listener = pipe.Listen(GetPipeName(), this.OnConnection);
+            Pipe pipe = this.loop
+                .CreatePipe()
+                .Listen(GetPipeName(), this.OnConnection);
 
             pipe.RemoveReference();
             long diff = this.loop.NowInHighResolution;
@@ -319,21 +318,22 @@ namespace NetUV.Core.Tests
             Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
-            listener.Close(this.OnClose);
+            pipe.CloseHandle(this.OnClose);
         }
 
         [Fact]
         public void PipeListen2()
         {
-            Pipe pipe = this.loop.CreatePipe();
-            StreamListener<Pipe> listener = pipe.Listen(GetPipeName(), this.OnConnection);
+            Pipe pipe = this.loop
+                .CreatePipe()
+                .Listen(GetPipeName(), this.OnConnection);
             pipe.RemoveReference();
             pipe.CloseHandle(this.OnClose);
 
             this.loop.RunDefault();
             Assert.Equal(1, this.closeCount);
 
-            listener.Close(this.OnClose);
+            pipe.CloseHandle(this.OnClose);
         }
 
         [Fact]

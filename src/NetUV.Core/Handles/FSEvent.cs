@@ -17,7 +17,7 @@ namespace NetUV.Core.Handles
     [Flags]
     public enum FSEventMask
     {
-        Default = 0,
+        None = 0,
 
         /*
         * By default, if the fs event watcher is given a directory name, we will
@@ -72,7 +72,7 @@ namespace NetUV.Core.Handles
 
         public FSEvent Start(string path, 
             Action<FSEvent, FileSystemEvent> callback, 
-            FSEventMask mask = FSEventMask.Default)
+            FSEventMask mask = FSEventMask.None)
         {
             Contract.Requires(!string.IsNullOrEmpty(path));
             Contract.Requires(callback != null);

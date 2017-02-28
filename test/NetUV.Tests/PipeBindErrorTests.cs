@@ -31,7 +31,7 @@ namespace NetUV.Core.Tests
             var error = Assert.Throws<OperationException>(() => pipe2.Bind(name));
             Assert.Equal((int)uv_err_code.UV_EADDRINUSE, error.ErrorCode);
 
-            StreamListener<Pipe> listener = pipe1.Listen(OnConnection);
+            Pipe listener = pipe1.Listen(OnConnection);
 
             error = Assert.Throws<OperationException>(() => pipe2.Listen(OnConnection));
             Assert.Equal((int)uv_err_code.UV_EINVAL, error.ErrorCode);
@@ -80,7 +80,7 @@ namespace NetUV.Core.Tests
         {
             Pipe pipe = this.loop.CreatePipe();
 
-            StreamListener<Pipe> listener = null;
+            Pipe listener = null;
             var error = Assert.Throws<OperationException>(
                 () => listener = pipe.Listen(OnConnection));
 

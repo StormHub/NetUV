@@ -48,6 +48,12 @@ namespace NetUV.Core.Handles
             return NativeMethods.ReceiveBufferSize(this.InternalHandle, value);
         }
 
+        public IntPtr GetFileDescriptor()
+        {
+            this.Validate();
+            return NativeMethods.GetFileDescriptor(this.InternalHandle);
+        }
+
         public unsafe long GetWriteQueueSize()
         {
             this.Validate();

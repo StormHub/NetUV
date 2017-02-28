@@ -254,10 +254,17 @@ namespace NetUV.Core.Native
                     if (args == null
                         || args.Length == 0)
                     {
-                        throw new ArgumentException($"{handleType} expecting fd argument.");
+                        throw new ArgumentException($"{handleType} expecting file descriptor or handle argument.");
                     }
 
-                    action = handle => Invoke(uv_poll_init, loopHandle, handle, (int)args[0]);
+                    if (Platform.IsWindows)
+                    {
+                        action = handle => Invoke(uv_poll_init_socket, loopHandle, handle, (IntPtr)args[0]);
+                    }
+                    else
+                    {
+                        action = handle => Invoke(uv_poll_init, loopHandle, handle, (int)args[0]);
+                    }
                     break;
                 case uv_handle_type.UV_SIGNAL:
                     action = handle => Invoke(uv_signal_init, loopHandle, handle);
@@ -897,6 +904,9 @@ namespace NetUV.Core.Native
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         static extern int uv_poll_init(IntPtr loop, IntPtr handle, int fd);
+
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+        static extern int uv_poll_init_socket(IntPtr loop, IntPtr handle, IntPtr socket);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         static extern int uv_poll_start(IntPtr handle, int events, uv_poll_cb cb);

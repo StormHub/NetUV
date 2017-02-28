@@ -69,8 +69,7 @@ namespace NetUV.Core.Handles
                     current = (FileStatus)curr;
                 }
 
-                this.pollCallback?.Invoke(this, 
-                    new FSPollStatus(previous, current, error));
+                this.pollCallback?.Invoke(this, new FSPollStatus(previous, current, error));
             }
             catch (Exception exception)
             {

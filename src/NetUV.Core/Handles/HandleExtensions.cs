@@ -10,37 +10,20 @@ namespace NetUV.Core.Handles
 
     public static class HandleExtensions
     {
-        internal const int DefaultBacklog = 128;
-
-        public static StreamListener<Pipe> Listen(this Pipe pipe, 
-            Action<Pipe, Exception> connectionHandler,
-            int backlog = DefaultBacklog)
-        {
-            Contract.Requires(pipe != null);
-            Contract.Requires(connectionHandler != null);
-            Contract.Requires(backlog > 0);
-
-            var listener = new StreamListener<Pipe>(pipe, connectionHandler);
-            listener.Listen(backlog);
-
-            return listener;
-        }
-
-        public static StreamListener<Pipe> Listen(this Pipe pipe,
+        public static Pipe Listen(this Pipe pipe,
             string name,
-            Action<Pipe, Exception> connectionHandler,
-            int backlog = DefaultBacklog)
+            Action<Pipe, Exception> onConnection,
+            int backlog = ServerStream.DefaultBacklog)
         {
             Contract.Requires(pipe != null);
             Contract.Requires(!string.IsNullOrEmpty(name));
-            Contract.Requires(connectionHandler != null);
+            Contract.Requires(onConnection != null);
             Contract.Requires(backlog > 0);
 
             pipe.Bind(name);
-            var listener = new StreamListener<Pipe>(pipe, connectionHandler);
-            listener.Listen(backlog);
+            pipe.Listen(onConnection, backlog);
 
-            return listener;
+            return pipe;
         }
 
         public static Pipe ConnectTo(this Pipe pipe, 
@@ -56,9 +39,8 @@ namespace NetUV.Core.Handles
             {
                 request = new PipeConnect(pipe, remoteName, connectionHandler);
             }
-            catch (Exception exception)
+            catch (Exception)
             {
-                ScheduleHandle.Log.Error($"{pipe.HandleType} {pipe.InternalHandle} Failed to connect to {remoteName}", exception);
                 request?.Dispose();
                 throw;
             }
@@ -66,35 +48,20 @@ namespace NetUV.Core.Handles
             return pipe;
         }
 
-        public static StreamListener<Tcp> Listen(this Tcp tcp, 
-            Action<Tcp, Exception> connectionHandler,
-            int backlog = DefaultBacklog)
-        {
-            Contract.Requires(tcp != null);
-            Contract.Requires(connectionHandler != null);
-            Contract.Requires(backlog > 0);
-
-            var listener = new StreamListener<Tcp>(tcp, connectionHandler);
-            listener.Listen(backlog);
-
-            return listener;
-        }
-
-        public static StreamListener<Tcp> Listen(this Tcp tcp,
+        public static Tcp Listen(this Tcp tcp,
             IPEndPoint localEndPoint,
-            Action<Tcp, Exception> connectionHandler,
-            int backlog = DefaultBacklog,
+            Action<Tcp, Exception> onConnection,
+            int backlog = ServerStream.DefaultBacklog,
             bool dualStack = false)
         {
             Contract.Requires(tcp != null);
             Contract.Requires(localEndPoint != null);
-            Contract.Requires(connectionHandler != null);
+            Contract.Requires(onConnection != null);
 
             tcp.Bind(localEndPoint, dualStack);
-            var listener = new StreamListener<Tcp>(tcp, connectionHandler);
-            listener.Listen(backlog);
+            tcp.Listen(onConnection, backlog);
 
-            return listener;
+            return tcp;
         }
 
         public static Tcp ConnectTo(this Tcp tcp,
@@ -128,9 +95,8 @@ namespace NetUV.Core.Handles
             {
                 request = new TcpConnect(tcp, remoteEndPoint, connectedHandler);
             }
-            catch (Exception exception)
+            catch (Exception)
             {
-                ScheduleHandle.Log.Error($"{tcp.HandleType} {tcp.InternalHandle} Failed to connect to {remoteEndPoint}", exception);
                 request?.Dispose();
                 throw;
             }
@@ -168,7 +134,6 @@ namespace NetUV.Core.Handles
 
             return udp;
         }
-
 
         public static Udp ReceiveStart(this Udp udp, 
             Action<Udp, IDatagramReadCompletion> receiveAction)
