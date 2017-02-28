@@ -56,13 +56,21 @@ namespace NetUV.Core.Handles
             Log.TraceFormat("{0} {1} callback", this.HandleType, this.InternalHandle);
             try
             {
+                FileStatus previous = null;
+                FileStatus current = null;
                 OperationException error = null;
                 if (status < 0)
                 {
                     error = NativeMethods.CreateError((uv_err_code)status);
                 }
+                else
+                {
+                    previous = (FileStatus)prev;
+                    current = (FileStatus)curr;
+                }
 
-                this.pollCallback?.Invoke(this, new FSPollStatus(prev, curr, error));
+                this.pollCallback?.Invoke(this, 
+                    new FSPollStatus(previous, current, error));
             }
             catch (Exception exception)
             {

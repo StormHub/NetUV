@@ -17,23 +17,27 @@ namespace NetUV.Core.Native
     {
         static readonly DateTime StartDateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        public long tv_sec;
-        public long tv_nsec;
+        public readonly long tv_sec;
+        public readonly long tv_nsec;
 
-        public static implicit operator DateTime(uv_timespec_t timespec)
+        public static explicit operator DateTime(uv_timespec_t timespec)
         {
-            long ticks = TimeSpan.TicksPerSecond * timespec.tv_sec
-                + timespec.tv_nsec / 100;
+            if (timespec.tv_sec <= 0)
+            {
+                return StartDateTime;
+            }
 
-            DateTime time = StartDateTime;
+
             try
             {
-                return time.AddTicks(ticks);
+                return StartDateTime
+                    .AddSeconds(timespec.tv_sec)
+                    .AddTicks(timespec.tv_nsec / 100);
             }
-            catch
+            catch (ArgumentOutOfRangeException)
             {
                 // Invalid time values, sometimes happens on Window
-                // platform
+                // for last change time.
                 return StartDateTime;
             }
         }
@@ -42,24 +46,24 @@ namespace NetUV.Core.Native
     [StructLayout(LayoutKind.Sequential)]
     struct uv_stat_t
     {
-        public long st_dev;
-        public long st_mode;
-        public long st_nlink;
-        public long st_uid;
-        public long st_gid;
-        public long st_rdev;
-        public long st_ino;
-        public long st_size;
-        public long st_blksize;
-        public long st_blocks;
-        public long st_flags;
-        public long st_gen;
-        public uv_timespec_t st_atim;
-        public uv_timespec_t st_mtim;
-        public uv_timespec_t st_ctim;
-        public uv_timespec_t st_birthtim;
+        public readonly long st_dev;
+        public readonly long st_mode;
+        public readonly long st_nlink;
+        public readonly long st_uid;
+        public readonly long st_gid;
+        public readonly long st_rdev;
+        public readonly long st_ino;
+        public readonly long st_size;
+        public readonly long st_blksize;
+        public readonly long st_blocks;
+        public readonly long st_flags;
+        public readonly long st_gen;
+        public readonly uv_timespec_t st_atim;
+        public readonly uv_timespec_t st_mtim;
+        public readonly uv_timespec_t st_ctim;
+        public readonly uv_timespec_t st_birthtim;
 
-        public static implicit operator FileStatus(uv_stat_t stat) => new FileStatus(stat);
+        public static explicit operator FileStatus(uv_stat_t stat) => new FileStatus(stat);
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
