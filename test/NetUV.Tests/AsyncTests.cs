@@ -4,7 +4,7 @@
 namespace NetUV.Core.Tests
 {
     using System;
-    using System.Threading.Tasks;
+    using System.Threading;
     using NetUV.Core.Handles;
     using Xunit;
 
@@ -13,60 +13,69 @@ namespace NetUV.Core.Tests
         Loop loop;
         Prepare prepare;
         Async async;
-        Task task;
 
+        Thread thread;
         int prepareCalled;
-        int asyncCalled;
-
-        void AsyncSend()
-        {
-            while (this.asyncCalled < 3)
-            {
-                this.async.Send();
-            }
-        }
+        long asyncCalled;
+        int closeCount;
 
         void PrepareCallback(Prepare handle)
         {
-            if (handle != null
-                && this.prepareCalled == 0)
+            if (this.prepareCalled == 0)
             {
-                this.prepareCalled++;
+                this.thread = new Thread(this.ThreadStart);
+                this.thread.Start();
+            }
 
-                this.task = Task.Run(() => this.AsyncSend());
+            this.prepareCalled++;
+        }
+
+        void ThreadStart()
+        {
+            while (true)
+            {
+                if (Interlocked.Read(ref this.asyncCalled) == 3)
+                {
+                    break;
+                }
+
+                this.async.Send();
             }
         }
 
         void OnAsync(Async handle)
         {
-            if (handle != null)
+            if (Interlocked.Increment(ref this.asyncCalled) == 3)
             {
-                int n = ++this.asyncCalled;
-
-                if (n == 3)
-                {
-                    this.prepare.Dispose();
-                    this.async.Dispose();
-                }
+                this.prepare.CloseHandle(this.OnClose);
+                this.async.CloseHandle(this.OnClose);
             }
         }
 
+        void OnClose(ScheduleHandle handle)
+        {
+            handle.Dispose();
+            this.closeCount++;
+        }
+
         [Fact]
-        public void Async()
+        public void Run()
         {
             this.loop = new Loop();
             this.prepareCalled = 0;
             this.asyncCalled = 0;
 
-            this.prepare = this.loop.CreatePrepare();
-            this.prepare.Start(this.PrepareCallback);
-
+            this.prepare = this.loop
+                .CreatePrepare()
+                .Start(this.PrepareCallback);
             this.async = this.loop.CreateAsync(this.OnAsync);
 
             this.loop.RunDefault();
 
-            Assert.True(this.task.IsCompleted);
-            Assert.True(this.prepareCalled > 0, "Prepare callback should be called at least once.");
+            this.thread?.Join();
+
+            Assert.Equal(2, this.closeCount);
+            Assert.True(this.prepareCalled > 0);
             Assert.Equal(3, this.asyncCalled);
         }
 

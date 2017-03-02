@@ -83,9 +83,11 @@ namespace NetUV.Core.Tests
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public void Run(bool deplexMode)
+        public void Run(bool depluxMode)
         {
-            this.deplux = deplexMode;
+            this.deplux = depluxMode;
+            this.endPoint = new IPEndPoint(IPAddress.Loopback, depluxMode ? Port : Port + 1);
+
             this.StartServer();
 
             for (int i = 0; i < NumberOfClients; i++)
@@ -122,7 +124,17 @@ namespace NetUV.Core.Tests
             poll.UserToken = context;
 
             // Kick off the connect
-            socket.ConnectAsync(this.endPoint);
+            try
+            {
+                socket.Connect(this.endPoint);
+            }
+            catch (SocketException exception)
+            {
+                if (!IsErrorAgain(exception))
+                {
+                    throw;
+                }
+            }
         }
 
         void OnPollConnection(Poll handle, PollStatus status)
@@ -142,7 +154,7 @@ namespace NetUV.Core.Tests
                 {
                     // Read a couple of bytes.
                     var buffer = new byte[74];
-                    int count = Receive(context.Socket, buffer);
+                    int count = TryReceive(context.Socket, buffer);
                     if (count > 0)
                     {
                         context.Receive += count;
@@ -159,11 +171,11 @@ namespace NetUV.Core.Tests
                 {
                     // Read until EAGAIN.
                     var buffer = new byte[931];
-                    int count = Receive(context.Socket, buffer);
+                    int count = TryReceive(context.Socket, buffer);
                     while (count > 0)
                     {
                         context.Receive += count;
-                        count = Receive(context.Socket, buffer);
+                        count = TryReceive(context.Socket, buffer);
                     }
 
                     if (count == 0)
@@ -214,7 +226,7 @@ namespace NetUV.Core.Tests
                     var buffer = new byte[103];
 
                     int send = Math.Min(TransferBytes - context.Sent, buffer.Length);
-                    int count = context.Socket.Send(buffer, 0, send, SocketFlags.None);
+                    int count = TrySend(context.Socket, buffer, send);
                     if (count < 0)
                     {
                         this.spuriousWritableWakeups++;
@@ -231,7 +243,7 @@ namespace NetUV.Core.Tests
                     // Send until EAGAIN.
                     var buffer = new byte[1234];
                     int send = Math.Min(TransferBytes - context.Sent, buffer.Length);
-                    int count = context.Socket.Send(buffer, 0, send, SocketFlags.None);
+                    int count = TrySend(context.Socket, buffer, send);
                     if (count < 0)
                     {
                         this.spuriousWritableWakeups++;
@@ -245,7 +257,7 @@ namespace NetUV.Core.Tests
                     while (context.Sent < TransferBytes)
                     {
                         send = Math.Min(TransferBytes - context.Sent, buffer.Length);
-                        count = context.Socket.Send(buffer, 0, send, SocketFlags.None);
+                        count = TrySend(context.Socket, buffer, send);
                         if (count < 0)
                         {
                             break;
@@ -314,26 +326,45 @@ namespace NetUV.Core.Tests
             }
         }
 
-        static int Receive(Socket socket, byte[] buffer)
+        static int TrySend(Socket socket, byte[] buffer, int length)
         {
-            int failures = 0;
-            while (true)
+            try
             {
-                try
+                return socket.Send(buffer, 0, length, SocketFlags.None);
+            }
+            catch (SocketException exception)
+            {
+                if (!IsErrorAgain(exception))
                 {
-                    return socket.Receive(buffer);
+                    throw;
                 }
-                catch (SocketException)
-                {
-                    failures++;
-                    // Retry 5 times
-                    if (failures >= 5)
-                    {
-                        throw;
-                    }
-                }
+
+                return -1;
             }
         }
+
+        static int TryReceive(Socket socket, byte[] buffer)
+        {
+            try
+            {
+                return socket.Receive(buffer);
+            }
+            catch (SocketException exception)
+            {
+                if (!IsErrorAgain(exception))
+                {
+                    throw;
+                }
+
+                return -1;
+            }
+        }
+
+        static bool IsErrorAgain(SocketException error) =>
+            error.SocketErrorCode == SocketError.ConnectionAborted
+            || error.SocketErrorCode == SocketError.InProgress
+            || error.SocketErrorCode == SocketError.TryAgain
+            || error.SocketErrorCode == SocketError.WouldBlock;
 
         void OnTimerDelay(Timer handle)
         {
@@ -344,7 +375,6 @@ namespace NetUV.Core.Tests
 
         void StartServer()
         {
-            this.endPoint = new IPEndPoint(IPAddress.Loopback, Port);
             var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             socket.Bind(this.endPoint);
 
