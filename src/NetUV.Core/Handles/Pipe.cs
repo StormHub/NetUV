@@ -118,11 +118,20 @@ namespace NetUV.Core.Handles
             return NativeMethods.PipePendingCount(this.InternalHandle);
         }
 
-        protected override unsafe StreamHandle NewStream()
+        protected internal override unsafe StreamHandle NewStream()
         {
             IntPtr loopHandle = ((uv_stream_t*)this.InternalHandle)->loop;
             var loop = HandleContext.GetTarget<LoopContext>(loopHandle);
             return new Pipe(loop);
+        }
+
+        public Pipe Listen(Action<Pipe, Exception> onConnection, int backlog = DefaultBacklog)
+        {
+            Contract.Requires(onConnection != null);
+            Contract.Requires(backlog > 0);
+            
+            this.StreamListen((handle, exception) => onConnection((Pipe)handle, exception), backlog);
+            return this;
         }
 
         public void CloseHandle(Action<Pipe> callback = null) =>

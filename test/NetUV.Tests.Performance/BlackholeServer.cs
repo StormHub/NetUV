@@ -14,7 +14,7 @@ namespace NetUV.Core.Tests.Performance
         public static readonly int Port = 9089;
         public static readonly IPEndPoint LoopbackEndPoint = new IPEndPoint(IPAddress.Loopback, Port);
 
-        readonly StreamListener<Tcp> tcpServer;
+        readonly Tcp tcpServer;
 
         public BlackholeServer()
         {

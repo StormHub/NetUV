@@ -73,20 +73,19 @@ namespace NetUV.Core.Handles
 
         internal static T GetTarget<T>(IntPtr handle)
         {
-            if (handle == IntPtr.Zero)
-            {
-                throw new InvalidOperationException($"{nameof(handle)} cannot be empty.");
-            }
+            Contract.Requires(handle != IntPtr.Zero);
 
             IntPtr inernalHandle = ((uv_handle_t*)handle)->data;
-            GCHandle gcHandle = GCHandle.FromIntPtr(inernalHandle);
-
-            if (!gcHandle.IsAllocated)
+            if (inernalHandle != IntPtr.Zero)
             {
-                return default(T);
+                GCHandle gcHandle = GCHandle.FromIntPtr(inernalHandle);
+                if (gcHandle.IsAllocated)
+                {
+                    return (T)gcHandle.Target;
+                }
             }
 
-            return (T)gcHandle.Target;
+            return default(T);
         }
 
         static void OnCloseHandle(IntPtr handle)

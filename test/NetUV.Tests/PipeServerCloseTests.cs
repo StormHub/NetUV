@@ -11,7 +11,7 @@ namespace NetUV.Core.Tests
     public sealed class PipeServerCloseTests : IDisposable
     {
         Loop loop;
-        StreamListener<Pipe> listener;
+        Pipe listener;
         int connectionError;
         int connectedCount;
         int closeCount;
@@ -45,7 +45,7 @@ namespace NetUV.Core.Tests
             }
 
             pipe.CloseHandle(this.OnClose);
-            this.listener.Close(this.OnClose);
+            this.listener.CloseHandle(this.OnClose);
         }
 
         void OnConnection(Pipe pipe, Exception exception)

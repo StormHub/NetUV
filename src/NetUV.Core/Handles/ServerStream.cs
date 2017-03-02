@@ -4,11 +4,15 @@
 namespace NetUV.Core.Handles
 {
     using System;
+    using System.Diagnostics.Contracts;
     using NetUV.Core.Native;
 
     public abstract class ServerStream : StreamHandle
     {
+        internal const int DefaultBacklog = 128;
+
         internal static readonly uv_watcher_cb ConnectionCallback = OnConnectionCallback;
+        Action<StreamHandle, Exception> connectionHandler;
 
         internal ServerStream(
             LoopContext loop, 
@@ -17,9 +21,32 @@ namespace NetUV.Core.Handles
             : base(loop, handleType, args)
         { }
 
-        internal Action<StreamHandle, Exception> ConnectionHandler { get; set; }
+        protected internal abstract StreamHandle NewStream();
 
-        protected abstract StreamHandle NewStream();
+        protected internal void StreamListen(Action<StreamHandle, Exception> onConnection, int backlog = DefaultBacklog)
+        {
+            Contract.Requires(this.connectionHandler != null);
+            Contract.Requires(backlog > 0);
+
+            this.Validate();
+            this.connectionHandler = onConnection;
+            try
+            {
+                NativeMethods.StreamListen(this.InternalHandle, backlog, ConnectionCallback);
+                Log.DebugFormat("Stream {0} {1} listening, backlog = {2}", this.HandleType, this.InternalHandle, backlog);
+            }
+            catch
+            {
+                this.Dispose();
+                throw;
+            }
+        }
+
+        protected override void Close()
+        {
+            this.connectionHandler = null;
+            base.Close();
+        }
 
         static void OnConnectionCallback(IntPtr handle, int status)
         {
@@ -48,11 +75,10 @@ namespace NetUV.Core.Handles
 
                     NativeMethods.StreamAccept(server.InternalHandle, client.InternalHandle);
                     client.ReadStart();
-
                     Log.DebugFormat("{0} {1} client {2} accepted", server.HandleType, handle, client.InternalHandle);
                 }
 
-                server.ConnectionHandler.Invoke(client, error);
+                server.connectionHandler.Invoke(client, error);
             }
             catch
             {

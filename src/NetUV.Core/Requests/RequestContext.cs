@@ -57,18 +57,20 @@ namespace NetUV.Core.Requests
 
         internal static T GetTarget<T>(IntPtr handle)
         {
-            try
-            {
-                IntPtr pHandle = ((uv_req_t*)handle)->data;
-                GCHandle gcHandle = GCHandle.FromIntPtr(pHandle);
+            Contract.Requires(handle != IntPtr.Zero);
 
-                return (T)gcHandle.Target;
-            }
-            catch (Exception exception)
+            IntPtr inernalHandle = ((uv_req_t*)handle)->data;
+            if (inernalHandle != IntPtr.Zero)
             {
-                Log.Error($"GCHandle for {handle} is not valid.", exception);
-                throw;
+                GCHandle gcHandle = GCHandle.FromIntPtr(inernalHandle);
+                if (gcHandle.IsAllocated)
+                {
+                    return (T)gcHandle.Target;
+                }
+
             }
+
+            return default(T);
         }
 
         protected override void CloseHandle()

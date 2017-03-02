@@ -25,9 +25,9 @@ namespace NetUV.Core.Tests
             pipe.Bind(pipeName);
 
             pipe.PendingInstances(16);
-            StreamListener<Pipe> listener = pipe.Listen(this.OnConnection);
+            pipe.Listen(this.OnConnection);
 
-            listener.Close(OnClose);
+            pipe.CloseHandle(OnClose);
 
             this.loop.RunDefault();
 

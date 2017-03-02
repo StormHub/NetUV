@@ -19,6 +19,8 @@ namespace NetUV.Core.Requests
 
         public virtual bool IsValid => this.InternalHandle != IntPtr.Zero;
 
+        public object UserToken { get; set; }
+
         internal abstract IntPtr InternalHandle { get; }
 
         internal uv_req_type RequestType { get; }
@@ -38,6 +40,7 @@ namespace NetUV.Core.Requests
                 return;
             }
 
+            this.UserToken = null;
             this.Close();
         }
     }

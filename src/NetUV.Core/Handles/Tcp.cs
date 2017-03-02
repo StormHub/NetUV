@@ -125,11 +125,20 @@ namespace NetUV.Core.Handles
             return this;
         }
 
-        protected override unsafe StreamHandle NewStream()
+        protected internal override unsafe StreamHandle NewStream()
         {
             IntPtr loopHandle = ((uv_stream_t*)this.InternalHandle)->loop;
             var loop = HandleContext.GetTarget<LoopContext>(loopHandle);
             return new Tcp(loop);
+        }
+
+        public Tcp Listen(Action<Tcp, Exception> onConnection, int backlog = DefaultBacklog)
+        {
+            Contract.Requires(onConnection != null);
+            Contract.Requires(backlog > 0);
+
+            this.StreamListen((handle, exception) => onConnection((Tcp)handle, exception), backlog);
+            return this;
         }
 
         public void CloseHandle(Action<Tcp> callback = null) =>

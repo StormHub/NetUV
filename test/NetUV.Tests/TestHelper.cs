@@ -5,6 +5,9 @@ namespace NetUV.Core.Tests
 {
     using System;
     using System.IO;
+    using System.Net.Sockets;
+    using System.Reflection;
+    using System.Runtime.InteropServices;
 
     static class TestHelper
     {
@@ -75,5 +78,19 @@ namespace NetUV.Core.Tests
 
             File.SetLastWriteTimeUtc(fullName, DateTime.UtcNow);
         }
+
+        public static IntPtr GetHandle(Socket socket)
+        {
+            // https://github.com/dotnet/corefx/issues/6807
+            // Until ths handle instance is exposed as scheduled to be .NET standard 2.0
+            // we have no choice but reflection.
+            FieldInfo fieldInfo =
+                typeof(Socket).GetField("m_Handle", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? typeof(Socket).GetField("_handle", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            var safeHandle = (SafeHandle)fieldInfo.GetValue(socket);
+            return safeHandle.DangerousGetHandle();
+        }
+
     }
 }

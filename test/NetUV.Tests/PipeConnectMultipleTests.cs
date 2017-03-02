@@ -15,7 +15,7 @@ namespace NetUV.Core.Tests
         Loop loop;
         int connectionCount;
         int connectedCount;
-        StreamListener<Pipe> listener;
+        Pipe listener;
         List<Pipe> clients;
 
         [Fact]

@@ -146,12 +146,22 @@ namespace NetUV.Core.Native
             return size.ToInt32();
         }
 
-        internal static uv_buf_t Buffer(IntPtr offset, int length)
+        // Gets the platform dependent file descriptor equivalent.
+        // The following handles are supported: TCP, pipes, TTY, UDP and poll. Passing any other handle 
+        // type will fail with UV_EINVAL.
+        // If a handle doesn’t have an attached file descriptor yet or the handle itself has been closed, 
+        // this function will return UV_EBADF.
+        // Warning: Be very careful when using this function. libuv assumes it’s in control of the 
+        // file descriptor so any change to it may lead to malfunction.
+        internal static IntPtr GetFileDescriptor(IntPtr handle)
         {
-            Contract.Requires(offset != IntPtr.Zero);
-            Contract.Requires(length > 0);
+            Contract.Requires(handle != IntPtr.Zero);
 
-            return uv_buf_init(offset, length);
+            IntPtr value;
+            int result = uv_fileno(handle, out value);
+            ThrowIfError(result);
+
+            return value;
         }
 
         #region Stream Status
@@ -167,13 +177,13 @@ namespace NetUV.Core.Native
         #region Read/Write
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+        static extern int uv_fileno(IntPtr handle, out IntPtr value);
+
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         static extern int uv_send_buffer_size(IntPtr handle, ref IntPtr value);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         static extern int uv_recv_buffer_size(IntPtr handle, ref IntPtr value);
-
-        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        static extern uv_buf_t uv_buf_init(IntPtr array, int len);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         static extern int uv_is_readable(IntPtr handle);

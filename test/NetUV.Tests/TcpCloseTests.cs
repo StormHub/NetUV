@@ -16,7 +16,7 @@ namespace NetUV.Core.Tests
 
         readonly IPEndPoint endPoint;
         Loop loop;
-        StreamListener<Tcp> tcpServer;
+        Tcp tcpServer;
         int writeCount;
         int closeCount;
 
@@ -68,13 +68,13 @@ namespace NetUV.Core.Tests
             this.writeCount++;
         }
 
-        StreamListener<Tcp> StartServer()
+        Tcp StartServer()
         {
-            Tcp tcp = this.loop.CreateTcp().Bind(this.endPoint);
-            StreamListener<Tcp> listner = tcp.Listen(OnConnection);
+            Tcp tcp = this.loop.CreateTcp()
+                .Listen(this.endPoint, OnConnection);
             tcp.RemoveReference();
 
-            return listner;
+            return tcp;
         }
 
         static void OnConnection(Tcp tcp, Exception exception) => 
