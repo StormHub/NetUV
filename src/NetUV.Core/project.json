@@ -1,8 +1,8 @@
 {
   "name": "NetUV.Core",
-  "version": "0.1.0",
+  "version": "0.1.19",
   "title": "NetUV: Libuv .NET/Core wrapper",
-  "description": "Libuv managed wrapper",
+  "description": "Libuv .NET/Core binding",
   "language": "en-US",
   "authors": [
     "Johnny Z"
@@ -18,6 +18,7 @@
   },
   "buildOptions": {
     "keyFile": "../../NetUV.snk",
+    "define": [ "SIGNED" ],
     "allowUnsafe": true,
     "nowarn": [
       "CS1591"

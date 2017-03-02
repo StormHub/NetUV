@@ -18,6 +18,7 @@
 
   "buildOptions": {
     "keyFile": "../../NetUV.snk",
+    "define": [ "SIGNED" ],
     "emitEntryPoint": true
   },
 

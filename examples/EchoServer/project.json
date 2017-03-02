@@ -3,6 +3,7 @@
   "description": "Example of Echo Server",
   "buildOptions": {
     "keyFile": "../../NetUV.snk",
+    "define": [ "SIGNED" ],
     "emitEntryPoint": true
   },
 

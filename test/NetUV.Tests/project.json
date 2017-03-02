@@ -17,6 +17,7 @@
   },
   "buildOptions": {
     "keyFile": "../../NetUV.snk",
+    "define": [ "SIGNED" ],
     "allowUnsafe": true
   },
 
