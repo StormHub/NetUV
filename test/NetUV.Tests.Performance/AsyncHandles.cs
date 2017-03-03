@@ -45,29 +45,28 @@ namespace NetUV.Core.Tests.Performance
             void OnMainCallback(Async handle)
             {
                 this.mainCount++;
-                if (this.worker.IsActive)
+                if (this.worker?.IsActive ?? false)
                 {
-                    this.worker.Send();
+                    this.worker?.Send();
                 }
 
                 if (this.mainCount >= PingCount)
                 {
-                    this.main.CloseHandle(OnClose);
+                    this.main?.CloseHandle(OnClose);
                 }
             }
 
             void OnWorkerCallback(Async handle)
             {
                 this.workerCount++;
-
-                if (this.main.IsActive)
+                if (this.main?.IsActive ?? false)
                 {
-                    this.main.Send();
+                    this.main?.Send();
                 }
 
                 if (this.workerCount >= PingCount)
                 {
-                    this.worker.CloseHandle(OnClose);
+                    this.worker?.CloseHandle(OnClose);
                 }
             }
 

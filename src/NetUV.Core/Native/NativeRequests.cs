@@ -197,7 +197,10 @@ namespace NetUV.Core.Native
                 service, 
                 null);
 
-            ThrowIfError(result);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
         }
 
         internal static void GetNameInfo(
@@ -215,7 +218,10 @@ namespace NetUV.Core.Native
             GetSocketAddress(endPoint, out addr);
 
             int result = uv_getnameinfo(loopHandle, handle, callback, ref addr, (int)flags);
-            ThrowIfError(result);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
         }
 
         internal static unsafe void FreeAddressInfo(ref addrinfo addrinfo)
@@ -231,28 +237,31 @@ namespace NetUV.Core.Native
         {
             Contract.Requires(streamHandle != IntPtr.Zero);
 
-            Invoke(uv_shutdown, requestHandle, streamHandle, WatcherRequest.WatcherCallback);
+            int result = uv_shutdown(requestHandle, streamHandle, WatcherRequest.WatcherCallback);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
         }
 
         internal static void QueueWork(IntPtr loopHandle, IntPtr handle)
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            Invoke(uv_queue_work, loopHandle, handle, Work.WorkCallback, Work.AfterWorkCallback);
+            int result = uv_queue_work(loopHandle, handle, Work.WorkCallback, Work.AfterWorkCallback);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
         }
 
-        internal static bool Cancel(IntPtr handle) => 
-            InvokeFunction(uv_cancel, handle) == 0;
+        internal static bool Cancel(IntPtr handle) => uv_cancel(handle) == 0;
 
         internal static int GetSize(uv_req_type requestType)
         {
             IntPtr value = uv_req_size(requestType);
             int size = value.ToInt32();
-            if (size <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Request {requestType} size must be greater than zero.");
-            }
+            Contract.Assert(size > 0);
 
             return size;
         }

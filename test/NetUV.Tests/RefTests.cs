@@ -13,7 +13,7 @@ namespace NetUV.Core.Tests
     public sealed class RefTests : IDisposable
     {
         const int Port = 9887;
-        const int HighResolutionTimePeriod = 10000000;
+        const int HighResolutionTimePeriod = 50000000;
         Loop loop;
         int closeCount;
         int callbackCount;
@@ -49,10 +49,7 @@ namespace NetUV.Core.Tests
             Idle idle = this.loop.CreateIdle().Start(this.OnCallback);
             idle.RemoveReference();
 
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(idle);
@@ -64,10 +61,7 @@ namespace NetUV.Core.Tests
             Async async = this.loop.CreateAsync(this.OnCallback);
             async.RemoveReference();
 
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(async);
@@ -79,10 +73,7 @@ namespace NetUV.Core.Tests
             Prepare prepare = this.loop.CreatePrepare().Start(this.OnCallback);
             prepare.RemoveReference();
 
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(prepare);
@@ -115,10 +106,7 @@ namespace NetUV.Core.Tests
                 .Start(this.OnCallback);
             check.RemoveReference();
 
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(check);
@@ -130,10 +118,7 @@ namespace NetUV.Core.Tests
             Timer timer = this.loop.CreateTimer();
             timer.RemoveReference();
 
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(timer);
@@ -145,10 +130,7 @@ namespace NetUV.Core.Tests
             Timer timer = this.loop.CreateTimer().Start(this.OnCallback, 42, 42);
             timer.RemoveReference();
 
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(timer);
@@ -162,10 +144,7 @@ namespace NetUV.Core.Tests
                 .Start(".", this.OnFSEvent);
             fsEvent.RemoveReference();
 
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(fsEvent);
@@ -181,10 +160,7 @@ namespace NetUV.Core.Tests
                 .Start(".", 999, this.OnFSPoll);
             fsPoll.RemoveReference();
 
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(fsPoll);
@@ -198,10 +174,7 @@ namespace NetUV.Core.Tests
             Tcp tcp = this.loop.CreateTcp();
             tcp.RemoveReference();
 
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(tcp);
@@ -215,10 +188,7 @@ namespace NetUV.Core.Tests
             tcp.Listen(anyEndPoint, this.OnConnection);
 
             tcp.RemoveReference();
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             tcp.CloseHandle(this.OnClose);
@@ -295,10 +265,7 @@ namespace NetUV.Core.Tests
             Pipe pipe = this.loop.CreatePipe();
             pipe.RemoveReference();
 
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(pipe);
@@ -312,10 +279,7 @@ namespace NetUV.Core.Tests
                 .Listen(GetPipeName(), this.OnConnection);
 
             pipe.RemoveReference();
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             pipe.CloseHandle(this.OnClose);
@@ -374,10 +338,7 @@ namespace NetUV.Core.Tests
             Udp udp = this.loop.CreateUdp();
             udp.RemoveReference();
 
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(udp);
@@ -392,10 +353,7 @@ namespace NetUV.Core.Tests
                 .ReceiveStart(endPoint, this.OnReceive);
             udp.RemoveReference();
 
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(0, this.callbackCount);
 
             this.CloseHandle(udp);
@@ -413,10 +371,7 @@ namespace NetUV.Core.Tests
             udp.QueueSend(data, endPoint, this.OnSendCompleted);
             udp.RemoveReference();
 
-            long diff = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-            diff = this.loop.NowInHighResolution - diff;
-            Assert.True(diff >= 0 && diff < HighResolutionTimePeriod);
             Assert.Equal(1, this.callbackCount);
 
             this.CloseHandle(udp);

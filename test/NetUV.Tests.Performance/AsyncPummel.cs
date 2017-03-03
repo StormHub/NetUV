@@ -63,7 +63,7 @@ namespace NetUV.Core.Tests.Performance
                 {
                     Interlocked.Exchange(ref this.state, 1); // Stopping
 
-                    while (Interlocked.Read(ref this.state) != 2) 
+                    while (Interlocked.Read(ref this.state) != 2)
                     {
                         // wait for stopped
                     }
@@ -75,7 +75,7 @@ namespace NetUV.Core.Tests.Performance
             {
                 this.aysnc = null;
                 this.counter = null;
-            } 
+            }
         }
 
         public AsyncPummel(int threadCount)
