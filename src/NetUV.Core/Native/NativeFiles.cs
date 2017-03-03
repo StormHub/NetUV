@@ -87,7 +87,11 @@ namespace NetUV.Core.Native
                 var length = (IntPtr)FileNameBufferSize;
 
                 int result = uv_fs_poll_getpath(handle, buf, ref length);
-                ThrowIfError(result);
+                OperationException error = CheckError(result);
+                if (error != null)
+                {
+                    throw error;
+                }
 
                 path = Marshal.PtrToStringAnsi(buf, length.ToInt32());
             }
@@ -108,7 +112,12 @@ namespace NetUV.Core.Native
             Contract.Requires(!string.IsNullOrEmpty(path));
             Contract.Requires(interval > 0);
 
-            Invoke(uv_fs_poll_start, handle, FSPoll.FSPollCallback, path, interval);
+            int result = uv_fs_poll_start(handle, FSPoll.FSPollCallback, path, interval);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
         }
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
@@ -132,7 +141,12 @@ namespace NetUV.Core.Native
             Contract.Requires(handle != IntPtr.Zero);
             Contract.Requires(!string.IsNullOrEmpty(path));
 
-            Invoke(uv_fs_event_start, handle, FSEvent.FSEventCallback, path, (int)mask);
+            int result = uv_fs_event_start(handle, FSEvent.FSEventCallback, path, (int)mask);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
         }
 
         internal static string FSEventGetPath(IntPtr handle)
@@ -147,7 +161,11 @@ namespace NetUV.Core.Native
                 var length = (IntPtr)FileNameBufferSize;
 
                 int result = uv_fs_event_getpath(handle, buf, ref length);
-                ThrowIfError(result);
+                OperationException error = CheckError(result);
+                if (error != null)
+                {
+                    throw error;
+                }
 
                 path = Marshal.PtrToStringAnsi(buf, length.ToInt32());
             }

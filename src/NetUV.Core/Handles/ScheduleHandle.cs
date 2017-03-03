@@ -10,7 +10,7 @@ namespace NetUV.Core.Handles
 
     public abstract class ScheduleHandle : IDisposable
     {
-        internal static readonly ILog Log = LogFactory.ForContext<ScheduleHandle>();
+        protected static readonly ILog Log = LogFactory.ForContext<ScheduleHandle>();
 
         readonly HandleContext handle;
         Action<ScheduleHandle> closeCallback;

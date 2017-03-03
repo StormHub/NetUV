@@ -6,6 +6,7 @@
 namespace NetUV.Core.Native
 {
     using System;
+    using System.Diagnostics.Contracts;
     using System.Runtime.InteropServices;
 
     enum uv_run_mode
@@ -34,22 +35,21 @@ namespace NetUV.Core.Native
         {
             IntPtr value = uv_loop_size();
             int size = value.ToInt32();
-            if (size <= 0)
-            {
-                throw new InvalidOperationException("Loop handle size must be greater than zero.");
-            }
+            Contract.Assert(size > 0);
 
             return size;
         }
 
         internal static void InitializeLoop(IntPtr handle)
         {
-            if (handle == IntPtr.Zero)
-            {
-                throw new ArgumentException("Invalid empty handle value.", nameof(handle));
-            }
+            Contract.Requires(handle != IntPtr.Zero);
 
-            Invoke(uv_loop_init, handle);
+            int result = uv_loop_init(handle);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
         }
 
         internal static bool CloseLoop(IntPtr handle)
@@ -82,15 +82,12 @@ namespace NetUV.Core.Native
                 return;
             }
 
-            InvokeAction(uv_walk, handle, callback, handle);
+            uv_walk(handle, callback, handle);
         }
 
         internal static int RunLoop(IntPtr handle, uv_run_mode mode)
         {
-            if (handle == IntPtr.Zero)
-            {
-                throw new ArgumentException("Empty handle value is not valid.");
-            }
+            Contract.Requires(handle != IntPtr.Zero);
 
             /*
               UV_RUN_DEFAULT: 
@@ -109,72 +106,54 @@ namespace NetUV.Core.Native
                 or non-zero if more callbacks are expected(meaning you should run the event loop again sometime in the future).
             */
 
-            int result = InvokeFunction(uv_run, handle, mode);
-            Log.Debug($"Native run loop {handle} {mode}, result = {result}");
+            int result = uv_run(handle, mode);
+            Log.DebugFormat("Native run loop {0} {1}, result = {2}", handle, mode, result);
+
             return result;
         }
 
         internal static void StopLoop(IntPtr handle)
         {
-            if (handle == IntPtr.Zero)
-            {
-                throw new ArgumentException("Empty handle value is not valid.");
-            }
+            Contract.Requires(handle != IntPtr.Zero);
 
-            InvokeAction(uv_stop, handle);
+            uv_stop(handle);
         }
 
         internal static bool IsLoopAlive(IntPtr handle)
         {
-            if (handle == IntPtr.Zero)
-            {
-                throw new ArgumentException("Empty handle value is not valid.");
-            }
+            Contract.Requires(handle != IntPtr.Zero);
 
-            int result = InvokeFunction(uv_loop_alive, handle);
-            return result != 0;
+            return uv_loop_alive(handle) != 0;
         }
 
         internal static long LoopNow(IntPtr handle)
         {
-            if (handle == IntPtr.Zero)
-            {
-                throw new InvalidOperationException("Invalid empty handle value.");
-            }
+            Contract.Requires(handle != IntPtr.Zero);
 
-            return InvokeFunction(uv_now, handle);
+            return uv_now(handle);
         }
 
         internal static long LoopNowInHighResolution(IntPtr handle)
         {
-            if (handle == IntPtr.Zero)
-            {
-                throw new InvalidOperationException("Invalid empty handle value.");
-            }
+            Contract.Requires(handle != IntPtr.Zero);
 
-            return InvokeFunction(uv_hrtime, handle);
+            return uv_hrtime(handle);
         }
 
         internal static int GetBackendTimeout(IntPtr handle)
         {
-            if (handle == IntPtr.Zero)
-            {
-                throw new InvalidOperationException("Invalid empty handle value.");
-            }
+            Contract.Requires(handle != IntPtr.Zero);
 
             // The return value is in milliseconds, or -1 for no timeout.
-            int timeout = InvokeFunction(uv_backend_timeout, handle);
+            int timeout = uv_backend_timeout(handle);
             return timeout > 0 ? timeout : 0;
         }
 
         internal static void LoopUpdateTime(IntPtr handle)
         {
-            if (handle == IntPtr.Zero)
-            {
-                throw new ArgumentException("Empty handle value is not valid.");
-            }
+            Contract.Requires(handle != IntPtr.Zero);
 
-            InvokeAction(uv_update_time, handle);
+            uv_update_time(handle);
         }
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
