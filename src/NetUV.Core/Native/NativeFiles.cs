@@ -87,7 +87,10 @@ namespace NetUV.Core.Native
                 var length = (IntPtr)FileNameBufferSize;
 
                 int result = uv_fs_poll_getpath(handle, buf, ref length);
-                ThrowIfError(result);
+                if (result < 0)
+                {
+                    ThrowError(result);
+                }
 
                 path = Marshal.PtrToStringAnsi(buf, length.ToInt32());
             }
@@ -108,7 +111,11 @@ namespace NetUV.Core.Native
             Contract.Requires(!string.IsNullOrEmpty(path));
             Contract.Requires(interval > 0);
 
-            Invoke(uv_fs_poll_start, handle, FSPoll.FSPollCallback, path, interval);
+            int result = uv_fs_poll_start(handle, FSPoll.FSPollCallback, path, interval);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
         }
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
@@ -132,7 +139,11 @@ namespace NetUV.Core.Native
             Contract.Requires(handle != IntPtr.Zero);
             Contract.Requires(!string.IsNullOrEmpty(path));
 
-            Invoke(uv_fs_event_start, handle, FSEvent.FSEventCallback, path, (int)mask);
+            int result = uv_fs_event_start(handle, FSEvent.FSEventCallback, path, (int)mask);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
         }
 
         internal static string FSEventGetPath(IntPtr handle)
@@ -147,8 +158,10 @@ namespace NetUV.Core.Native
                 var length = (IntPtr)FileNameBufferSize;
 
                 int result = uv_fs_event_getpath(handle, buf, ref length);
-                ThrowIfError(result);
-
+                if (result < 0)
+                {
+                    ThrowError(result);
+                }
                 path = Marshal.PtrToStringAnsi(buf, length.ToInt32());
             }
             finally

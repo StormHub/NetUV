@@ -15,16 +15,22 @@ namespace NetUV.Core.Handles
 
         internal HandleContext(
             uv_handle_type handleType, 
-            Action<IntPtr> initializer, 
-            ScheduleHandle target)
+            Func<IntPtr, IntPtr, object[], int> initializer,
+            IntPtr loopHandle,
+            ScheduleHandle target, 
+            params object[] args)
         {
             Contract.Requires(initializer != null);
             Contract.Requires(target != null);
 
             int size = NativeMethods.GetSize(handleType);
             IntPtr handle = Marshal.AllocHGlobal(size);
-
-            initializer(handle);
+            int result = initializer(loopHandle, handle, args);
+            if (result < 0)
+            {
+                Marshal.FreeHGlobal(handle);
+                NativeMethods.ThrowError(result);
+            }
 
             GCHandle gcHandle = GCHandle.Alloc(target, GCHandleType.Normal);
             ((uv_handle_t*)handle)->data = GCHandle.ToIntPtr(gcHandle);

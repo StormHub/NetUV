@@ -72,24 +72,40 @@ namespace NetUV.Core.Native
 
     static partial class NativeMethods
     {
-        internal static void StreamReadStart(IntPtr handle) => 
-            Invoke(uv_read_start, handle, StreamHandle.AllocateCallback, StreamHandle.ReadCallback);
+        internal static void StreamReadStart(IntPtr handle)
+        {
+            int result = uv_read_start(handle, StreamHandle.AllocateCallback, StreamHandle.ReadCallback);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
+        }
 
-        internal static void StreamReadStop(IntPtr handle) => 
-            Invoke(uv_read_stop, handle);
+        internal static void StreamReadStop(IntPtr handle)
+        {
+            int result = uv_read_stop(handle);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
+        }
 
         internal static bool IsStreamReadable(IntPtr handle) => 
-            handle != IntPtr.Zero 
-            && InvokeFunction(uv_is_readable, handle) == 1;
+            handle != IntPtr.Zero
+            && uv_is_readable(handle) == 1;
 
         internal static bool IsStreamWritable(IntPtr handle) => 
             handle != IntPtr.Zero 
-            && InvokeFunction(uv_is_writable, handle) == 1;
+            && uv_is_writable(handle) == 1;
 
         internal static void TryWriteStream(IntPtr handle, uv_buf_t buf)
         {
             var bufs = new [] { buf };
-            Invoke(uv_try_write, handle , bufs, bufs.Length);
+            int result = uv_try_write(handle , bufs, bufs.Length);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
         }
 
         internal static void WriteStream(IntPtr requestHandle, IntPtr streamHandle, ref uv_buf_t[] bufs)
@@ -97,7 +113,11 @@ namespace NetUV.Core.Native
             Contract.Requires(streamHandle != IntPtr.Zero);
             Contract.Requires(bufs != null && bufs.Length > 0);
 
-            Invoke(uv_write, requestHandle, streamHandle, bufs, bufs.Length, WriteRequest.WriteCallback);
+            int result = uv_write(requestHandle, streamHandle, bufs, bufs.Length, WriteRequest.WriteCallback);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
         }
 
         internal static void StreamListen(IntPtr handle, int backlog, uv_watcher_cb callback)
@@ -105,14 +125,22 @@ namespace NetUV.Core.Native
             Contract.Requires(backlog > 0);
             Contract.Requires(callback != null);
 
-            Invoke(uv_listen, handle, backlog, callback);
+            int result = uv_listen(handle, backlog, callback);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
         }
 
         internal static void StreamAccept(IntPtr serverHandle, IntPtr clientHandle)
         {
             Contract.Requires(clientHandle != IntPtr.Zero);
 
-            Invoke(uv_accept, serverHandle, clientHandle);
+            int result = uv_accept(serverHandle, clientHandle);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
         }
 
         // If *value == 0, it will return the current send buffer size, 
@@ -125,7 +153,10 @@ namespace NetUV.Core.Native
 
             var size = (IntPtr)value;
             int result = uv_send_buffer_size(handle, ref size);
-            ThrowIfError(result);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
 
             return size.ToInt32();
         }
@@ -141,7 +172,10 @@ namespace NetUV.Core.Native
 
             var size = (IntPtr)value;
             int result = uv_recv_buffer_size(handle, ref size);
-            ThrowIfError(result);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
 
             return size.ToInt32();
         }
@@ -159,7 +193,10 @@ namespace NetUV.Core.Native
 
             IntPtr value;
             int result = uv_fileno(handle, out value);
-            ThrowIfError(result);
+            if (result < 0)
+            {
+                ThrowError(result);
+            }
 
             return value;
         }

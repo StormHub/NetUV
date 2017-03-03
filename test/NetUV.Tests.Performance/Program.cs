@@ -4,6 +4,7 @@
 namespace NetUV.Core.Tests.Performance
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using NetUV.Core.Logging;
 
@@ -20,29 +21,56 @@ namespace NetUV.Core.Tests.Performance
         const string Debug = "-debug";
         const string Pause = "-pause";
 
+        static bool isDebug;
+        static bool shouldPause;
+
         public static void Main(string[] args)
         {
-            string category = args.Length > 0 ? args[0] : null;
-            string name = args.Length > 1 ? args[1] : null;
+            ParseFlags(args);
 
-            bool pause = args.Length > 0
-                && args.Any(x => string.Compare(x, Pause, StringComparison.OrdinalIgnoreCase) == 0);
+            string category = GetCategory(args);
+            string name = GetTestName(args);
 
-            if (args.Length > 0 
-                && args.Any(x => string.Compare(x, Debug, StringComparison.OrdinalIgnoreCase) == 0))
+            if (isDebug)
             {
                 LogFactory.AddConsoleProvider();
             }
 
             Run(category, name);
 
-            if (!pause)
+            if (!shouldPause)
             {
                 return;
             }
 
             Console.WriteLine("Press any key to terminate the application");
             Console.ReadLine();
+        }
+
+        static string GetCategory(string[] args)
+        {
+            List<string> list = args?.Where(x => !x.StartsWith("-")).ToList();
+            return list?.FirstOrDefault();
+        }
+
+        static string GetTestName(string[] args)
+        {
+            List<string> list = args?.Where(x => !x.StartsWith("-")).ToList();
+
+            if (list == null 
+                || list.Count <= 1)
+            {
+                return null;
+            }
+
+            return list[1];
+        }
+
+        static void ParseFlags(string[] args)
+        {
+            List<string> switches = args?.Where(x => x.StartsWith("-")).ToList();
+            isDebug = switches != null && switches.Any(x => string.Compare(x, Debug, StringComparison.OrdinalIgnoreCase) == 0);
+            shouldPause = switches != null && switches.Any(x => string.Compare(x, Pause, StringComparison.OrdinalIgnoreCase) == 0);
         }
 
         static void Run(string category, string name)
