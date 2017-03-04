@@ -44,7 +44,15 @@ namespace NetUV.Core.Requests
             int size = NativeMethods.GetSize(requestType);
             IntPtr handle = Marshal.AllocHGlobal(size);
 
-            initializer(handle);
+            try
+            {
+                initializer(handle);
+            }
+            catch (Exception)
+            {
+                Marshal.FreeHGlobal(handle);
+                throw;
+            }
 
             GCHandle gcHandle = GCHandle.Alloc(target, GCHandleType.Normal);
             ((uv_req_t*)handle)->data = GCHandle.ToIntPtr(gcHandle);
