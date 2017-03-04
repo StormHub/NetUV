@@ -232,81 +232,138 @@ namespace NetUV.Core.Native
 
         internal static HandleContext Initialize(IntPtr loopHandle, uv_handle_type handleType, ScheduleHandle target, params object[] args)
         {
-            Action<IntPtr> action;
+            Contract.Requires(loopHandle != IntPtr.Zero);
+            Contract.Requires(target != null);
+
             switch (handleType)
             {
                 case uv_handle_type.UV_TIMER:
-                    action = handle => Invoke(uv_timer_init, loopHandle, handle);
-                    break;
+                    return new HandleContext(handleType, InitializeTimer, loopHandle, target, args);
                 case uv_handle_type.UV_PREPARE:
-                    action = handle => Invoke(uv_prepare_init, loopHandle, handle);
-                    break;
+                    return new HandleContext(handleType, InitializePrepare, loopHandle, target, args);
                 case uv_handle_type.UV_CHECK:
-                    action = handle => Invoke(uv_check_init, loopHandle, handle);
-                    break;
+                    return new HandleContext(handleType, InitializeCheck, loopHandle, target, args);
                 case uv_handle_type.UV_IDLE:
-                    action = handle => Invoke(uv_idle_init, loopHandle, handle);
-                    break;
+                    return new HandleContext(handleType, InitializeIdle, loopHandle, target, args);
                 case uv_handle_type.UV_ASYNC:
-                    action = handle => Invoke(uv_async_init, loopHandle, handle, WorkHandle.WorkCallback);
-                    break;
+                    return new HandleContext(handleType, InitializeAsync, loopHandle, target, args);
                 case uv_handle_type.UV_POLL:
-                    if (args == null
-                        || args.Length == 0)
-                    {
-                        throw new ArgumentException($"{handleType} expecting file descriptor or handle argument.");
-                    }
-
-                    if (Platform.IsWindows)
-                    {
-                        action = handle => Invoke(uv_poll_init_socket, loopHandle, handle, (IntPtr)args[0]);
-                    }
-                    else
-                    {
-                        action = handle => Invoke(uv_poll_init, loopHandle, handle, (int)args[0]);
-                    }
-                    break;
+                    return new HandleContext(handleType, InitializePoll, loopHandle, target, args);
                 case uv_handle_type.UV_SIGNAL:
-                    action = handle => Invoke(uv_signal_init, loopHandle, handle);
-                    break;
+                    return new HandleContext(handleType, InitializeSignal, loopHandle, target, args);
                 case uv_handle_type.UV_TCP:
-                    action = handle => Invoke(uv_tcp_init, loopHandle, handle);
-                    break;
+                    return new HandleContext(handleType, InitializeTcp, loopHandle, target, args);
                 case uv_handle_type.UV_NAMED_PIPE:
-                    if (args == null 
-                        || args.Length == 0)
-                    {
-                        throw new ArgumentException($"{handleType} expecting ipc argument.");
-                    }
-
-                    bool value = (bool)args[0];
-                    action = handle => Invoke(uv_pipe_init, loopHandle, handle, value ? 1 : 0);
-                    break;
+                    return new HandleContext(handleType, InitializePipe, loopHandle, target, args);
                 case uv_handle_type.UV_TTY:
-                    if (args == null 
-                        || args.Length == 0)
-                    {
-                        throw new ArgumentException($"{handleType} expecting Tty type argument.");
-                    }
-
-                    var ttyType = (TtyType)args[0];
-                    action = handle => Invoke(uv_tty_init, loopHandle, handle, (int)ttyType, 
-                        ttyType == TtyType.In ? 1 : 0);
-                    break;
+                    return new HandleContext(handleType, InitializeTty, loopHandle, target, args);
                 case uv_handle_type.UV_UDP:
-                    action = handle => Invoke(uv_udp_init, loopHandle, handle);
-                    break;
+                    return new HandleContext(handleType, InitializeUdp, loopHandle, target, args);
                 case uv_handle_type.UV_FS_EVENT:
-                    action = handle => Invoke(uv_fs_event_init, loopHandle, handle);
-                    break;
+                    return new HandleContext(handleType, InitializeFSEvent, loopHandle, target, args);
                 case uv_handle_type.UV_FS_POLL:
-                    action = handle => Invoke(uv_fs_poll_init, loopHandle, handle);
-                    break;
+                    return new HandleContext(handleType, InitializeFSPoll, loopHandle, target, args);
                 default:
                     throw new NotSupportedException($"Handle type to initialize {handleType} not supported");
             }
+        }
 
-            return new HandleContext(handleType, action, target);
+        static int InitializeTimer(IntPtr loopHandle, IntPtr handle, object[] args)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+
+            return uv_timer_init(loopHandle, handle);
+        }
+
+        static int InitializePrepare(IntPtr loopHandle, IntPtr handle, object[] args)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+
+            return uv_prepare_init(loopHandle, handle);
+        }
+
+        static int InitializeCheck(IntPtr loopHandle, IntPtr handle, object[] args)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+
+            return uv_check_init(loopHandle, handle);
+        }
+
+        static int InitializeIdle(IntPtr loopHandle, IntPtr handle, object[] args)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+
+            return uv_idle_init(loopHandle, handle);
+        }
+
+        static int InitializeAsync(IntPtr loopHandle, IntPtr handle, object[] args)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+
+            return uv_async_init(loopHandle, handle, WorkHandle.WorkCallback);
+        }
+
+        static int InitializePoll(IntPtr loopHandle, IntPtr handle, object[] args)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+            Contract.Requires(args != null && args.Length > 1);
+
+            return Platform.IsWindows
+                ? uv_poll_init_socket(loopHandle, handle, (IntPtr)args[0])
+                : uv_poll_init(loopHandle, handle, (int)args[0]);
+        }
+
+        static int InitializeSignal(IntPtr loopHandle, IntPtr handle, object[] args)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+
+            return uv_signal_init(loopHandle, handle);
+        }
+
+        static int InitializeTcp(IntPtr loopHandle, IntPtr handle, object[] args)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+
+            return uv_tcp_init(loopHandle, handle);
+        }
+
+        static int InitializePipe(IntPtr loopHandle, IntPtr handle, object[] args)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+            Contract.Requires(args != null && args.Length > 1);
+
+            bool value = (bool)args[0];
+            return uv_pipe_init(loopHandle, handle, value ? 1 : 0);
+        }
+
+        static int InitializeTty(IntPtr loopHandle, IntPtr handle, object[] args)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+            Contract.Requires(args != null && args.Length > 1);
+
+            var ttyType = (TtyType)args[0];
+            return uv_tty_init(loopHandle, handle, (int)ttyType, ttyType == TtyType.In ? 1 : 0);
+        }
+
+        static int InitializeUdp(IntPtr loopHandle, IntPtr handle, object[] args)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+
+            return uv_udp_init(loopHandle, handle);
+        }
+
+        static int InitializeFSEvent(IntPtr loopHandle, IntPtr handle, object[] args)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+
+            return uv_fs_event_init(loopHandle, handle);
+        }
+
+        static int InitializeFSPoll(IntPtr loopHandle, IntPtr handle, object[] args)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+
+            return uv_fs_poll_init(loopHandle, handle);
         }
 
         internal static void Start(uv_handle_type handleType, IntPtr handle)
