@@ -197,7 +197,11 @@ namespace NetUV.Core.Native
                 service, 
                 null);
 
-            ThrowIfError(result);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
         }
 
         internal static void GetNameInfo(
@@ -215,7 +219,11 @@ namespace NetUV.Core.Native
             GetSocketAddress(endPoint, out addr);
 
             int result = uv_getnameinfo(loopHandle, handle, callback, ref addr, (int)flags);
-            ThrowIfError(result);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
         }
 
         internal static unsafe void FreeAddressInfo(ref addrinfo addrinfo)
@@ -229,30 +237,38 @@ namespace NetUV.Core.Native
 
         internal static void Shutdown(IntPtr requestHandle, IntPtr streamHandle)
         {
+            Contract.Requires(requestHandle != IntPtr.Zero);
             Contract.Requires(streamHandle != IntPtr.Zero);
 
-            Invoke(uv_shutdown, requestHandle, streamHandle, WatcherRequest.WatcherCallback);
+            int result = uv_shutdown(requestHandle, streamHandle, WatcherRequest.WatcherCallback);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
         }
 
         internal static void QueueWork(IntPtr loopHandle, IntPtr handle)
         {
+            Contract.Requires(loopHandle != IntPtr.Zero);
             Contract.Requires(handle != IntPtr.Zero);
 
-            Invoke(uv_queue_work, loopHandle, handle, Work.WorkCallback, Work.AfterWorkCallback);
+            int result = uv_queue_work(loopHandle, handle, Work.WorkCallback, Work.AfterWorkCallback);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
         }
 
         internal static bool Cancel(IntPtr handle) => 
-            InvokeFunction(uv_cancel, handle) == 0;
+            handle != IntPtr.Zero && uv_cancel(handle) == 0;
 
         internal static int GetSize(uv_req_type requestType)
         {
             IntPtr value = uv_req_size(requestType);
             int size = value.ToInt32();
-            if (size <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Request {requestType} size must be greater than zero.");
-            }
+            Contract.Assert(size > 0);
 
             return size;
         }

@@ -118,25 +118,6 @@ namespace NetUV.Core.Native
 
         #region Common
 
-        static void Invoke(Func<IntPtr, int> function, IntPtr handle)
-        {
-            Contract.Requires(function != null);
-            Contract.Requires(handle != IntPtr.Zero);
-
-            int result;
-            try
-            {
-                result = function(handle);
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"Failed to invoke native method on handle {handle}", exception);
-                throw;
-            }
-
-            ThrowIfError(result);
-        }
-
         static void Invoke<T1>(Func<IntPtr, T1, int> function, IntPtr handle, T1 arg1)
         {
             Contract.Requires(function != null);
@@ -194,136 +175,28 @@ namespace NetUV.Core.Native
             ThrowIfError(result);
         }
 
-        static void Invoke<T1, T2, T3, T4>(Func<IntPtr, T1, T2, T3, T4, int> function, IntPtr handle, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-        {
-            Contract.Requires(function != null);
-            Contract.Requires(handle != IntPtr.Zero);
-
-            int result;
-            try
-            {
-                result = function(handle, arg1, arg2, arg3, arg4);
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"Failed to invoke native method on handle {handle}", exception);
-                throw;
-            }
-
-            ThrowIfError(result);
-        }
-
-        static T InvokeFunction<T>(Func<IntPtr, T> function, IntPtr handle)
-        {
-            Contract.Requires(function != null);
-            Contract.Requires(handle != IntPtr.Zero);
-
-            try
-            {
-                return function(handle);
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"Failed to invoke native method on handle {handle}", exception);
-                throw;
-            }
-        }
-
-        static T InvokeFunction<T1, T>(Func<IntPtr, T1, T> function, IntPtr handle, T1 arg1)
-        {
-            Contract.Requires(function != null);
-            Contract.Requires(handle != IntPtr.Zero);
-
-            try
-            {
-                return function(handle, arg1);
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"Failed to invoke native method on handle {handle}", exception);
-                throw;
-            }
-        }
-
-        static void InvokeAction(Action<IntPtr> action, IntPtr handle)
-        {
-            Contract.Requires(action != null);
-            Contract.Requires(handle != IntPtr.Zero);
-
-            try
-            {
-                action(handle);
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"Failed to invoke native method on handle {handle}", exception);
-                throw;
-            }
-        }
-
-        static void InvokeAction<T1>(Action<IntPtr, T1> action, IntPtr handle, T1 arg1)
-        {
-            Contract.Requires(action != null);
-            Contract.Requires(handle != IntPtr.Zero);
-
-            try
-            {
-                action(handle, arg1);
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"Failed to invoke native method on handle {handle}", exception);
-                throw;
-            }
-        }
-
-        static void InvokeAction<T1, T2>(Action<IntPtr, T1, T2> action, IntPtr handle, T1 arg1, T2 arg2)
-        {
-            Contract.Requires(action != null);
-            Contract.Requires(handle != IntPtr.Zero);
-
-            try
-            {
-                action(handle, arg1, arg2);
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"Failed to invoke native method on handle {handle}", exception);
-                throw;
-            }
-        }
-
-        internal static bool IsHandleActive(IntPtr handle)
-        {
-            if (handle == IntPtr.Zero)
-            {
-                return false;
-            }
-
-            int result = InvokeFunction(uv_is_active, handle);
-            return result != 0;
-        }
+        internal static bool IsHandleActive(IntPtr handle) => 
+            handle != IntPtr.Zero && uv_is_active(handle) != 0;
 
         internal static void AddReference(IntPtr handle)
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            InvokeAction(uv_ref, handle);
+            uv_ref(handle);
         }
 
         internal static void ReleaseReference(IntPtr handle)
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            InvokeAction(uv_unref, handle);
+            uv_unref(handle);
         }
 
         internal static bool HadReference(IntPtr handle)
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            int result = InvokeFunction(uv_has_ref, handle);
-            return result != 0;
+            return uv_has_ref(handle) != 0;
         }
 
         internal static void CloseHandle(IntPtr handle, uv_close_cb callback)
@@ -334,22 +207,15 @@ namespace NetUV.Core.Native
                 return;
             }
 
-            int result = InvokeFunction(uv_is_closing, handle);
+            int result = uv_is_closing(handle);
             if (result == 0)
             {
-                InvokeAction(uv_close, handle, callback);
+                uv_close(handle, callback);
             }
         }
 
-        internal static bool IsHandleClosing(IntPtr handle)
-        {
-            if (handle == IntPtr.Zero)
-            {
-                return false;
-            }
-
-            return uv_is_closing(handle) != 0;
-        }
+        internal static bool IsHandleClosing(IntPtr handle) => 
+            handle != IntPtr.Zero && uv_is_closing(handle) != 0;
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         static extern void uv_close(IntPtr handle, uv_close_cb close_cb);
@@ -382,6 +248,9 @@ namespace NetUV.Core.Native
 
             throw CreateError((uv_err_code)code);
         }
+
+        static OperationException CheckError(int code) => 
+            code < 0 ? CreateError((uv_err_code)code) : null;
 
         internal static OperationException CreateError(uv_err_code error)
         {
@@ -423,7 +292,7 @@ namespace NetUV.Core.Native
         }
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern uint uv_version();
+        static extern uint uv_version();
 
         #endregion Version
     }

@@ -72,47 +72,88 @@ namespace NetUV.Core.Native
 
     static partial class NativeMethods
     {
-        internal static void StreamReadStart(IntPtr handle) => 
-            Invoke(uv_read_start, handle, StreamHandle.AllocateCallback, StreamHandle.ReadCallback);
+        internal static void StreamReadStart(IntPtr handle)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
 
-        internal static void StreamReadStop(IntPtr handle) => 
-            Invoke(uv_read_stop, handle);
+            int result = uv_read_start(handle, StreamHandle.AllocateCallback, StreamHandle.ReadCallback);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
+        }
+
+        internal static void StreamReadStop(IntPtr handle)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+
+            int result = uv_read_stop(handle);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
+        }
 
         internal static bool IsStreamReadable(IntPtr handle) => 
-            handle != IntPtr.Zero 
-            && InvokeFunction(uv_is_readable, handle) == 1;
+            handle != IntPtr.Zero && uv_is_readable(handle) == 1;
 
         internal static bool IsStreamWritable(IntPtr handle) => 
-            handle != IntPtr.Zero 
-            && InvokeFunction(uv_is_writable, handle) == 1;
+            handle != IntPtr.Zero && uv_is_writable(handle) == 1;
 
         internal static void TryWriteStream(IntPtr handle, uv_buf_t buf)
         {
+            Contract.Requires(handle != IntPtr.Zero);
+
             var bufs = new [] { buf };
-            Invoke(uv_try_write, handle , bufs, bufs.Length);
+            int result = uv_try_write(handle , bufs, bufs.Length);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
         }
 
         internal static void WriteStream(IntPtr requestHandle, IntPtr streamHandle, ref uv_buf_t[] bufs)
         {
+            Contract.Requires(requestHandle != IntPtr.Zero);
             Contract.Requires(streamHandle != IntPtr.Zero);
             Contract.Requires(bufs != null && bufs.Length > 0);
 
-            Invoke(uv_write, requestHandle, streamHandle, bufs, bufs.Length, WriteRequest.WriteCallback);
+            int result  = uv_write(requestHandle, streamHandle, bufs, bufs.Length, WriteRequest.WriteCallback);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
         }
 
         internal static void StreamListen(IntPtr handle, int backlog, uv_watcher_cb callback)
         {
+            Contract.Requires(handle != IntPtr.Zero);
             Contract.Requires(backlog > 0);
             Contract.Requires(callback != null);
 
-            Invoke(uv_listen, handle, backlog, callback);
+            int result = uv_listen(handle, backlog, callback);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
         }
 
         internal static void StreamAccept(IntPtr serverHandle, IntPtr clientHandle)
         {
+            Contract.Requires(serverHandle != IntPtr.Zero);
             Contract.Requires(clientHandle != IntPtr.Zero);
 
-            Invoke(uv_accept, serverHandle, clientHandle);
+            int result = uv_accept(serverHandle, clientHandle);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
         }
 
         // If *value == 0, it will return the current send buffer size, 
@@ -125,7 +166,11 @@ namespace NetUV.Core.Native
 
             var size = (IntPtr)value;
             int result = uv_send_buffer_size(handle, ref size);
-            ThrowIfError(result);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
 
             return size.ToInt32();
         }
@@ -141,7 +186,11 @@ namespace NetUV.Core.Native
 
             var size = (IntPtr)value;
             int result = uv_recv_buffer_size(handle, ref size);
-            ThrowIfError(result);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
 
             return size.ToInt32();
         }
@@ -159,7 +208,11 @@ namespace NetUV.Core.Native
 
             IntPtr value;
             int result = uv_fileno(handle, out value);
-            ThrowIfError(result);
+            OperationException error = CheckError(result);
+            if (error != null)
+            {
+                throw error;
+            }
 
             return value;
         }
