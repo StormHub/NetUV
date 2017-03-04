@@ -368,10 +368,7 @@ namespace NetUV.Core.Native
         {
             IntPtr value = uv_handle_size(handleType);
             int size = value.ToInt32();
-            if (size <= 0)
-            {
-                throw new InvalidOperationException($"Handle {handleType} size must be greater than zero.");
-            }
+            Contract.Assert(size > 0);
 
             return size;
         }
