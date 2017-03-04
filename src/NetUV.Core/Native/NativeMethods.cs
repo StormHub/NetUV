@@ -423,7 +423,7 @@ namespace NetUV.Core.Native
         }
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern uint uv_version();
+        static extern uint uv_version();
 
         #endregion Version
     }

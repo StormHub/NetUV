@@ -157,6 +157,8 @@ namespace NetUV.Core.Handles
             return new NameInfoRequest(this.handle);
         }
 
+        public static Version GetNativeVersion => NativeMethods.GetVersion();
+
         public void Dispose() => this.handle.Dispose();
     }
 }

@@ -11,6 +11,8 @@ namespace NetUV.Core.Tests.Performance
     sealed class AsyncPummel : IDisposable
     {
         const int PingCount = 1000 * 1000;
+        const int Timeout = 5000;
+
         readonly int threadCount;
         List<Thread> threads;
         Loop loop;
@@ -50,7 +52,10 @@ namespace NetUV.Core.Tests.Performance
                     this.aysnc.Send();
                 }
 
-                Interlocked.Exchange(ref this.state, 2); // Stopped
+                while (Interlocked.CompareExchange(ref this.state, 2, 1) != 2)
+                {
+                    // Stopped
+                }
             }
 
             static void OnClose(Async handle) => handle.Dispose();
@@ -61,8 +66,7 @@ namespace NetUV.Core.Tests.Performance
 
                 if (this.counter.IsCompleted)
                 {
-                    Interlocked.Exchange(ref this.state, 1); // Stopping
-
+                    Interlocked.CompareExchange(ref this.state, 1, 0); // Stopping
                     while (Interlocked.Read(ref this.state) != 2) 
                     {
                         // wait for stopped
@@ -101,7 +105,7 @@ namespace NetUV.Core.Tests.Performance
 
             foreach (Thread thread in this.threads)
             {
-                thread.Join();
+                thread.Join(Timeout);
             }
 
             time = this.loop.NowInHighResolution - time;

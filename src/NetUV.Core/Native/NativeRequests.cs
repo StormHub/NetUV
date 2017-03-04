@@ -248,11 +248,7 @@ namespace NetUV.Core.Native
         {
             IntPtr value = uv_req_size(requestType);
             int size = value.ToInt32();
-            if (size <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Request {requestType} size must be greater than zero.");
-            }
+            Contract.Assert(size > 0);
 
             return size;
         }

@@ -6,6 +6,7 @@
 namespace NetUV.Core.Native
 {
     using System;
+    using System.Diagnostics.Contracts;
     using System.Runtime.InteropServices;
 
     enum uv_run_mode
@@ -34,10 +35,7 @@ namespace NetUV.Core.Native
         {
             IntPtr value = uv_loop_size();
             int size = value.ToInt32();
-            if (size <= 0)
-            {
-                throw new InvalidOperationException("Loop handle size must be greater than zero.");
-            }
+            Contract.Assert(size > 0);
 
             return size;
         }
