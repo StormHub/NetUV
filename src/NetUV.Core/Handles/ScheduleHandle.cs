@@ -18,7 +18,7 @@ namespace NetUV.Core.Handles
         internal ScheduleHandle(
             LoopContext loop, 
             uv_handle_type handleType, 
-            params object[] args)
+            object[] args = null)
         {
             Contract.Requires(loop != null);
 

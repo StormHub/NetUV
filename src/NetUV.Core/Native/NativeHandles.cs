@@ -226,11 +226,11 @@ namespace NetUV.Core.Native
 
     static partial class NativeMethods
     {
-        #region Common
-
         const int NameBufferSize = 1024;
 
-        internal static HandleContext Initialize(IntPtr loopHandle, uv_handle_type handleType, ScheduleHandle target, params object[] args)
+        #region Common
+
+        internal static HandleContext Initialize(IntPtr loopHandle, uv_handle_type handleType, ScheduleHandle target, object[] args)
         {
             Contract.Requires(loopHandle != IntPtr.Zero);
             Contract.Requires(target != null);
@@ -452,14 +452,22 @@ namespace NetUV.Core.Native
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            Invoke(uv_udp_recv_start, handle, Udp.AllocateCallback, Udp.ReceiveCallback);
+            int result = uv_udp_recv_start(handle, Udp.AllocateCallback, Udp.ReceiveCallback);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void UdpReceiveStop(IntPtr handle)
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            Invoke(uv_udp_recv_stop, handle);
+            int result = uv_udp_recv_stop(handle);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void UdpSend(IntPtr requestHandle, IntPtr handle, IPEndPoint remoteEndPoint, ref uv_buf_t[] bufs)
@@ -507,7 +515,12 @@ namespace NetUV.Core.Native
 
             string multicast_addr = multicastAddress.ToString();
             string interface_addr = interfaceAddress?.ToString();
-            Invoke(uv_udp_set_membership, handle, multicast_addr, interface_addr, membership);
+
+            int result = uv_udp_set_membership(handle, multicast_addr, interface_addr, membership);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void UdpSetMulticastInterface(IntPtr handle, IPAddress interfaceAddress)
@@ -516,7 +529,11 @@ namespace NetUV.Core.Native
             Contract.Requires(interfaceAddress != null);
 
             string ip = interfaceAddress.ToString();
-            Invoke(uv_udp_set_multicast_interface, handle, ip);
+            int result = uv_udp_set_multicast_interface(handle, ip);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void UdpBind(IntPtr handle, IPEndPoint endPoint, bool reuseAddress, bool dualStack)
@@ -567,28 +584,44 @@ namespace NetUV.Core.Native
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            Invoke(uv_udp_set_multicast_loop, handle, value ? -1 : 0);
+            int result = uv_udp_set_multicast_loop(handle, value ? -1 : 0);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void UdpSetMulticastTtl(IntPtr handle, int value)
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            Invoke(uv_udp_set_multicast_ttl, handle, value);
+            int result = uv_udp_set_multicast_ttl(handle, value);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void UdpSetTtl(IntPtr handle, int value)
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            Invoke(uv_udp_set_ttl, handle, value);
+            int result = uv_udp_set_ttl(handle, value);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void UdpSetBroadcast(IntPtr handle, bool value)
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            Invoke(uv_udp_set_broadcast, handle, value ? -1 : 0);
+            int result = uv_udp_set_broadcast(handle, value ? -1 : 0);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
@@ -636,9 +669,14 @@ namespace NetUV.Core.Native
 
         internal static void PipeBind(IntPtr handle, string name)
         {
+            Contract.Requires(handle != IntPtr.Zero);
             Contract.Requires(!string.IsNullOrEmpty(name));
 
-            Invoke(uv_pipe_bind, handle, name);
+            int result = uv_pipe_bind(handle, name);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void PipeConnect(IntPtr requestHandle, IntPtr handle, string remoteName)
@@ -662,7 +700,10 @@ namespace NetUV.Core.Native
                 var length = (IntPtr)NameBufferSize;
 
                 int result = uv_pipe_getsockname(handle, buf, ref length);
-                ThrowIfError(result);
+                if (result < 0)
+                {
+                    throw CreateError((uv_err_code)result);
+                }
 
                 socketName = Marshal.PtrToStringAnsi(buf, length.ToInt32());
             }
@@ -689,7 +730,10 @@ namespace NetUV.Core.Native
                 var length = (IntPtr)NameBufferSize;
 
                 int result = uv_pipe_getpeername(handle, buf, ref length);
-                ThrowIfError(result);
+                if (result < 0)
+                {
+                    throw CreateError((uv_err_code)result);
+                }
 
                 peerName = Marshal.PtrToStringAnsi(buf, length.ToInt32());
             }
@@ -744,14 +788,39 @@ namespace NetUV.Core.Native
 
         #region TCP
 
-        internal static void TcpSetNoDelay(IntPtr handle, bool value) => 
-            Invoke(uv_tcp_nodelay, handle, value ? 1 : 0);
+        internal static void TcpSetNoDelay(IntPtr handle, bool value)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
 
-        internal static void TcpSetKeepAlive(IntPtr handle, bool value, int delay) => 
-            Invoke(uv_tcp_keepalive, handle, value ? 1: 0, delay);
+            int result = uv_tcp_nodelay(handle, value ? 1 : 0);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
+        }
 
-        internal static void TcpSimultaneousAccepts(IntPtr handle, bool value) => 
-            Invoke(uv_tcp_simultaneous_accepts, handle, value ? 1 : 0);
+        internal static void TcpSetKeepAlive(IntPtr handle, bool value, int delay)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+            Contract.Requires(delay >= 0);
+
+            int result = uv_tcp_keepalive(handle, value ? 1 : 0, delay);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
+        }
+
+        internal static void TcpSimultaneousAccepts(IntPtr handle, bool value)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+
+            int result = uv_tcp_simultaneous_accepts(handle, value ? 1 : 0);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
+        }
 
         internal static void TcpBind(IntPtr handle, IPEndPoint endPoint, bool dualStack /* Both IPv4 & IPv6 */)
         {
@@ -762,7 +831,10 @@ namespace NetUV.Core.Native
             GetSocketAddress(endPoint, out addr);
             
             int result = uv_tcp_bind(handle, ref addr, (uint)(dualStack ? 1 : 0));
-            ThrowIfError(result);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void TcpConnect(IntPtr requestHandle, IntPtr handle, IPEndPoint endPoint)
@@ -775,7 +847,10 @@ namespace NetUV.Core.Native
             GetSocketAddress(endPoint, out addr);
 
             int result = uv_tcp_connect(requestHandle, handle, ref addr, WatcherRequest.WatcherCallback);
-            ThrowIfError(result);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static IPEndPoint TcpGetSocketName(IntPtr handle)
@@ -796,7 +871,10 @@ namespace NetUV.Core.Native
             sockaddr sockaddr;
             int namelen = Marshal.SizeOf<sockaddr>();
             int result = uv_tcp_getpeername(handle, out sockaddr, ref namelen);
-            ThrowIfError(result);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
 
             return sockaddr.GetIPEndPoint();
         }
@@ -833,7 +911,11 @@ namespace NetUV.Core.Native
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            Invoke(uv_tty_set_mode, handle, (uv_tty_mode_t)ttyMode);
+            int result = uv_tty_set_mode(handle, (uv_tty_mode_t)ttyMode);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void TtyResetMode()
@@ -841,7 +923,10 @@ namespace NetUV.Core.Native
             // To be called when the program exits. 
             // Resets TTY settings to default values for the next process to take over.
             int result = uv_tty_reset_mode();
-            ThrowIfError(result);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void TtyWindowSize(IntPtr handle, out int width, out int height)
@@ -849,7 +934,10 @@ namespace NetUV.Core.Native
             Contract.Requires(handle != IntPtr.Zero);
 
             int result = uv_tty_get_winsize(handle, out width, out height);
-            ThrowIfError(result);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
@@ -868,18 +956,28 @@ namespace NetUV.Core.Native
 
         #region Timer
 
-        internal static void Start(IntPtr handle, uv_work_cb callback, long timeout, long repeat)
+        internal static void Start(IntPtr handle, long timeout, long repeat)
         {
             Contract.Requires(handle != IntPtr.Zero);
+            Contract.Requires(timeout >= 0);
+            Contract.Requires(repeat >= 0);
 
-            Invoke(uv_timer_start, handle, callback, timeout, repeat);
+            int result = uv_timer_start(handle, WorkHandle.WorkCallback, timeout, repeat);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void Again(IntPtr handle)
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            Invoke(uv_timer_again, handle);
+            int result = uv_timer_again(handle);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void SetTimerRepeat(IntPtr handle, long repeat)
@@ -979,7 +1077,12 @@ namespace NetUV.Core.Native
         internal static void PollStart(IntPtr handle, PollMask mask)
         {
             Contract.Requires(handle != IntPtr.Zero);
-            Invoke(uv_poll_start, handle, (int)mask, Poll.PollCallback);
+
+            int result = uv_poll_start(handle, (int)mask, Poll.PollCallback);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
@@ -1002,7 +1105,11 @@ namespace NetUV.Core.Native
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            Invoke(uv_signal_start, handle, Signal.SignalCallback, signum);
+            int result = uv_signal_start(handle, Signal.SignalCallback, signum);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
@@ -1037,7 +1144,10 @@ namespace NetUV.Core.Native
                         $"End point {endPoint} is not supported, expecting InterNetwork/InterNetworkV6.");
             }
 
-            ThrowIfError(result);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]

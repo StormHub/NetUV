@@ -175,7 +175,7 @@ namespace NetUV.Core.Handles
                 fixed (byte* memory = array)
                 {
                     var buf = new uv_buf_t((IntPtr)memory + offset, count);
-                    NativeMethods.TryWriteStream(this.InternalHandle, buf);
+                    NativeMethods.TryWriteStream(this.InternalHandle, ref buf);
                 }
             }
             catch (Exception exception)
