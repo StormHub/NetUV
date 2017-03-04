@@ -75,16 +75,14 @@ namespace NetUV.Core.Native
         internal static void StreamReadStart(IntPtr handle) => 
             Invoke(uv_read_start, handle, StreamHandle.AllocateCallback, StreamHandle.ReadCallback);
 
-        internal static void StreamReadStop(IntPtr handle) => 
+        internal static void StreamReadStop(IntPtr handle) =>
             Invoke(uv_read_stop, handle);
 
         internal static bool IsStreamReadable(IntPtr handle) => 
-            handle != IntPtr.Zero 
-            && InvokeFunction(uv_is_readable, handle) == 1;
+            handle != IntPtr.Zero && uv_is_readable(handle) == 1;
 
         internal static bool IsStreamWritable(IntPtr handle) => 
-            handle != IntPtr.Zero 
-            && InvokeFunction(uv_is_writable, handle) == 1;
+            handle != IntPtr.Zero && uv_is_writable(handle) == 1;
 
         internal static void TryWriteStream(IntPtr handle, uv_buf_t buf)
         {
@@ -125,7 +123,10 @@ namespace NetUV.Core.Native
 
             var size = (IntPtr)value;
             int result = uv_send_buffer_size(handle, ref size);
-            ThrowIfError(result);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
 
             return size.ToInt32();
         }
@@ -141,7 +142,10 @@ namespace NetUV.Core.Native
 
             var size = (IntPtr)value;
             int result = uv_recv_buffer_size(handle, ref size);
-            ThrowIfError(result);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
 
             return size.ToInt32();
         }
@@ -159,7 +163,10 @@ namespace NetUV.Core.Native
 
             IntPtr value;
             int result = uv_fileno(handle, out value);
-            ThrowIfError(result);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
 
             return value;
         }
