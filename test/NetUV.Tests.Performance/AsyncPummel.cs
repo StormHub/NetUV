@@ -47,15 +47,18 @@ namespace NetUV.Core.Tests.Performance
 
             public void Run()
             {
+                Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} sending");
                 while (Interlocked.Read(ref this.state) == 0) // Running
                 {
                     this.aysnc.Send();
                 }
 
+                Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} completed sending messages.");
                 while (Interlocked.CompareExchange(ref this.state, 2, 1) != 2)
                 {
                     // Stopped
                 }
+                Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} finished");
             }
 
             static void OnClose(Async handle) => handle.Dispose();
@@ -66,11 +69,15 @@ namespace NetUV.Core.Tests.Performance
 
                 if (this.counter.IsCompleted)
                 {
+                    Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} callback counter completed.");
                     Interlocked.CompareExchange(ref this.state, 1, 0); // Stopping
+
+                    Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} wait for thread to finish.");
                     while (Interlocked.Read(ref this.state) != 2) 
                     {
                         // wait for stopped
                     }
+                    Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} closing handle.");
                     this.aysnc.CloseHandle(OnClose);
                 }
             }
