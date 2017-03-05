@@ -5,6 +5,9 @@ namespace NetUV.Core.Handles
 {
     using System;
     using System.Diagnostics.Contracts;
+#if NET46
+    using System.Threading;
+#endif
     using NetUV.Core.Native;
 
     /// <summary>
@@ -24,8 +27,22 @@ namespace NetUV.Core.Handles
         public Async Send()
         {
             this.Validate();
-            NativeMethods.Send(this.InternalHandle);
 
+#if NET46
+            if (ExecutionContext.IsFlowSuppressed())
+            {
+                NativeMethods.Send(this.InternalHandle);
+            }
+            else
+            {
+                using (ExecutionContext.SuppressFlow())
+                {
+                    NativeMethods.Send(this.InternalHandle);
+                }
+            }
+#else
+            NativeMethods.Send(this.InternalHandle);
+#endif
             return this;
         }
 

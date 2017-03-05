@@ -119,25 +119,6 @@ namespace NetUV.Core.Native
 
         #region Common
 
-        static void Invoke(Func<IntPtr, int> function, IntPtr handle)
-        {
-            Contract.Requires(function != null);
-            Contract.Requires(handle != IntPtr.Zero);
-
-            int result;
-            try
-            {
-                result = function(handle);
-            }
-            catch (Exception exception)
-            {
-                Log.Error($"Failed to invoke native method on handle {handle}", exception);
-                throw;
-            }
-
-            ThrowIfError(result);
-        }
-
         internal static bool IsHandleActive(IntPtr handle) => 
             handle != IntPtr.Zero && uv_is_active(handle) != 0;
 
@@ -197,16 +178,6 @@ namespace NetUV.Core.Native
         #endregion Common
 
         #region Error
-
-        static void ThrowIfError(int code)
-        {
-            if (code >= 0) // OK
-            {
-                return;
-            }
-
-            throw CreateError((uv_err_code)code);
-        }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         internal static OperationException CreateError(uv_err_code error)
