@@ -72,11 +72,27 @@ namespace NetUV.Core.Native
 
     static partial class NativeMethods
     {
-        internal static void StreamReadStart(IntPtr handle) => 
-            Invoke(uv_read_start, handle, StreamHandle.AllocateCallback, StreamHandle.ReadCallback);
+        internal static void StreamReadStart(IntPtr handle)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
 
-        internal static void StreamReadStop(IntPtr handle) =>
-            Invoke(uv_read_stop, handle);
+            int result = uv_read_start(handle, StreamHandle.AllocateCallback, StreamHandle.ReadCallback);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
+        }
+
+        internal static void StreamReadStop(IntPtr handle)
+        {
+            Contract.Requires(handle != IntPtr.Zero);
+
+            int result = uv_read_stop(handle);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
+        }
 
         internal static bool IsStreamReadable(IntPtr handle) => 
             handle != IntPtr.Zero && uv_is_readable(handle) == 1;
@@ -84,33 +100,53 @@ namespace NetUV.Core.Native
         internal static bool IsStreamWritable(IntPtr handle) => 
             handle != IntPtr.Zero && uv_is_writable(handle) == 1;
 
-        internal static void TryWriteStream(IntPtr handle, uv_buf_t buf)
+        internal static void TryWriteStream(IntPtr handle, ref uv_buf_t buf)
         {
+            Contract.Requires(handle != IntPtr.Zero);
+
             var bufs = new [] { buf };
-            Invoke(uv_try_write, handle , bufs, bufs.Length);
+            int result = uv_try_write(handle , bufs, bufs.Length);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void WriteStream(IntPtr requestHandle, IntPtr streamHandle, ref uv_buf_t[] bufs)
         {
+            Contract.Requires(requestHandle != IntPtr.Zero);
             Contract.Requires(streamHandle != IntPtr.Zero);
             Contract.Requires(bufs != null && bufs.Length > 0);
 
-            Invoke(uv_write, requestHandle, streamHandle, bufs, bufs.Length, WriteRequest.WriteCallback);
+            int result = uv_write(requestHandle, streamHandle, bufs, bufs.Length, WriteRequest.WriteCallback);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
-        internal static void StreamListen(IntPtr handle, int backlog, uv_watcher_cb callback)
+        internal static void StreamListen(IntPtr handle, int backlog)
         {
+            Contract.Requires(handle != IntPtr.Zero);
             Contract.Requires(backlog > 0);
-            Contract.Requires(callback != null);
 
-            Invoke(uv_listen, handle, backlog, callback);
+            int result = uv_listen(handle, backlog, ServerStream.ConnectionCallback);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         internal static void StreamAccept(IntPtr serverHandle, IntPtr clientHandle)
         {
+            Contract.Requires(serverHandle != IntPtr.Zero);
             Contract.Requires(clientHandle != IntPtr.Zero);
 
-            Invoke(uv_accept, serverHandle, clientHandle);
+            int result = uv_accept(serverHandle, clientHandle);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         // If *value == 0, it will return the current send buffer size, 

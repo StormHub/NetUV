@@ -25,7 +25,7 @@ namespace NetUV.Core.Handles
             this.Validate();
 
             this.Callback = state => callback.Invoke((Timer)state);
-            NativeMethods.Start(this.InternalHandle, WorkCallback, timeout, repeat);
+            NativeMethods.Start(this.InternalHandle, timeout, repeat);
 
             return this;
         }

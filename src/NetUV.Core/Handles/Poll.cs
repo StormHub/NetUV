@@ -35,11 +35,11 @@ namespace NetUV.Core.Handles
         Action<Poll, PollStatus> pollCallback;
 
         internal Poll(LoopContext loop, int fd)
-            : base(loop, uv_handle_type.UV_POLL, fd)
+            : base(loop, uv_handle_type.UV_POLL, new object[] { fd })
         { }
 
         internal Poll(LoopContext loop, IntPtr handle)
-            : base(loop, uv_handle_type.UV_POLL, handle)
+            : base(loop, uv_handle_type.UV_POLL, new object[] { handle })
         { }
 
         public IntPtr GetFileDescriptor()

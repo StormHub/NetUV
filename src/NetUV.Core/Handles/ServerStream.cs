@@ -32,7 +32,7 @@ namespace NetUV.Core.Handles
             this.connectionHandler = onConnection;
             try
             {
-                NativeMethods.StreamListen(this.InternalHandle, backlog, ConnectionCallback);
+                NativeMethods.StreamListen(this.InternalHandle, backlog);
                 Log.DebugFormat("Stream {0} {1} listening, backlog = {2}", this.HandleType, this.InternalHandle, backlog);
             }
             catch
