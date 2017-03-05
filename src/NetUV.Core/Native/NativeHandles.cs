@@ -1059,7 +1059,21 @@ namespace NetUV.Core.Native
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            Invoke(uv_async_send, handle);
+            int result;
+            try
+            {
+                result = uv_async_send(handle);
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"Failed to send {handle}", exception);
+                throw;
+            }
+
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
         }
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]

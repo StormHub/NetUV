@@ -63,14 +63,13 @@ namespace NetUV.Core.Native
             {
                 return true;
             }
-
-            var code = (uv_err_code)result;
-            if (code == uv_err_code.UV_EBUSY)
+            else if (result == (int)uv_err_code.UV_EBUSY)
             {
+                // Loop busy is ok
                 return false;
             }
 
-            throw CreateError(code);
+            throw CreateError((uv_err_code)result);
         }
 
         internal static void WalkLoop(IntPtr handle, uv_walk_cb callback)
