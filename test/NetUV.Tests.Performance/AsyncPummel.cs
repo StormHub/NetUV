@@ -103,7 +103,10 @@ namespace NetUV.Core.Tests.Performance
             for (int i = 0; i < this.threadCount; i++)
             {
                 var context = new WorkContext(this.loop, this.counter);
-                var thread = new Thread(ThreadStart);
+                var thread = new Thread(ThreadStart)
+                {
+                    IsBackground = true
+                };
                 this.threads.Add(thread);
                 thread.Start(context);
             }
