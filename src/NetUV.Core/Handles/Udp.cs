@@ -36,6 +36,13 @@ namespace NetUV.Core.Handles
             this.bufferQueue = new BufferQueue();
             this.sendRequestPool = new WriteRequestPool(uv_req_type.UV_UDP_SEND);
         }
+        public WritableBuffer Allocate(int size)
+        {
+            Contract.Requires(size > 0 && size < FixedBufferSize);
+
+            this.Validate();
+            return new WritableBuffer(this.allocator.Buffer(size));
+        }
 
         public int GetSendBufferSize()
         {
