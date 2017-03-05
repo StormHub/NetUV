@@ -37,25 +37,31 @@ namespace NetUV.Core.Tests.Performance
         class WorkContext
         {
             readonly ManualResetEventSlim resetEvent;
-            readonly Counter counter;
             readonly Async aysnc;
+            readonly Counter counter;
 
-            public WorkContext(Loop loop, Counter counter, Action<Async> callback)
+            public WorkContext(Async aysnc, Counter counter)
             {
                 this.resetEvent = new ManualResetEventSlim(false);
+                this.aysnc = aysnc;
                 this.counter = counter;
-                this.aysnc = loop.CreateAsync(callback);
-                this.aysnc.UserToken = this;
             }
 
             public void Run()
             {
-                while (!this.counter.IsCompleted)
+                while (!this.resetEvent.IsSet)
                 {
-                    this.aysnc.Send();
+                    if (this.counter.IsCompleted
+                        || !this.aysnc.IsValid)
+                    {
+                        this.resetEvent.Wait();
+                    }
+                    else
+                    {
+                        this.aysnc.Send();
+                    }
                 }
 
-                this.resetEvent.Wait();
                 this.resetEvent.Dispose();
             }
 
@@ -83,7 +89,8 @@ namespace NetUV.Core.Tests.Performance
         {
             for (int i = 0; i < this.threadCount; i++)
             {
-                var context = new WorkContext(this.loop, this.counter, this.OnAsync);
+                Async handle = this.loop.CreateAsync(this.OnAsync);
+                var context = new WorkContext(handle, this.counter);
                 var thread = new Thread(ThreadStart);
                 this.threads.Add(thread, context);
                 thread.Start(context);
