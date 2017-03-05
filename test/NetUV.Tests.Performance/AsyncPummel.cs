@@ -20,16 +20,16 @@ namespace NetUV.Core.Tests.Performance
 
         class Counter
         {
+            volatile int count;
+
             public Counter()
             {
-                this.Count = 0;
+                this.count = 0;
             }
 
-            public bool IsCompleted => this.Count >= PingCount;
+            public int Count => this.count;
 
-            public int Count { get; private set; }
-
-            public void Increment() => this.Count++;
+            public bool Increment() => ++this.count >= PingCount;
         }
 
         class WorkContext : IDisposable
@@ -54,8 +54,9 @@ namespace NetUV.Core.Tests.Performance
                 }
 
                 Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} completed sending messages.");
-                while (Interlocked.CompareExchange(ref this.state, 2, 1) != 2)
+                while (Interlocked.CompareExchange(ref this.state, 2, 1) != 1)
                 {
+                    Console.WriteLine($"{this.counter.Count}");
                     // Stopped
                 }
                 Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} finished");
@@ -65,21 +66,21 @@ namespace NetUV.Core.Tests.Performance
 
             void OnCallback(Async handle)
             {
-                this.counter.Increment();
-
-                if (this.counter.IsCompleted)
+                if (!this.counter.Increment())
                 {
-                    Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} callback counter completed.");
-                    Interlocked.CompareExchange(ref this.state, 1, 0); // Stopping
-
-                    Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} wait for thread to finish.");
-                    while (Interlocked.Read(ref this.state) != 2) 
-                    {
-                        // wait for stopped
-                    }
-                    Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} closing handle.");
-                    this.aysnc.CloseHandle(OnClose);
+                    return;
                 }
+
+                Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} callback counter completed.");
+                Interlocked.CompareExchange(ref this.state, 1, 0); // Stopping
+
+                Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} wait for thread to finish.");
+                while (Interlocked.Read(ref this.state) != 2) 
+                {
+                    // wait for stopped
+                }
+                Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} closing handle.");
+                this.aysnc.CloseHandle(OnClose);
             }
 
             public void Dispose()
