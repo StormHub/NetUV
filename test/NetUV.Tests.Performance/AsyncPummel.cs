@@ -50,8 +50,7 @@ namespace NetUV.Core.Tests.Performance
 
             public void Run()
             {
-                while (!this.counter.IsCompleted 
-                    && !this.resetEvent.IsSet)
+                while (!this.counter.IsCompleted)
                 {
                     this.aysnc.Send();
                 }
@@ -65,11 +64,6 @@ namespace NetUV.Core.Tests.Performance
             void OnClose(Async handle)
             {
                 handle.Dispose();
-                this.Set();
-            }
-
-            void Set()
-            {
                 if (!this.resetEvent.IsSet)
                 {
                     this.resetEvent.Set();
