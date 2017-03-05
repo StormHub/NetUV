@@ -10,7 +10,6 @@ namespace NetUV.Core.Native
     using System.Diagnostics.Contracts;
     using System.Runtime.CompilerServices;
     using System.Runtime.InteropServices;
-    using NetUV.Core.Logging;
 
     #region uv_err_t
 
@@ -115,7 +114,6 @@ namespace NetUV.Core.Native
     static partial class NativeMethods
     {
         const string LibraryName = "libuv";
-        static readonly ILog Log = LogFactory.ForContext(LibraryName);
 
         #region Common
 

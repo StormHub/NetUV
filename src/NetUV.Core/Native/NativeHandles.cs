@@ -390,8 +390,6 @@ namespace NetUV.Core.Native
             {
                 throw CreateError((uv_err_code)result);
             }
-
-            Log.DebugFormat("{0} {1} started.", handleType, handle);
         }
 
         internal static void Stop(uv_handle_type handleType, IntPtr handle)
@@ -431,8 +429,6 @@ namespace NetUV.Core.Native
                 default:
                     throw new NotSupportedException($"Handle type to stop {handleType} not supported");
             }
-
-            Log.DebugFormat("{0} {1} stopped.", handleType, handle);
         }
 
         internal static int GetSize(uv_handle_type handleType)
