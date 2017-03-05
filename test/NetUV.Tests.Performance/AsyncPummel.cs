@@ -14,7 +14,7 @@ namespace NetUV.Core.Tests.Performance
         const int Timeout = 5000;
 
         readonly int threadCount;
-        List<Thread> threads;
+        Dictionary<Thread, WorkContext> threads;
         Loop loop;
         Counter counter;
 
@@ -37,48 +37,50 @@ namespace NetUV.Core.Tests.Performance
         class WorkContext
         {
             readonly ManualResetEventSlim resetEvent;
-
             readonly Counter counter;
             readonly Async aysnc;
 
-            public WorkContext(Loop loop, Counter counter)
+            public WorkContext(Loop loop, Counter counter, Action<Async> callback)
             {
                 this.resetEvent = new ManualResetEventSlim(false);
                 this.counter = counter;
-                this.aysnc = loop.CreateAsync(this.OnCallback);
+                this.aysnc = loop.CreateAsync(callback);
+                this.aysnc.UserToken = this;
             }
 
             public void Run()
             {
-                while (!this.counter.IsCompleted)
+                while (!this.counter.IsCompleted 
+                    && !this.resetEvent.IsSet)
                 {
                     this.aysnc.Send();
                 }
 
                 this.resetEvent.Wait();
+                this.resetEvent.Dispose();
             }
+
+            public void Close() => this.aysnc.CloseHandle(this.OnClose);
 
             void OnClose(Async handle)
             {
                 handle.Dispose();
-                this.resetEvent.Set();
-            } 
+                this.Set();
+            }
 
-            void OnCallback(Async handle)
+            void Set()
             {
-                if (!this.counter.Increment())
+                if (!this.resetEvent.IsSet)
                 {
-                    return;
+                    this.resetEvent.Set();
                 }
-
-                this.aysnc.CloseHandle(this.OnClose);
             }
         }
 
         public AsyncPummel(int threadCount)
         {
             this.threadCount = threadCount;
-            this.threads = new List<Thread>();
+            this.threads = new Dictionary<Thread, WorkContext>();
             this.counter = new Counter();
             this.loop = new Loop();
         }
@@ -87,19 +89,16 @@ namespace NetUV.Core.Tests.Performance
         {
             for (int i = 0; i < this.threadCount; i++)
             {
-                var context = new WorkContext(this.loop, this.counter);
-                var thread = new Thread(ThreadStart)
-                {
-                    IsBackground = true
-                };
-                this.threads.Add(thread);
+                var context = new WorkContext(this.loop, this.counter, this.OnAsync);
+                var thread = new Thread(ThreadStart);
+                this.threads.Add(thread, context);
                 thread.Start(context);
             }
 
             long time = this.loop.NowInHighResolution;
             this.loop.RunDefault();
 
-            foreach (Thread thread in this.threads)
+            foreach (Thread thread in this.threads.Keys)
             {
                 thread.Join(Timeout);
             }
@@ -109,6 +108,17 @@ namespace NetUV.Core.Tests.Performance
             double totalTime = (double)time / TestHelper.NanoSeconds;
             double value = count / totalTime;
             Console.WriteLine($"Async pummel {this.threadCount}: {TestHelper.Format(count)} callbacks in {TestHelper.Format(totalTime)} sec ({TestHelper.Format(value)}/sec)");
+        }
+
+        void OnAsync(Async handle)
+        {
+            if (this.counter.Increment())
+            {
+                foreach (WorkContext context in this.threads.Values)
+                {
+                    context.Close();
+                }
+            }
         }
 
         static void ThreadStart(object state)
