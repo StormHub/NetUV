@@ -139,8 +139,7 @@ Task("Benchmark")
   foreach (var lib in libraries)
   {
     Information("Benchmark: {0}", lib);
-	var benchmarkLib = new StringBuilder().Append(" dotnet " + lib);
-    int result = StartProcess(benchmarkLib, new ProcessSettings { WorkingDirectory = lib.GetDirectory() } );
+    int result = StartProcess(" dotnet " + lib, new ProcessSettings { WorkingDirectory = lib.GetDirectory() } );
     if (result != 0)
     {
       throw new CakeException($"Benchmark failed. {lib}");
