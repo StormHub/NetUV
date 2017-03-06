@@ -45,7 +45,7 @@ namespace NetUV.Core.Tests.Performance
             void OnMainCallback(Async handle)
             {
                 this.mainCount++;
-                if (this.worker?.IsActive ?? false)
+                if (this.worker?.IsValid ?? false)
                 {
                     this.worker?.Send();
                 }
@@ -60,7 +60,7 @@ namespace NetUV.Core.Tests.Performance
             {
                 this.workerCount++;
 
-                if (this.main?.IsActive ?? false)
+                if (this.main?.IsValid ?? false)
                 {
                     this.main?.Send();
                 }

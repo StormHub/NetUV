@@ -11,81 +11,70 @@ namespace NetUV.Core.Tests.Performance
     sealed class AsyncPummel : IDisposable
     {
         const int PingCount = 1000 * 1000;
-        const int Timeout = 5000;
 
         readonly int threadCount;
-        List<Thread> threads;
+        List<WorkContext> threads;
         Loop loop;
         Counter counter;
 
         class Counter
         {
+            long count;
+
             public Counter()
             {
-                this.Count = 0;
+                this.count = 0;
             }
 
-            public bool IsCompleted => this.Count >= PingCount;
+            public long Count => this.count;
 
-            public int Count { get; private set; }
+            public bool Increment() => Interlocked.Increment(ref this.count) >= PingCount;
 
-            public void Increment() => this.Count++;
+            public bool IsCompleted => Interlocked.Read(ref this.count) >= PingCount;
         }
 
-        class WorkContext : IDisposable
+        class WorkContext
         {
-            Counter counter;
-            long state;
-            Async aysnc;
+            readonly ManualResetEventSlim resetEvent;
+            readonly Async handle;
+            readonly Counter counter;
 
-            public WorkContext(Loop loop, Counter counter)
+            public WorkContext(Async handle, Counter counter)
             {
+                this.handle = handle;
                 this.counter = counter;
-                this.state = 0;
-                this.aysnc = loop.CreateAsync(this.OnCallback);
+                this.resetEvent = new ManualResetEventSlim(false);
             }
 
             public void Run()
             {
-                while (Interlocked.Read(ref this.state) == 0) // Running
+                while (!this.resetEvent.IsSet)
                 {
-                    this.aysnc.Send();
-                }
-
-                while (Interlocked.CompareExchange(ref this.state, 2, 1) != 2)
-                {
-                    // Stopped
-                }
-            }
-
-            static void OnClose(Async handle) => handle.Dispose();
-
-            void OnCallback(Async handle)
-            {
-                this.counter.Increment();
-
-                if (this.counter.IsCompleted)
-                {
-                    Interlocked.CompareExchange(ref this.state, 1, 0); // Stopping
-                    while (Interlocked.Read(ref this.state) != 2) 
+                    if (this.counter.IsCompleted
+                        || !this.handle.IsValid)
                     {
-                        // wait for stopped
+                        break;
                     }
-                    this.aysnc.CloseHandle(OnClose);
+
+                    this.handle.Send();
                 }
+
+                this.resetEvent.Wait();
             }
 
-            public void Dispose()
+            public void Close() => this.handle.CloseHandle(this.OnClose);
+
+            void OnClose(Async asyncHandle)
             {
-                this.aysnc = null;
-                this.counter = null;
+                asyncHandle.Dispose();
+                this.resetEvent.Set();
             } 
         }
 
         public AsyncPummel(int threadCount)
         {
             this.threadCount = threadCount;
-            this.threads = new List<Thread>();
+            this.threads = new List<WorkContext>();
             this.counter = new Counter();
             this.loop = new Loop();
         }
@@ -94,25 +83,34 @@ namespace NetUV.Core.Tests.Performance
         {
             for (int i = 0; i < this.threadCount; i++)
             {
-                var context = new WorkContext(this.loop, this.counter);
+                Async handle = this.loop.CreateAsync(this.OnAsync);
+                var context = new WorkContext(handle, this.counter);
                 var thread = new Thread(ThreadStart);
-                this.threads.Add(thread);
+                this.threads.Add(context);
                 thread.Start(context);
             }
 
             long time = this.loop.NowInHighResolution;
             this.loop.RunDefault();
-
-            foreach (Thread thread in this.threads)
-            {
-                thread.Join(Timeout);
-            }
-
             time = this.loop.NowInHighResolution - time;
-            int count = this.counter.Count;
+
+            long count = this.counter.Count;
             double totalTime = (double)time / TestHelper.NanoSeconds;
             double value = count / totalTime;
             Console.WriteLine($"Async pummel {this.threadCount}: {TestHelper.Format(count)} callbacks in {TestHelper.Format(totalTime)} sec ({TestHelper.Format(value)}/sec)");
+        }
+
+        void OnAsync(Async handle)
+        {
+            if (!this.counter.Increment())
+            {
+                return;
+            }
+
+            foreach (WorkContext context in this.threads)
+            {
+                context.Close();
+            }
         }
 
         static void ThreadStart(object state)

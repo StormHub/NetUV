@@ -62,10 +62,9 @@ namespace NetUV.Core.Native
         {
             using (this.gate.Aquire())
             {
-                BufferRef bufferRef;
                 while (this.queue.Count > 0)
                 {
-                    bufferRef = this.queue.RemoveFromBack();
+                    BufferRef bufferRef = this.queue.RemoveFromBack();
                     bufferRef.Dispose();
                 }
             }
