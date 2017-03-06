@@ -1,0 +1,48 @@
+language: csharp
+dotnet: 1.0.0-preview2-003131
+addons:
+  apt:
+    packages:
+    - gettext
+    - libcurl4-openssl-dev
+    - libicu-dev
+    - libssl-dev
+    - libunwind8
+    - zlib1g
+
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      sudo: required
+      env: CONFIGURATION=Release
+    - os: osx
+      osx_image: Xcode 7.3.1
+      env: CONFIGURATION=Release
+
+install:
+  # Display dotnet version info
+  - which dotnet;
+    if [ $? -eq 0 ]; then
+      echo "Using dotnet:";
+      dotnet --info;
+    else
+      echo "dotnet.exe not found"
+      exit 1;
+    fi
+
+  - if test "$TRAVIS_OS_NAME" == "linux"; then
+      nvm install stable && nvm use stable;
+    fi
+  - node -e "jsonPath='./src/NetUV.Core/project.json';data=require(jsonPath);fs=require('fs');delete data.frameworks.net46;fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2))"
+  - node -e "jsonPath='./test/NetUV.Tests/project.json';data=require(jsonPath);fs=require('fs');delete data.frameworks.net461;fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2))"
+
+  # Restore dependencies
+  - dotnet restore
+
+  # Build projects
+  - dotnet build -c $CONFIGURATION ./src/NetUV.Core
+
+script:
+  # Run tests
+  - dotnet test -c $CONFIGURATION ./test/NetUV.Tests
