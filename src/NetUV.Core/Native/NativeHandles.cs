@@ -1055,6 +1055,17 @@ namespace NetUV.Core.Native
         {
             Contract.Requires(handle != IntPtr.Zero);
 
+            // As of libuv 1.9.1 
+            // async.c
+
+            // The user should make sure never to call uv_async_send to a closing
+            // or closed handle.
+            //
+            if (uv_is_closing(handle) != 0)
+            {
+                return;
+            }
+
             int result = uv_async_send(handle);
             if (result < 0)
             {
