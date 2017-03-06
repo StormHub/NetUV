@@ -63,14 +63,13 @@ namespace NetUV.Core.Native
             {
                 return true;
             }
-
-            var code = (uv_err_code)result;
-            if (code == uv_err_code.UV_EBUSY)
+            else if (result == (int)uv_err_code.UV_EBUSY)
             {
+                // Loop busy is ok
                 return false;
             }
 
-            throw CreateError(code);
+            throw CreateError((uv_err_code)result);
         }
 
         internal static void WalkLoop(IntPtr handle, uv_walk_cb callback)
@@ -105,10 +104,7 @@ namespace NetUV.Core.Native
                 or non-zero if more callbacks are expected(meaning you should run the event loop again sometime in the future).
             */
 
-            int result = uv_run(handle, mode);
-            Log.DebugFormat("Native run loop {0} {1}, result = {2}", handle, mode, result);
-
-            return result;
+            return uv_run(handle, mode);
         }
 
         internal static void StopLoop(IntPtr handle)
