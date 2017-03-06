@@ -44,7 +44,7 @@ namespace NetUV.Core.Tests
             Assert.Equal(Port, localEndPoint.Port);
 
             var error = Assert.Throws<OperationException>(() => tcpServer.GetPeerEndPoint());
-            Assert.Equal((int)uv_err_code.UV_ENOTCONN, error.ErrorCode);
+            Assert.Equal(ErrorCode.ENOTCONN, error.ErrorCode);
 
             var remoteEndPoint = new IPEndPoint(IPAddress.Loopback, Port);
             Tcp client = this.loop.CreateTcp().ConnectTo(remoteEndPoint, this.OnConnected);

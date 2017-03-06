@@ -55,7 +55,7 @@ namespace NetUV.Core.Requests
             }
 
             GCHandle gcHandle = GCHandle.Alloc(target, GCHandleType.Normal);
-            ((uv_req_t*)handle)->data = GCHandle.ToIntPtr(gcHandle);
+            *(IntPtr*)handle = GCHandle.ToIntPtr(gcHandle);
 
             this.Handle = handle;
             this.requestType = requestType;

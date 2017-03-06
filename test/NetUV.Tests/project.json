@@ -37,9 +37,14 @@
         "Microsoft.NETCore.App": {
           "version": "1.0.0-*",
           "type": "platform"
-        }
+        },
+        "System.Net.NetworkInformation": "4.3.0"
       }
     },
-    "net461": { }
+    "net461": {
+      "dependencies": {
+        "System.Net.NetworkInformation": "4.3.0"
+      }
+    }
   }
 }

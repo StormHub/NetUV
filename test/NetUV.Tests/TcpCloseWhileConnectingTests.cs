@@ -22,6 +22,7 @@ namespace NetUV.Core.Tests
 
         bool timer1Callback;
         bool timer2Callback;
+        Exception connectedError;
 
         public TcpCloseWhileConnectingTests()
         {
@@ -46,7 +47,7 @@ namespace NetUV.Core.Tests
             catch (OperationException exception)
             {
                 // Skip
-                if (exception.ErrorCode == (int)uv_err_code.UV_ENETUNREACH)
+                if (exception.ErrorCode == ErrorCode.ENETUNREACH)
                 {
                     return;
                 }
@@ -63,6 +64,11 @@ namespace NetUV.Core.Tests
             Assert.False(this.timer2Callback);
             Assert.Equal(2, this.closeCount);
             Assert.Equal(1, this.connectCount);
+
+            Assert.NotNull(this.connectedError);
+            Assert.IsType<OperationException>(this.connectedError);
+            var operationException = (OperationException)this.connectedError;
+            Assert.Equal(ErrorCode.ECANCELED, operationException.ErrorCode);
         }
 
         void OnTimer1(Timer timer)
@@ -78,11 +84,7 @@ namespace NetUV.Core.Tests
 
         void OnConnected(Tcp tcp, Exception exception)
         {
-            Assert.IsType<OperationException>(exception);
-
-            var operationException = (OperationException)exception;
-            Assert.Equal((int)uv_err_code.UV_ECANCELED, operationException.ErrorCode);
-
+            this.connectedError = exception;
             this.timer2.Stop();
             this.connectCount++;
         }

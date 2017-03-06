@@ -19,6 +19,7 @@ namespace NetUV.Core.Tests
         Udp client;
         int closeCount;
         int serverReceiveCount;
+        Exception receiveError;
 
         [Fact]
         public void Run()
@@ -46,7 +47,7 @@ namespace NetUV.Core.Tests
             // Message too big
             var data = new byte[64 * 1024];
             var error = Assert.Throws<OperationException>(() => this.client.TrySend(remoteEndPoint, data));
-            Assert.Equal((int)uv_err_code.UV_EMSGSIZE, error.ErrorCode);
+            Assert.Equal(ErrorCode.EMSGSIZE, error.ErrorCode);
 
             // Normal message
             data = Encoding.UTF8.GetBytes("EXIT");
@@ -56,25 +57,20 @@ namespace NetUV.Core.Tests
 
             Assert.Equal(2, this.closeCount);
             Assert.Equal(1, this.serverReceiveCount);
+            Assert.Null(this.receiveError);
         }
 
         void OnServerReceive(Udp udp, IDatagramReadCompletion completion)
         {
-            if (completion.Error == null)
-            {
-                return;
-            }
-
+            this.receiveError = completion.Error;
             ReadableBuffer data = completion.Data;
-            if (data.Count == 0)
+            if (data.Count > 0)
             {
-                return;
-            }
-
-            string message = data.ReadString(data.Count, Encoding.UTF8);
-            if (message == "EXIT")
-            {
-                this.serverReceiveCount++;
+                string message = data.ReadString(data.Count, Encoding.UTF8);
+                if (message == "EXIT")
+                {
+                    this.serverReceiveCount++;
+                }
             }
 
             udp.CloseHandle(this.OnClose);

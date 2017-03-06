@@ -4,6 +4,7 @@
 namespace NetUV.Core.Tests
 {
     using System;
+    using System.Collections.Generic;
     using NetUV.Core.Handles;
     using NetUV.Core.Native;
     using Xunit;
@@ -17,16 +18,20 @@ namespace NetUV.Core.Tests
         int callbackCount;
         int closeCount;
         int timerCount;
+        List<string> directoryList;
 
         public FSPollTests()
         {
             this.loop = new Loop();
+            this.directoryList = new List<string>();
         }
 
         [Fact]
         public void Poll()
         {
             string directory = TestHelper.CreateTempDirectory();
+            this.directoryList.Add(directory);
+
             this.file = TestHelper.CreateTempFile(directory);
             TestHelper.DeleteFile(this.file);
 
@@ -48,7 +53,7 @@ namespace NetUV.Core.Tests
             {
                 var error = fsPollStatus.Error as OperationException;
                 if (error != null 
-                    && error.ErrorCode == (int)uv_err_code.UV_ENOENT)
+                    && error.ErrorCode == ErrorCode.ENOENT)
                 {
                     TestHelper.CreateFile(this.file);
                 }
@@ -78,7 +83,7 @@ namespace NetUV.Core.Tests
             {
                 var error = fsPollStatus.Error as OperationException;
                 if (error != null
-                    && error.ErrorCode == (int)uv_err_code.UV_ENOENT)
+                    && error.ErrorCode == ErrorCode.ENOENT)
                 {
                     fsPoll.CloseHandle(this.OnClose);
                 }
@@ -97,11 +102,13 @@ namespace NetUV.Core.Tests
         public void GetPath()
         {
             string directory = TestHelper.CreateTempDirectory();
+            this.directoryList.Add(directory);
+
             this.file = TestHelper.CreateTempFile(directory);
 
             FSPoll fsPoll = this.loop.CreateFSPoll();
             var error = Assert.Throws<OperationException>(() => fsPoll.GetPath());
-            Assert.Equal((int)uv_err_code.UV_EINVAL, error.ErrorCode);
+            Assert.Equal(ErrorCode.EINVAL, error.ErrorCode);
 
             fsPoll.Start(this.file, 100, this.OnFSPoll);
             string path = fsPoll.GetPath();
@@ -124,6 +131,9 @@ namespace NetUV.Core.Tests
 
         public void Dispose()
         {
+            TestHelper.DeleteDirectories(this.directoryList);
+            this.directoryList = null;
+
             this.loop?.Dispose();
             this.loop = null;
         }

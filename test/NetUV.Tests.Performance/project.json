@@ -29,47 +29,14 @@
   },
 
   "frameworks": {
-    "netcoreapp1.1": {
-      "buildOptions": {
-        "define": [
-          "NO_EVENTARGS_CONSTRAINT",
-          "HAS_EDI",
-          "HAS_WINRT",
-          "HAS_PROGRESS",
-          "PREFER_ASYNC",
-          "HAS_AWAIT",
-          "HAS_APTCA",
-          "NO_REMOTING",
-          "NO_SERIALIZABLE",
-          "CRIPPLED_REFLECTION",
-          "PLIB",
-          "USE_TIMER_SELF_ROOT",
-          "XUNIT"
-        ]
-      },
+    "netcoreapp1.0": {
       "dependencies": {
         "Microsoft.NETCore.App": {
-          "version": "1.1.0",
+          "version": "1.0.0-*",
           "type": "platform"
         }
       }
     },
-    "net461": {
-      "buildOptions": {
-        "define": [
-          "NO_EVENTARGS_CONSTRAINT",
-          "HAS_EDI",
-          "HAS_WINRT",
-          "HAS_PROGRESS",
-          "PREFER_ASYNC",
-          "HAS_AWAIT",
-          "HAS_APTCA",
-          "USE_TIMER_SELF_ROOT",
-          "DESKTOPCLR",
-          "DESKTOPCLR46",
-          "XUNIT"
-        ]
-      }
-    }
+    "net461": { }
   }
 }

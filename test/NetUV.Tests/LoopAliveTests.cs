@@ -11,15 +11,10 @@ namespace NetUV.Core.Tests
     public sealed class LoopAliveTests : IDisposable
     {
         Loop loop;
-        int timerCalled;
 
-        void OnTimer(Timer handle)
-        {
-            if (handle != null)
-            {
-                this.timerCalled++;
-            }
-        } 
+        int timerCount;
+        int workCount;
+        int afterWorkCount;
 
         [Fact]
         public void IsAlive()
@@ -34,21 +29,26 @@ namespace NetUV.Core.Tests
 
             // loop run should not be alive
             this.loop.RunDefault();
-            Assert.Equal(1, this.timerCalled); // Timer should fire
+            Assert.Equal(1, this.timerCount); // Timer should fire
             Assert.False(this.loop.IsAlive);
 
             // loops with requests are alive
-            bool workCallbackFired = false;
-            bool afterWorkCallbackFired = false;
-            Work request = this.loop.CreateWorkRequest(x => workCallbackFired = true, x => afterWorkCallbackFired = true);
+            Work request = this.loop.CreateWorkRequest(this.OnWork, this.OnAfterWork);
             Assert.NotNull(request);
             Assert.True(this.loop.IsAlive);
 
             this.loop.RunDefault();
-            Assert.True(workCallbackFired, "Work callback should be invoked.");
-            Assert.True(afterWorkCallbackFired, "After work callback should be invoked");
+
             Assert.False(this.loop.IsAlive);
+            Assert.Equal(1, this.workCount);
+            Assert.Equal(1, this.afterWorkCount);
         }
+
+        void OnTimer(Timer handle) => this.timerCount++;
+
+        void OnWork(Work work) => this.workCount++;
+
+        void OnAfterWork(Work work) => this.afterWorkCount++;
 
         public void Dispose()
         {

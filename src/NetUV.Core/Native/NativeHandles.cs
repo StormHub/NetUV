@@ -308,9 +308,17 @@ namespace NetUV.Core.Native
             Contract.Requires(handle != IntPtr.Zero);
             Contract.Requires(args != null && args.Length > 1);
 
-            return Platform.IsWindows
-                ? uv_poll_init_socket(loopHandle, handle, (IntPtr)args[0])
-                : uv_poll_init(loopHandle, handle, (int)args[0]);
+            object arg = args[0];
+            if (arg is IntPtr)
+            {
+                return uv_poll_init_socket(loopHandle, handle, (IntPtr)args[0]);
+            }
+            else if (arg is int)
+            {
+                return uv_poll_init(loopHandle, handle, (int)args[0]);
+            }
+
+            throw new NotSupportedException("Poll argument must be either IntPtr or int");
         }
 
         static int InitializeSignal(IntPtr loopHandle, IntPtr handle, object[] args)
@@ -580,7 +588,7 @@ namespace NetUV.Core.Native
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            int result = uv_udp_set_multicast_loop(handle, value ? -1 : 0);
+            int result = uv_udp_set_multicast_loop(handle, value ? 1 : 0);
             if (result < 0)
             {
                 throw CreateError((uv_err_code)result);
@@ -613,7 +621,7 @@ namespace NetUV.Core.Native
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            int result = uv_udp_set_broadcast(handle, value ? -1 : 0);
+            int result = uv_udp_set_broadcast(handle, value ? 1 : 0);
             if (result < 0)
             {
                 throw CreateError((uv_err_code)result);

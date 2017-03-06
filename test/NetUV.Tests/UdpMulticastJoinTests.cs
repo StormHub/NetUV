@@ -18,6 +18,8 @@ namespace NetUV.Core.Tests
         int closeCount;
         int serverSendCount;
         int clientReceiveCount;
+        Exception sendError;
+        Exception receiveError;
 
         [Fact]
         public void Run()
@@ -45,36 +47,29 @@ namespace NetUV.Core.Tests
             Assert.Equal(2, this.closeCount);
             Assert.Equal(1, this.serverSendCount);
             Assert.Equal(1, this.clientReceiveCount);
+
+            Assert.Null(this.sendError);
+            Assert.Null(this.receiveError);
         }
 
         void OnServerSendCompleted(Udp udp, Exception exception)
         {
-            if (exception == null)
-            {
-                this.serverSendCount++;
-            }
-
+            this.sendError = exception;
+            this.serverSendCount++;
             udp.CloseHandle(this.OnClose);
         }
 
         void OnClientReceive(Udp udp, IDatagramReadCompletion completion)
         {
-            if (completion.Error != null
-                || completion.RemoteEndPoint == null)
-            {
-                return;
-            }
-
+            this.receiveError = completion.Error;
             ReadableBuffer buffer = completion.Data;
-            if (buffer.Count == 0)
+            if (buffer.Count > 0)
             {
-                return;
-            }
-
-            string message = buffer.ReadString(buffer.Count, Encoding.UTF8);
-            if (message == "PING")
-            {
-                this.clientReceiveCount++;
+                string message = buffer.ReadString(buffer.Count, Encoding.UTF8);
+                if (message == "PING")
+                {
+                    this.clientReceiveCount++;
+                }
             }
 
             /* we are done with the client handle, we can close it */

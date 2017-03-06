@@ -6,15 +6,12 @@ namespace NetUV.Core.Tests
     using System;
     using System.Net;
     using System.Text;
-    using NetUV.Core.Buffers;
     using NetUV.Core.Handles;
+    using NetUV.Core.Native;
     using Xunit;
 
     public sealed class UdpSendUnreachableTests : IDisposable
     {
-        const int Port1 = 8995;
-        const int Port2 = 8994;
-
         Loop loop;
         Udp client;
 
@@ -22,6 +19,8 @@ namespace NetUV.Core.Tests
         int closeCount;
         int clientSendCount;
         int clientReceiveCount;
+        Exception receiveError;
+        Exception sendError;
 
         [Fact]
         public void Run()
@@ -31,8 +30,9 @@ namespace NetUV.Core.Tests
             this.clientSendCount = 0;
             this.clientReceiveCount = 0;
 
-            var endPoint1 = new IPEndPoint(IPAddress.Loopback, Port1);
-            var endPoint2 = new IPEndPoint(IPAddress.Loopback, Port2);
+            IPAddress address = IPAddress.Parse("127.0.0.1");
+            var endPoint1 = new IPEndPoint(address, TestHelper.TestPort);
+            var endPoint2 = new IPEndPoint(address, TestHelper.TestPort2);
 
             this.loop = new Loop();
             this.loop
@@ -53,33 +53,37 @@ namespace NetUV.Core.Tests
 
             this.loop.RunDefault();
 
+            Assert.Null(this.receiveError);
+            Assert.Null(this.sendError);
+
             Assert.Equal(1, this.timerCount);
             Assert.Equal(2, this.clientSendCount);
-            Assert.Equal(2, this.clientReceiveCount);
+
+            // On windows the receive actually been call with
+            // empty data, on Linux, the receive is not called
+            // at all.
+            if (Platform.IsWindows)
+            {
+                Assert.Equal(2, this.clientReceiveCount);
+            }
+            else
+            {
+                Assert.Equal(0, this.clientReceiveCount);
+            }
+
             Assert.Equal(2, this.closeCount);
         }
 
         void OnReceive(Udp udp, IDatagramReadCompletion completion)
         {
-            if (completion.Error != null)
-            {
-                return;
-            }
-
-            ReadableBuffer data = completion.Data;
-            if (data.Count == 0 
-                && completion.RemoteEndPoint == null)
-            {
-                this.clientReceiveCount++;
-            }
+            this.receiveError = completion.Error;
+            this.clientReceiveCount++;
         }
 
         void OnSendCompleted(Udp udp, Exception exception)
         {
-            if (exception == null)
-            {
-                this.clientSendCount++;
-            }
+            this.sendError = exception;
+            this.clientSendCount++;
         }
 
         void OnTimer(Timer handle)

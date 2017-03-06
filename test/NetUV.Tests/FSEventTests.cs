@@ -4,6 +4,7 @@
 namespace NetUV.Core.Tests
 {
     using System;
+    using System.Collections.Generic;
     using NetUV.Core.Handles;
     using NetUV.Core.Native;
     using Xunit;
@@ -27,9 +28,12 @@ namespace NetUV.Core.Tests
         int fileCreated;
         int fileRemoved;
 
+        List<string> directoryList;
+
         public FSEventTests()
         {
             this.loop = new Loop();
+            this.directoryList = new List<string>();
         }
 
         [Fact]
@@ -44,6 +48,7 @@ namespace NetUV.Core.Tests
 
             string directory = TestHelper.CreateTempDirectory();
             this.currentFileName = TestHelper.CreateRandomDirectory(directory);
+            this.directoryList.Add(this.currentFileName);
 
             this.fsEventCurrent = this.loop
                 .CreateFSEvent()
@@ -62,6 +67,7 @@ namespace NetUV.Core.Tests
         public void WatchDir()
         {
             this.currentFileName = TestHelper.CreateTempDirectory();
+            this.directoryList.Add(this.currentFileName);
 
             this.fsEventCurrent = this.loop
                 .CreateFSEvent()
@@ -140,6 +146,8 @@ namespace NetUV.Core.Tests
         public void WatchFile()
         {
             string directory = TestHelper.CreateTempDirectory();
+            this.directoryList.Add(directory);
+
             this.currentFileName = TestHelper.CreateTempFile(directory);
             this.currentFileName1 = TestHelper.CreateTempFile(directory);
 
@@ -176,6 +184,8 @@ namespace NetUV.Core.Tests
         public void WatchFileTwice()
         {
             string directory = TestHelper.CreateTempDirectory();
+            this.directoryList.Add(directory);
+
             string file = TestHelper.CreateTempFile(directory);
 
             this.fsEventCurrent = this.loop
@@ -205,6 +215,8 @@ namespace NetUV.Core.Tests
         public void WatchFileCurrentDir()
         {
             string directory = TestHelper.CreateTempDirectory();
+            this.directoryList.Add(directory);
+
             this.currentFileName = TestHelper.CreateTempFile(directory);
 
             this.fsEventCurrent = this.loop
@@ -265,6 +277,8 @@ namespace NetUV.Core.Tests
         public void NoCallbackAfterClose()
         {
             string directory = TestHelper.CreateTempDirectory();
+            this.directoryList.Add(directory);
+
             string file = TestHelper.CreateTempFile(directory);
 
             FSEvent fsEvent = this.loop
@@ -283,6 +297,8 @@ namespace NetUV.Core.Tests
         public void NoCallbackOnClose()
         {
             string directory = TestHelper.CreateTempDirectory();
+            this.directoryList.Add(directory);
+
             string file = TestHelper.CreateTempFile(directory);
 
             FSEvent fsEvent = this.loop
@@ -332,6 +348,8 @@ namespace NetUV.Core.Tests
         public void CloseWithPendingEvent()
         {
             string directory = TestHelper.CreateTempDirectory();
+            this.directoryList.Add(directory);
+
             string file = TestHelper.CreateTempFile(directory);
 
             FSEvent fsEvent = this.loop
@@ -351,6 +369,8 @@ namespace NetUV.Core.Tests
         public void CloseInCallback()
         {
             string directory = TestHelper.CreateTempDirectory();
+            this.directoryList.Add(directory);
+
             string file1 = TestHelper.CreateTempFile(directory);
             string file2 = TestHelper.CreateTempFile(directory);
             string file3 = TestHelper.CreateTempFile(directory);
@@ -387,6 +407,7 @@ namespace NetUV.Core.Tests
         public void StartAndClose()
         {
             string directory = TestHelper.CreateTempDirectory();
+            this.directoryList.Add(directory);
 
             FSEvent fsEvent1 = this.loop.CreateFSEvent();
             fsEvent1.Start(directory, this.OnFSEventDirectory);
@@ -419,9 +440,11 @@ namespace NetUV.Core.Tests
         {
             FSEvent fsEvent = this.loop.CreateFSEvent();
             var error = Assert.Throws<OperationException>(() => fsEvent.GetPath());
-            Assert.Equal((int)uv_err_code.UV_EINVAL, error.ErrorCode);
+            Assert.Equal(ErrorCode.EINVAL, error.ErrorCode);
 
             string directory = TestHelper.CreateTempDirectory();
+            this.directoryList.Add(directory);
+
             fsEvent.Start(directory, this.OnFSEvent);
             string path = fsEvent.GetPath();
             Assert.Equal(directory, path);
@@ -449,6 +472,9 @@ namespace NetUV.Core.Tests
 
             this.fsEventCurrent1?.Dispose();
             this.fsEventCurrent1 = null;
+
+            TestHelper.DeleteDirectories(this.directoryList);
+            this.directoryList = null;
 
             this.loop?.Dispose();
             this.loop = null;

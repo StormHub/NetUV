@@ -90,8 +90,8 @@ namespace NetUV.Core.Handles
             {
                 Exception error = exception;
 
-                int? errorCode = (error as OperationException)?.ErrorCode;
-                if (errorCode == (int)uv_err_code.UV_EPIPE)
+                ErrorCode? errorCode = (error as OperationException)?.ErrorCode;
+                if (errorCode == ErrorCode.EPIPE)
                 {
                     // It is ok if the stream is already down
                     error = null;

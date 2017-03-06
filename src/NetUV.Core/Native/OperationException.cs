@@ -11,14 +11,104 @@ namespace NetUV.Core.Native
             int errorCode, 
             string errorName, 
             string description)
-            : base(description)
+            : base($"{errorName} : {description}")
         {
-            this.ErrorCode = errorCode;
-            this.ErrorName = errorName;
+            this.Code = errorCode;
+            this.Name = errorName;
+
+            ErrorCode value;
+            if (!Enum.TryParse(errorName, out value))
+            {
+                value = ErrorCode.UNKNOWN;
+            }
+
+            this.ErrorCode = value;
         }
 
-        public int ErrorCode { get; }
+        public int Code { get; }
 
-        public string ErrorName { get; }
+        public string Name { get; }
+
+        public ErrorCode ErrorCode { get; }
+    }
+
+    // ReSharper disable InconsistentNaming
+    public enum ErrorCode
+    {
+        E2BIG,
+        EACCES,
+        EADDRINUSE,
+        EADDRNOTAVAIL,
+        EAFNOSUPPORT,
+        EAGAIN,
+        EAI_ADDRFAMILY,
+        EAI_AGAIN,
+        EAI_BADFLAGS,
+        EAI_BADHINTS,
+        EAI_CANCELED,
+        EAI_FAIL,
+        EAI_FAMILY,
+        EAI_MEMORY,
+        EAI_NODATA,
+        EAI_NONAME,
+        EAI_OVERFLOW,
+        EAI_PROTOCOL,
+        EAI_SERVICE,
+        EAI_SOCKTYPE,
+        EALREADY,
+        EBADF,
+        EBUSY,
+        ECANCELED,
+        ECHARSET,
+        ECONNABORTED,
+        ECONNREFUSED,
+        ECONNRESET,
+        EDESTADDRREQ,
+        EEXIST,
+        EFAULT,
+        EFBIG,
+        EHOSTUNREACH,
+        EINTR,
+        EINVAL,
+        EIO,
+        EISCONN,
+        EISDIR,
+        ELOOP,
+        EMFILE,
+        EMSGSIZE,
+        ENAMETOOLONG,
+        ENETDOWN,
+        ENETUNREACH,
+        ENFILE,
+        ENOBUFS,
+        ENODEV,
+        ENOENT,
+        ENOMEM,
+        ENONET,
+        ENOPROTOOPT,
+        ENOSPC,
+        ENOSYS,
+        ENOTCONN,
+        ENOTDIR,
+        ENOTEMPTY,
+        ENOTSOCK,
+        ENOTSUP,
+        EPERM,
+        EPIPE,
+        EPROTO,
+        EPROTONOSUPPORT,
+        EPROTOTYPE,
+        ERANGE,
+        EROFS,
+        ESHUTDOWN,
+        ESPIPE,
+        ESRCH,
+        ETIMEDOUT,
+        ETXTBSY,
+        EXDEV,
+        UNKNOWN,
+        EOF,
+        ENXIO,
+        EMLINK,
     }
 }

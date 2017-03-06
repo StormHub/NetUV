@@ -24,8 +24,18 @@ namespace NetUV.Core.Tests
 
         static IEnumerable<object[]> IpFamilyCases()
         {
-            yield return new object[] { new IPEndPoint(IPAddress.Any, Port) };
-            yield return new object[] { new IPEndPoint(IPAddress.IPv6Any, Port) };
+            if (Platform.IsWindows)
+            {
+                yield return new object[] { new IPEndPoint(IPAddress.Any, Port) };
+            }
+            else
+            {
+                yield return new object[] { new IPEndPoint(IPAddress.Parse("0.0.0.0"), Port) };
+            }
+            if (Platform.OSSupportsIPv6)
+            {
+                yield return new object[] { new IPEndPoint(IPAddress.Parse("::"), Port) };
+            }
         }
 
         [Theory]
@@ -53,7 +63,7 @@ namespace NetUV.Core.Tests
             foreach (int i in invalidTtls)
             {
                 var error = Assert.Throws<OperationException>(() => udp.Ttl(i));
-                Assert.Equal((int)uv_err_code.UV_EINVAL, error.ErrorCode);
+                Assert.Equal(ErrorCode.EINVAL, error.ErrorCode);
             }
 
             udp.MulticastLoopback(true);
@@ -69,7 +79,7 @@ namespace NetUV.Core.Tests
 
             /* anything >255 should fail */
             var exception = Assert.Throws<OperationException>(() => udp.MulticastTtl(256));
-            Assert.Equal((int)uv_err_code.UV_EINVAL, exception.ErrorCode);
+            Assert.Equal(ErrorCode.EINVAL, exception.ErrorCode);
             /* don't test ttl=-1, it's a valid value on some platforms */
 
             this.loop.RunDefault();
@@ -81,16 +91,16 @@ namespace NetUV.Core.Tests
             Udp udp = this.loop.CreateUdp();
 
             var error = Assert.Throws<OperationException>(() => udp.MulticastTtl(32));
-            Assert.Equal((int)uv_err_code.UV_EBADF, error.ErrorCode);
+            Assert.Equal(ErrorCode.EBADF, error.ErrorCode);
 
             error = Assert.Throws<OperationException>(() => udp.Broadcast(true));
-            Assert.Equal((int)uv_err_code.UV_EBADF, error.ErrorCode);
+            Assert.Equal(ErrorCode.EBADF, error.ErrorCode);
 
             error = Assert.Throws<OperationException>(() => udp.Ttl(1));
-            Assert.Equal((int)uv_err_code.UV_EBADF, error.ErrorCode);
+            Assert.Equal(ErrorCode.EBADF, error.ErrorCode);
 
             error = Assert.Throws<OperationException>(() => udp.MulticastInterface(IPAddress.Any));
-            Assert.Equal((int)uv_err_code.UV_EBADF, error.ErrorCode);
+            Assert.Equal(ErrorCode.EBADF, error.ErrorCode);
 
             udp.CloseHandle(OnClose);
 

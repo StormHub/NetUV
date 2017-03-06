@@ -29,12 +29,12 @@ namespace NetUV.Core.Tests
 
             Pipe pipe2 = this.loop.CreatePipe();
             var error = Assert.Throws<OperationException>(() => pipe2.Bind(name));
-            Assert.Equal((int)uv_err_code.UV_EADDRINUSE, error.ErrorCode);
+            Assert.Equal(ErrorCode.EADDRINUSE, error.ErrorCode);
 
             Pipe listener = pipe1.Listen(OnConnection);
 
             error = Assert.Throws<OperationException>(() => pipe2.Listen(OnConnection));
-            Assert.Equal((int)uv_err_code.UV_EINVAL, error.ErrorCode);
+            Assert.Equal(ErrorCode.EINVAL, error.ErrorCode);
 
             pipe1.CloseHandle(this.OnClose);
             pipe2.CloseHandle(this.OnClose);
@@ -51,7 +51,7 @@ namespace NetUV.Core.Tests
             string name = GetBadPipeName();
 
             var error = Assert.Throws<OperationException>(() => pipe.Bind(name));
-            Assert.Equal((int)uv_err_code.UV_EACCES, error.ErrorCode);
+            Assert.Equal(ErrorCode.EACCES, error.ErrorCode);
 
             pipe.CloseHandle(this.OnClose);
             this.loop.RunDefault();
@@ -67,7 +67,7 @@ namespace NetUV.Core.Tests
             pipe.Bind(name);
 
             var error = Assert.Throws<OperationException>(() => pipe.Bind($"{name}2"));
-            Assert.Equal((int)uv_err_code.UV_EINVAL, error.ErrorCode);
+            Assert.Equal(ErrorCode.EINVAL, error.ErrorCode);
 
             pipe.CloseHandle(this.OnClose);
             this.loop.RunDefault();
@@ -84,7 +84,7 @@ namespace NetUV.Core.Tests
             var error = Assert.Throws<OperationException>(
                 () => listener = pipe.Listen(OnConnection));
 
-            Assert.Equal((int)uv_err_code.UV_EINVAL, error.ErrorCode);
+            Assert.Equal(ErrorCode.EINVAL, error.ErrorCode);
 
             pipe.CloseHandle(this.OnClose);
             this.loop.RunDefault();
