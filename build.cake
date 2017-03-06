@@ -133,18 +133,7 @@ Task("Benchmark")
   .IsDependentOn("Compile")
   .Does(() =>
 {
-  var libraries = GetFiles("./test/**/bin/" + configuration + "/net461/win7-x64/*.Performance.exe");
-  CreateDirectory(outputPerfResults);
-
-  foreach (var lib in libraries)
-  {
-    Information("Benchmark: {0}", lib);
-    int result = StartProcess(lib, new ProcessSettings { WorkingDirectory = lib.GetDirectory() } );
-    if (result != 0)
-    {
-      throw new CakeException($"Benchmark failed. {lib}");
-    }
-  }
+	DotNetCoreRun("./test/NetUV.Tests.Performance/");
 });
 
 ///////////////////////////////////////////////////////////////

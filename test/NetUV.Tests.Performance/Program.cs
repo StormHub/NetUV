@@ -6,6 +6,7 @@ namespace NetUV.Core.Tests.Performance
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.InteropServices;
     using NetUV.Core.Logging;
 
     public class Program
@@ -23,9 +24,16 @@ namespace NetUV.Core.Tests.Performance
 
         static bool isDebug;
         static bool shouldPause;
+        static int processorCount;
 
         public static void Main(string[] args)
         {
+            processorCount = Environment.ProcessorCount;
+            Console.WriteLine(
+                  $" {RuntimeInformation.OSArchitecture} {RuntimeInformation.OSDescription}\n" 
+                + $" {RuntimeInformation.ProcessArchitecture} {RuntimeInformation.FrameworkDescription}\n" 
+                + $" Processor Count : {Environment.ProcessorCount} \n");
+            
             ParseFlags(args);
 
             string category = GetCategory(args);
@@ -154,19 +162,28 @@ namespace NetUV.Core.Tests.Performance
                     asyncThreads.Run();
                 }
 
-                using (var asyncThreads = new AsyncHandles(2))
+                if (processorCount >= 2)
                 {
-                    asyncThreads.Run();
+                    using (var asyncThreads = new AsyncHandles(2))
+                    {
+                        asyncThreads.Run();
+                    }
                 }
 
-                using (var asyncThreads = new AsyncHandles(4))
+                if (processorCount >= 4)
                 {
-                    asyncThreads.Run();
+                    using (var asyncThreads = new AsyncHandles(4))
+                    {
+                        asyncThreads.Run();
+                    }
                 }
 
-                using (var asyncThreads = new AsyncHandles(8))
+                if (processorCount >= 8)
                 {
-                    asyncThreads.Run();
+                    using (var asyncThreads = new AsyncHandles(8))
+                    {
+                        asyncThreads.Run();
+                    }
                 }
             }
 
@@ -178,19 +195,28 @@ namespace NetUV.Core.Tests.Performance
                     asyncPummel.Run();
                 }
 
-                using (var asyncPummel = new AsyncPummel(2))
+                if (processorCount >= 2)
                 {
-                    asyncPummel.Run();
+                    using (var asyncPummel = new AsyncPummel(2))
+                    {
+                        asyncPummel.Run();
+                    }
                 }
 
-                using (var asyncPummel = new AsyncPummel(4))
+                if (processorCount >= 4)
                 {
-                    asyncPummel.Run();
+                    using (var asyncPummel = new AsyncPummel(4))
+                    {
+                        asyncPummel.Run();
+                    }
                 }
 
-                using (var asyncPummel = new AsyncPummel(8))
+                if (processorCount >= 8)
                 {
-                    asyncPummel.Run();
+                    using (var asyncPummel = new AsyncPummel(8))
+                    {
+                        asyncPummel.Run();
+                    }
                 }
             }
         }

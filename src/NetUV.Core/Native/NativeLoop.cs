@@ -105,10 +105,7 @@ namespace NetUV.Core.Native
                 or non-zero if more callbacks are expected(meaning you should run the event loop again sometime in the future).
             */
 
-            int result = uv_run(handle, mode);
-            Log.DebugFormat("Native run loop {0} {1}, result = {2}", handle, mode, result);
-
-            return result;
+            return uv_run(handle, mode);
         }
 
         internal static void StopLoop(IntPtr handle)
