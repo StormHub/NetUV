@@ -21,9 +21,9 @@ dotnet build ./test/NetUV.Tests -c Release -f net451
 
 mono \  
 ./test/NetUV.Tests/bin/Release/net451/*/dotnet-test-xunit.exe \
-./test/NetUV.Tests/bin/Release/net451/*/TEST_PROJECT_NAME.dll
+./test/NetUV.Tests/bin/Release/net451/*/NetUV.Tests.dll.dll
 
 revision=${TRAVIS_JOB_ID:=1}  
 revision=$(printf "%04d" $revision) 
 
-dotnet pack ./src/NetUV.Core -c Release -o ./artifacts --version-suffix=$revision  
+dotnet pack ./src/NetUV.Core -c Release -o ./artifacts --version-suffix=$revision 
