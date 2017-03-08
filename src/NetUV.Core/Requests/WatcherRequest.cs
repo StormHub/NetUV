@@ -50,7 +50,7 @@ namespace NetUV.Core.Requests
             {
                 if (error != null)
                 {
-                    Log.Error($"{this.RequestType} {this.InternalHandle} error : {error.ErrorCode} {error.ErrorName}.", error);
+                    Log.Error($"{this.RequestType} {this.InternalHandle} error : {error.ErrorCode} {error.Name}.", error);
                 }
 
                 this.watcherCallback?.Invoke(this, error);

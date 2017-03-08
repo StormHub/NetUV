@@ -47,7 +47,21 @@ namespace NetUV.Core.Tests
             IPAddress address = IPAddress.Parse(ipAddress);
             var endPoint = new IPEndPoint(address, Port);
             Tcp tcp = this.loop.CreateTcp();
-            Assert.Throws<OperationException>(() => tcp.Bind(endPoint));
+
+            //
+            // 
+            // It seems that Linux is broken here - bind succeeds 
+            // for "127.255.255.255"
+            //
+            if (ipAddress == "127.255.255.255" && Platform.IsLinux)
+            {
+                tcp.Bind(endPoint);
+            }
+            else
+            {
+                var error = Assert.Throws<OperationException>(() => tcp.Bind(endPoint));
+                Assert.Equal(ErrorCode.EADDRNOTAVAIL, error.ErrorCode);
+            }
 
             tcp.CloseHandle(this.OnClose);
             this.loop.RunDefault();

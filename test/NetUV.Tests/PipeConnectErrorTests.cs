@@ -44,7 +44,7 @@ namespace NetUV.Core.Tests
             var error = exception as OperationException;
             if (error != null)
             {
-                this.badPipeErrorValid = error.ErrorCode == (int)uv_err_code.UV_ENOENT;
+                this.badPipeErrorValid = error.ErrorCode == ErrorCode.ENOENT;
             }
 
             this.connectCount++;

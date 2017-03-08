@@ -7,6 +7,7 @@ namespace NetUV.Core.Tests
     using System.Net;
     using System.Text;
     using NetUV.Core.Handles;
+    using NetUV.Core.Native;
     using Xunit;
 
     public sealed class UdpIPv6Tests : IDisposable
@@ -30,6 +31,11 @@ namespace NetUV.Core.Tests
         [InlineData(false)]
         public void Run(bool dualStack)
         {
+            if (!Platform.OSSupportsIPv6)
+            {
+                return;
+            }
+
             this.sendCount = 0;
             this.receiveCount = 0;
             this.closeCount = 0;

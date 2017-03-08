@@ -113,7 +113,7 @@ namespace NetUV.Core.Tests
 
             this.connectionErrorValid =
                 error != null
-                && error.ErrorCode == (int)uv_err_code.UV_ECONNREFUSED
+                && error.ErrorCode == ErrorCode.ECONNREFUSED
                 && this.closeCount == 0;
 
             this.connectCount++;

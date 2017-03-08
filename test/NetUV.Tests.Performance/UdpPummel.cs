@@ -103,7 +103,7 @@ namespace NetUV.Core.Tests.Performance
             {
                 var error = exception as OperationException;
                 if (error != null 
-                    && error.ErrorCode == -4081) // UV_ECANCELED
+                    && error.ErrorCode == ErrorCode.ECANCELED)
                 {
                     return;
                 }
@@ -141,7 +141,7 @@ namespace NetUV.Core.Tests.Performance
         {
             var error = completion.Error as OperationException;
             if (error != null
-                && error.ErrorCode == -4081) // UV_ECANCELED
+                && error.ErrorCode == ErrorCode.ECANCELED) // UV_ECANCELED
             {
                 return;
             }

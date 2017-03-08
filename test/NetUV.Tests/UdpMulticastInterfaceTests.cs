@@ -36,7 +36,6 @@ namespace NetUV.Core.Tests
             Udp udp = this.loop
                 .CreateUdp()
                 .Bind(anyEndPoint)
-                .MulticastLoopback(true)
                 .MulticastInterface(IPAddress.Any);
 
             byte[] data = Encoding.UTF8.GetBytes("PING");
@@ -61,7 +60,7 @@ namespace NetUV.Core.Tests
                 var error = exception as OperationException;
                 if (error != null)
                 {
-                    this.sendErrorValid = error.ErrorCode == (int)uv_err_code.UV_ENETUNREACH;
+                    this.sendErrorValid = error.ErrorCode == ErrorCode.ENETUNREACH;
                 }
             }
 

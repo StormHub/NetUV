@@ -37,7 +37,7 @@ namespace NetUV.Core.Tests
         {
             var error = exception as OperationException;
             if (error != null 
-                && error.ErrorCode == (int)uv_err_code.UV_ENOENT)
+                && error.ErrorCode == ErrorCode.ENOENT)
             {
                 this.connectedCount++;
             }

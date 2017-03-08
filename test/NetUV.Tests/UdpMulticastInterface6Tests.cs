@@ -7,47 +7,68 @@ namespace NetUV.Core.Tests
     using System.Net;
     using System.Text;
     using NetUV.Core.Handles;
+    using NetUV.Core.Native;
     using Xunit;
 
     public sealed class UdpMulticastInterface6Tests : IDisposable
     {
-        const int Port = 8993;
+        const int Port = 8988;
 
         Loop loop;
 
         int closeCount;
         int serverSendCount;
+        Exception sendError;
 
         [Fact]
         public void Run()
         {
+            if (!Platform.OSSupportsIPv6)
+            {
+                return;
+            }
+
             this.closeCount = 0;
             this.serverSendCount = 0;
 
             this.loop = new Loop();
+            var endPoint = new IPEndPoint(IPAddress.Parse("::1"), Port);
 
-            var anyEndPoint = new IPEndPoint(IPAddress.IPv6Any, Port);
-            Udp server = this.loop.CreateUdp()
-                .Bind(anyEndPoint)
-                .MulticastInterface(IPAddress.IPv6Loopback);
+            var anyEndPoint = new IPEndPoint(IPAddress.Parse("::"), Port);
+            Udp server = this.loop.CreateUdp();
 
-            var endPoint = new IPEndPoint(IPAddress.IPv6Loopback, Port);
-            byte[] data = Encoding.UTF8.GetBytes("PING");
-            server.QueueSend(data, endPoint, this.OnServerSendCompleted);
+            try
+            {
+                server.Bind(anyEndPoint).MulticastInterface(IPAddress.IPv6Loopback);
+                byte[] data = Encoding.UTF8.GetBytes("PING");
+                server.QueueSend(data, endPoint, this.OnServerSendCompleted);
 
-            this.loop.RunDefault();
+                this.loop.RunDefault();
 
-            Assert.Equal(1, this.closeCount);
-            Assert.Equal(1, this.serverSendCount);
+                Assert.Equal(1, this.closeCount);
+                Assert.Equal(1, this.serverSendCount);
+            }
+            catch (OperationException exception)
+            {
+                this.sendError = exception;
+            }
+
+            if (Platform.IsWindows)
+            {
+                Assert.Null(this.sendError);
+            }
+            else
+            {
+                Assert.IsType<OperationException>(this.sendError);
+                var error = (OperationException)this.sendError;
+                Assert.Equal(ErrorCode.EADDRNOTAVAIL, error.ErrorCode);
+            }
         }
 
         void OnServerSendCompleted(Udp udp, Exception exception)
         {
-            if (exception == null)
-            {
-                this.serverSendCount++;
-            }
-
+            this.sendError = exception;
+            this.serverSendCount++;
             udp.CloseHandle(this.OnClose);
         }
 

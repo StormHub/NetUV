@@ -16,6 +16,7 @@ namespace NetUV.Core.Tests
         Loop loop;
         int sendCount;
         int closeCount;
+        Exception sendError;
 
         [Fact]
         public void Run()
@@ -33,17 +34,16 @@ namespace NetUV.Core.Tests
 
             Assert.Equal(1, this.sendCount);
             Assert.Equal(1, this.closeCount);
+            Assert.NotNull(this.sendError);
+            Assert.IsType<OperationException>(this.sendError);
+            var error =(OperationException)this.sendError;
+            Assert.Equal(ErrorCode.EMSGSIZE, error.ErrorCode);
         }
 
         void OnSendCompleted(Udp udp, Exception exception)
         {
-            var error = exception as OperationException;
-            if (error != null 
-                && error.ErrorCode == (int)uv_err_code.UV_EMSGSIZE)
-            {
-                this.sendCount++;
-            }
-
+            this.sendError = exception;
+            this.sendCount++;
             udp.CloseHandle(this.OnClose);
         }
 

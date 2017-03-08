@@ -482,9 +482,11 @@ namespace NetUV.Core.Tests
         {
             using (FileStream file = TestHelper.OpenTempFile())
             {
+                Assert.NotNull(file);
+                Assert.NotNull(file.SafeFileHandle);
                 IntPtr handle = file.SafeFileHandle.DangerousGetHandle();
                 var error = Assert.Throws<OperationException>(() => this.loop.CreatePoll(handle));
-                Assert.Equal((int)uv_err_code.UV_ENOTSOCK, error.ErrorCode);
+                Assert.True(error.ErrorCode == ErrorCode.ENOTSOCK || error.ErrorCode == ErrorCode.EPERM);
             }
         }
 

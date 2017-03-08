@@ -24,10 +24,10 @@ namespace NetUV.Core.Tests
             Pipe server = this.loop.CreatePipe();
 
             var error = Assert.Throws<OperationException>(() => server.GetSocketName());
-            Assert.Equal((int)uv_err_code.UV_EBADF, error.ErrorCode);
+            Assert.Equal(ErrorCode.EBADF, error.ErrorCode);
 
             error = Assert.Throws<OperationException>(() => server.GetPeerName());
-            Assert.Equal((int)uv_err_code.UV_EBADF, error.ErrorCode);
+            Assert.Equal(ErrorCode.EBADF, error.ErrorCode);
 
             string pipeName = GetPipeName();
             server.Bind(pipeName);
@@ -36,7 +36,7 @@ namespace NetUV.Core.Tests
             Assert.Equal(pipeName, name);
 
             error = Assert.Throws<OperationException>(() => server.GetPeerName());
-            Assert.Equal((int)uv_err_code.UV_ENOTCONN, error.ErrorCode);
+            Assert.Equal(ErrorCode.ENOTCONN, error.ErrorCode);
 
             this.listener = server.Listen(this.OnConnection);
 

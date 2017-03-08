@@ -8,11 +8,12 @@ namespace NetUV.Core.Tests
     using System.Text;
     using NetUV.Core.Buffers;
     using NetUV.Core.Handles;
+    using NetUV.Core.Native;
     using Xunit;
 
     public sealed class UdpMulticastJoin6Tests : IDisposable
     {
-        const int Port = 8991;
+        const int Port = 9889;
 
         Loop loop;
 
@@ -23,19 +24,48 @@ namespace NetUV.Core.Tests
         [Fact]
         public void Run()
         {
+            if (!Platform.OSSupportsIPv6)
+            {
+                return;
+            }
+
             this.closeCount = 0;
             this.serverSendCount = 0;
             this.clientReceiveCount = 0;
 
             this.loop = new Loop();
-
+            
             var endPoint = new IPEndPoint(IPAddress.IPv6Loopback, Port);
-            Udp client = this.loop
-                .CreateUdp()
-                .ReceiveStart(endPoint, this.OnClientReceive);
+            Udp client = this.loop.CreateUdp();
+
+            try
+            {
+                client.ReceiveStart(endPoint, this.OnClientReceive);
+            }
+            catch (OperationException exception)
+            {
+                // IPv6 loop back not available happens on some Linux
+                Assert.Equal(ErrorCode.EADDRNOTAVAIL, exception.ErrorCode);
+                return;
+            }
 
             IPAddress group = IPAddress.Parse("ff02::1");
-            client.JoinGroup(group, IPAddress.IPv6Loopback);
+            try
+            {
+                if (Platform.IsMacOS)
+                {
+                    client.JoinGroup(group, IPAddress.IPv6Loopback);
+                }
+                else
+                {
+                    client.JoinGroup(group);
+                }
+            }
+            catch (OperationException error)
+            {
+                Assert.Equal(ErrorCode.ENODEV, error.ErrorCode);
+                return;
+            }
 
             byte[] data = Encoding.UTF8.GetBytes("PING");
             Udp server = this.loop.CreateUdp();

@@ -5,6 +5,7 @@ namespace NetUV.Core.Tests
 {
     using System;
     using System.Net;
+    using System.Net.NetworkInformation;
     using NetUV.Core.Handles;
     using NetUV.Core.Native;
     using Xunit;
@@ -13,17 +14,22 @@ namespace NetUV.Core.Tests
     {
         const int Port = 9888;
         Loop loop;
-        int closeCalled;
+        int closeCount;
 
         public TcpBind6ErrorTests()
         {
             this.loop = new Loop();
-            this.closeCalled = 0;
+            this.closeCount = 0;
         }
 
         [Fact]
         public void AddressInUse()
         {
+            if (!Platform.OSSupportsIPv6)
+            {
+                return;
+            }
+
             IPAddress address = IPAddress.Parse("::");
             var endPoint = new IPEndPoint(address, Port);
 
@@ -36,12 +42,17 @@ namespace NetUV.Core.Tests
             tcp1.CloseHandle(this.OnClose);
             tcp2.CloseHandle(this.OnClose);
             this.loop.RunDefault();
-            Assert.Equal(2, this.closeCalled);
+            Assert.Equal(2, this.closeCount);
         }
 
         [Fact]
         public void AddressNotAvailable()
         {
+            if (!Platform.OSSupportsIPv6)
+            {
+                return;
+            }
+
             IPAddress address = IPAddress.Parse("4:4:4:4:4:4:4:4");
             var endPoint = new IPEndPoint(address, Port);
             Tcp tcp = this.loop.CreateTcp();
@@ -49,12 +60,17 @@ namespace NetUV.Core.Tests
 
             tcp.CloseHandle(this.OnClose);
             this.loop.RunDefault();
-            Assert.Equal(1, this.closeCalled);
+            Assert.Equal(1, this.closeCount);
         }
 
         [Fact]
         public void Invalid()
         {
+            if (!Platform.OSSupportsIPv6)
+            {
+                return;
+            }
+
             IPAddress address = IPAddress.Parse("::");
             var endPoint1 = new IPEndPoint(address, Port);
             var endPoint2 = new IPEndPoint(address, Port + 1);
@@ -65,18 +81,35 @@ namespace NetUV.Core.Tests
             Assert.Throws<OperationException>(() => tcp.Bind(endPoint2));
             tcp.CloseHandle(this.OnClose);
             this.loop.RunDefault();
-            Assert.Equal(1, this.closeCalled);
+            Assert.Equal(1, this.closeCount);
         }
 
         [Fact]
         public void LocalHost()
         {
-            IPAddress address = IPAddress.Parse("::1");
-            var endPoint = new IPEndPoint(address, Port);
+            if (!Platform.OSSupportsIPv6)
+            {
+                return;
+            }
 
+            var endPoint = new IPEndPoint(IPAddress.IPv6Loopback, Port);
             Tcp tcp = this.loop.CreateTcp();
-            Assert.Equal(tcp.Bind(endPoint), tcp);
-            tcp.Dispose();
+
+            try
+            {
+                tcp.Bind(endPoint);
+            }
+            catch (OperationException exception)
+            {
+                // IPv6 loop back not available happens on some Linux
+                Assert.Equal(ErrorCode.EADDRNOTAVAIL, exception.ErrorCode);
+                return;
+            }
+
+            tcp.CloseHandle(this.OnClose);
+
+            this.loop.RunDefault();
+            Assert.Equal(1, this.closeCount);
         }
 
         static void OnConnection(Tcp tcp, Exception exception) =>
@@ -85,7 +118,7 @@ namespace NetUV.Core.Tests
         void OnClose(Tcp tcp)
         {
             tcp.Dispose();
-            this.closeCalled++;
+            this.closeCount++;
         }
 
         public void Dispose()

@@ -16,6 +16,7 @@ namespace NetUV.Core.Tests
 
         int connectCount;
         int closeCount;
+        Exception connectedError;
 
         public TcpConnectTimeoutTests()
         {
@@ -48,7 +49,7 @@ namespace NetUV.Core.Tests
             catch (OperationException exception)
             {
                 // Skip
-                if (exception.ErrorCode == (int)uv_err_code.UV_ENETUNREACH)
+                if (exception.ErrorCode == ErrorCode.ENETUNREACH)
                 {
                     return;
                 }
@@ -57,14 +58,16 @@ namespace NetUV.Core.Tests
             this.loop.RunDefault();
             Assert.Equal(2, this.closeCount);
             Assert.Equal(1, this.connectCount);
+
+            Assert.NotNull(this.connectedError);
+            Assert.IsType<OperationException>(this.connectedError);
+            var operationException = (OperationException)this.connectedError;
+            Assert.Equal(ErrorCode.ECANCELED, operationException.ErrorCode);
         }
 
         void OnConnected(Tcp tcpClient, Exception exception)
         {
-            Assert.IsType<OperationException>(exception);
-
-            var operationException = (OperationException)exception;
-            Assert.Equal((int)uv_err_code.UV_ECANCELED, operationException.ErrorCode);
+            this.connectedError = exception;
             this.connectCount++;
         }
 

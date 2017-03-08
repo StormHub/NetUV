@@ -39,7 +39,7 @@ namespace NetUV.Core.Tests
             else
             {
                 var error = Assert.Throws<OperationException>(() => udp2.Bind(anyEndPoint));
-                Assert.Equal((int)uv_err_code.UV_EADDRINUSE, error.ErrorCode);
+                Assert.Equal(ErrorCode.EADDRINUSE, error.ErrorCode);
             }
 
             udp1.CloseHandle(this.OnClose);

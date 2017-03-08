@@ -19,6 +19,8 @@ namespace NetUV.Core.Tests
         Tcp tcpServer;
         int writeCount;
         int closeCount;
+        Exception writeError;
+        Exception connectionError;
 
         public TcpCloseTests()
         {
@@ -41,6 +43,8 @@ namespace NetUV.Core.Tests
 
             Assert.Equal(this.writeCount, NumberOfWriteRequests);
             Assert.Equal(this.closeCount, 1);
+            Assert.Null(this.writeError);
+            Assert.Null(this.connectionError);
         }
 
         void OnConnected(Tcp tcp, Exception exception)
@@ -64,21 +68,21 @@ namespace NetUV.Core.Tests
 
         void OnWriteCompleted(Tcp tcp, Exception exception)
         {
-            Assert.True(exception == null);
+            this.writeError = exception;
             this.writeCount++;
         }
 
         Tcp StartServer()
         {
             Tcp tcp = this.loop.CreateTcp()
-                .Listen(this.endPoint, OnConnection);
+                .Listen(this.endPoint, this.OnConnection);
             tcp.RemoveReference();
 
             return tcp;
         }
 
-        static void OnConnection(Tcp tcp, Exception exception) => 
-            Assert.True(exception == null);
+        void OnConnection(Tcp tcp, Exception exception) => 
+            this.connectionError = exception;
 
         public void Dispose()
         {

@@ -64,7 +64,7 @@ namespace NetUV.Core.Tests
                 }
                 catch (OperationException error)
                 {
-                    if (error.ErrorCode != (int)uv_err_code.UV_EAGAIN)
+                    if (error.ErrorCode != ErrorCode.EAGAIN)
                     {
                         this.bytesWritten = 0;
                         break;
@@ -84,7 +84,7 @@ namespace NetUV.Core.Tests
                 }
                 catch (OperationException error)
                 {
-                    if (error.ErrorCode != (int)uv_err_code.UV_EAGAIN)
+                    if (error.ErrorCode != ErrorCode.EAGAIN)
                     {
                         this.bytesWritten = 0;
                         break;

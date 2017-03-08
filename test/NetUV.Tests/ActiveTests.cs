@@ -12,13 +12,7 @@ namespace NetUV.Core.Tests
         Loop loop;
         int timerCalled;
 
-        void OnTimer(Timer handle)
-        {
-            if (handle != null)
-            {
-                this.timerCalled++;
-            }
-        }
+        void OnTimer(Timer handle) => this.timerCalled++;
 
         [Fact]
         public void Active()
