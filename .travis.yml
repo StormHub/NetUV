@@ -36,6 +36,7 @@ install:
     fi
   - node -e "jsonPath='./src/NetUV.Core/project.json';data=require(jsonPath);fs=require('fs');delete data.frameworks.net46;fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2))"
   - node -e "jsonPath='./test/NetUV.Tests/project.json';data=require(jsonPath);fs=require('fs');delete data.frameworks.net461;fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2))"
+  - node -e "jsonPath='./test/NetUV.Tests.Performance/project.json';data=require(jsonPath);fs=require('fs');delete data.frameworks.net461;fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2))"
 
   # Restore dependencies
   - dotnet restore
@@ -46,3 +47,5 @@ install:
 script:
   # Run tests
   - dotnet test -c $CONFIGURATION ./test/NetUV.Tests
+  # Run Benchmark
+  - dotnet run -c $CONFIGURATION -p ./test/NetUV.Tests.Performance
