@@ -134,6 +134,9 @@ namespace NetUV.Core.Handles
             return this;
         }
 
+        public void Shutdown(Action<Pipe, Exception> completedAction = null) =>
+            this.ShutdownStream((state, error) => completedAction?.Invoke((Pipe)state, error));
+
         public void CloseHandle(Action<Pipe> callback = null) =>
             base.CloseHandle(state => callback?.Invoke((Pipe)state));
     }

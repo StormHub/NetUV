@@ -23,8 +23,10 @@ namespace NetUV.Core.Handles
 
         public Async Send()
         {
-            this.Validate();
-            NativeMethods.Send(this.InternalHandle);
+            if (this.IsActive)
+            {
+                NativeMethods.Send(this.InternalHandle);
+            }
 
             return this;
         }
