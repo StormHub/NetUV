@@ -17,11 +17,11 @@ matrix:
       sudo: required
       env: CONFIGURATION=Release
     #- os: osx
-    #  osx_image: Xcode 7.3.1
+    #  osx_image: xcode8.2
     #  env: CONFIGURATION=Release
 
 install:
-  # Display dotnet version info
+  # Display dotnet version info 
   - which dotnet;
     if [ $? -eq 0 ]; then
       echo "Using dotnet:";
