@@ -4,7 +4,6 @@
 namespace NetUV.Core.Tests.Performance
 {
     using System;
-    using System.Collections.Generic;
     using System.Text;
     using NetUV.Core.Buffers;
     using NetUV.Core.Channels;
@@ -17,7 +16,6 @@ namespace NetUV.Core.Tests.Performance
 
         readonly HandleType handleType;
         readonly int clientCount;
-        readonly List<StreamHandle> clients;
 
         EchoServer server;
         Loop loop;
@@ -29,12 +27,25 @@ namespace NetUV.Core.Tests.Performance
         long stopTime;
         int closedStreams;
         int connectionsFailed;
+        int activeStreams;
+
+        class StreamContext
+        {
+            public StreamContext(int index, StreamHandle[] streams)
+            {
+                this.Index = index;
+                this.Streams = streams;
+            }
+
+            public int Index { get; }
+
+            public StreamHandle[] Streams { get; }
+        }
 
         public Pound(HandleType handleType, int clientCount)
         {
             this.handleType = handleType;
             this.clientCount = clientCount;
-            this.clients = new List<StreamHandle>();
         }
 
         public void Run()
@@ -52,6 +63,7 @@ namespace NetUV.Core.Tests.Performance
 
             this.startTime = this.loop.NowInHighResolution;
             this.StartClients();
+            this.activeStreams = this.clientCount;
 
             this.loop.RunDefault();
 
@@ -62,10 +74,11 @@ namespace NetUV.Core.Tests.Performance
 
         void StartClients()
         {
+            var streams = new StreamHandle[this.clientCount];
             for (int i = 0; i < this.clientCount; i++)
             {
-                StreamHandle streamHandle = this.CreateStream();
-                this.clients.Add(streamHandle);
+                streams[i] = this.CreateStream();
+                streams[i].UserToken = new StreamContext(i, streams);
             }
         }
 
@@ -97,7 +110,7 @@ namespace NetUV.Core.Tests.Performance
             else
             {
                 IStream stream = client.CreateStream();
-                stream.Subscribe(OnNext, this.OnError);
+                stream.Subscribe(this.OnNext, this.OnError, this.OnComplete);
                 stream.Write(this.buffer, this.OnWriteComplete);
             }
         }
@@ -106,50 +119,53 @@ namespace NetUV.Core.Tests.Performance
         {
             if (error != null)
             {
+                stream.Handle.CloseHandle(this.OnClosed);
                 Console.WriteLine($"{this.handleType} conn pound : {this.clientCount} write error {error}");
             }
-
-            stream.Handle.CloseHandle(this.OnClosed);
         }
 
         void OnClosed(StreamHandle stream)
         {
+            var context = (StreamContext)stream.UserToken;
             this.closedStreams++;
             stream.Dispose();
 
-            if ((this.loop.Now - this.start) < 10000)
+            long duration = this.loop.Now - this.start;
+            if (duration < 10000)
             {
-                int index = this.clients.IndexOf(stream);
-                this.clients[index] = this.CreateStream();
-                return;
+                StreamHandle streamHandle = this.CreateStream();
+                streamHandle.UserToken = context;
+                context.Streams[context.Index] = streamHandle;
             }
-
-            if (this.stopTime == 0)
+            else
             {
-                this.stopTime = this.loop.NowInHighResolution;
-            }
-            this.clients.Remove(stream);
+                context.Streams[context.Index] = null;
+                this.activeStreams--;
+                if (this.stopTime == 0)
+                {
+                    this.stopTime = this.loop.NowInHighResolution;
+                }
 
-            if (this.clients.Count == 0)
-            {
-                this.loop.Stop();
+                if (this.activeStreams <= 0) 
+                {
+                    this.server.CloseServer();
+                }
             }
         }
 
-        static void OnNext(IStream stream, ReadableBuffer data)
+        void OnNext(IStream stream, ReadableBuffer data)
         {
-            // NOP
+            data.Dispose();
+            stream.Handle.CloseHandle(this.OnClosed);
         }
 
         void OnError(IStream stream, Exception error)
         {
-            if (error == null)
-            {
-                return;
-            }
-
             Console.WriteLine($"{this.handleType} conn pound : {this.clientCount} read error {error}");
+            stream.Handle.CloseHandle(this.OnClosed);
         }
+
+        void OnComplete(IStream stream) => stream.Handle.CloseHandle(this.OnClosed);
 
         public void Dispose()
         {

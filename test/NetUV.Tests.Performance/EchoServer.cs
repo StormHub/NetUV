@@ -5,7 +5,6 @@ namespace NetUV.Core.Tests.Performance
 {
     using System;
     using System.Net;
-    using System.Net.Sockets;
     using System.Text;
     using NetUV.Core.Buffers;
     using NetUV.Core.Channels;
@@ -13,8 +12,8 @@ namespace NetUV.Core.Tests.Performance
 
     sealed class EchoServer : IDisposable
     {
-        const int MaximumBacklogSize = (int)SocketOptionName.MaxConnections;
-        readonly IDisposable server;
+        const int MaximumBacklogSize = 1000;
+        readonly ScheduleHandle server;
 
         public EchoServer(HandleType handleType)
         {
@@ -37,7 +36,7 @@ namespace NetUV.Core.Tests.Performance
                 case HandleType.Pipe:
                     this.server = this.Loop
                         .CreatePipe()
-                        .Listen(TestHelper.LocalPipeName, this.OnConnection);
+                        .Listen(TestHelper.LocalPipeName, this.OnConnection, MaximumBacklogSize);
                     break;
                 default:
                     throw new InvalidOperationException($"{handleType} not supported.");
@@ -48,25 +47,22 @@ namespace NetUV.Core.Tests.Performance
 
         static void OnReceive(Udp udp, IDatagramReadCompletion completion)
         {
-            IPEndPoint remoteEndPoint = completion.RemoteEndPoint;
-            ReadableBuffer data = completion.Data;
-            if (data.Count == 0)
-            {
-                return;
-            }
-
             if (completion.Error != null)
             {
+                completion.Dispose();
                 Console.WriteLine($"{nameof(EchoServer)} receive error {completion.Error}");
                 udp.ReceiveStop();
-                udp.Dispose();
+                udp.CloseHandle(OnClose);
                 return;
             }
 
-            string message = data.ReadString(data.Count, Encoding.UTF8);
+            ReadableBuffer data = completion.Data;
+            string message = data.Count > 0 ? data.ReadString(data.Count, Encoding.UTF8) : null;
             data.Dispose();
 
-            if (remoteEndPoint == null)
+            IPEndPoint remoteEndPoint = completion.RemoteEndPoint;
+            if (string.IsNullOrEmpty(message) 
+                || remoteEndPoint == null)
             {
                 return;
             }
@@ -79,6 +75,7 @@ namespace NetUV.Core.Tests.Performance
         {
             if (exception != null)
             {
+                udp.CloseHandle(OnClose);
                 Console.WriteLine($"{nameof(EchoServer)} send error {exception}");
             }
         }
@@ -89,22 +86,23 @@ namespace NetUV.Core.Tests.Performance
             if (error != null)
             {
                 Console.WriteLine($"{nameof(EchoServer)} client connection failed, {error}");
-                client.Dispose();
-                return;
+                client.CloseHandle(OnClose);
             }
-
-            client.CreateStream().Subscribe(this.OnNext, OnError, OnComplete);
+            else
+            {
+                client.CreateStream().Subscribe(this.OnNext, OnError, OnComplete);
+            }
         }
 
         void OnNext(IStream stream, ReadableBuffer data)
         {
-            if (data.Count == 0)
+            string message = data.Count > 0 ? data.ReadString(data.Count, Encoding.UTF8) : null;
+            data.Dispose();
+
+            if (string.IsNullOrEmpty(message))
             {
                 return;
             }
-
-            string message = data.ReadString(data.Count, Encoding.UTF8);
-            data.Dispose();
 
             //
             // Scan for the letter Q which signals that we should quit the server.
@@ -112,19 +110,33 @@ namespace NetUV.Core.Tests.Performance
             //
             if (message.StartsWith("Q"))
             {
-                stream.Dispose();
-
                 if (message.EndsWith("QS"))
                 {
-                    return;
+                    stream.Handle.CloseHandle(OnClose);
                 }
+                else
+                {
+                    this.CloseServer();
 
-                this.server.Dispose();
+                }
             }
             else
             {
                 WritableBuffer buffer = WritableBuffer.From(Encoding.UTF8.GetBytes(message));
                 stream.Write(buffer, OnWriteCompleted);
+            }
+        }
+
+        public void CloseServer()
+        {
+            var serverStream = this.server as ServerStream;
+            if (serverStream != null)
+            {
+                serverStream.CloseHandle(OnClose);
+            }
+            else
+            {
+                ((Udp)this.server).CloseHandle(OnClose);
             }
         }
 
@@ -136,14 +148,20 @@ namespace NetUV.Core.Tests.Performance
             }
 
             Console.WriteLine($"{nameof(EchoServer)} write failed, {error}");
-            stream.Dispose();
+            stream.Handle.CloseHandle(OnClose);
         }
 
-        static void OnError(IStream stream, Exception exception) => 
+        static void OnError(IStream stream, Exception exception)
+        {
             Console.WriteLine($"{nameof(EchoServer)} read error {exception}");
+            stream.Shutdown(OnShutdown);
+        }
 
-        static void OnComplete(IStream stream) => 
-            stream.Dispose();
+        static void OnShutdown(IStream handle, Exception exception) => handle.Handle.CloseHandle(OnClose);
+
+        static void OnClose(ScheduleHandle handle) => handle.Dispose();
+
+        static void OnComplete(IStream stream) => stream.Handle.CloseHandle(OnClose);
 
         public void Dispose()
         {

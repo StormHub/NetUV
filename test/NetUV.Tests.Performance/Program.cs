@@ -130,6 +130,8 @@ namespace NetUV.Core.Tests.Performance
             if (string.IsNullOrEmpty(name)
                 || string.Compare(name, "count", StringComparison.CurrentCultureIgnoreCase) == 0)
             {
+                Console.WriteLine($"{nameof(RunLoopBenchmark)} {nameof(LoopCount)}");
+
                 using (var loopCount = new LoopCount())
                 {
                     loopCount.Run();
@@ -139,6 +141,8 @@ namespace NetUV.Core.Tests.Performance
 
         static void RunTimerBenchmark()
         {
+            Console.WriteLine($"{nameof(RunTimerBenchmark)}");
+
             using (var timers = new MillionTimers())
             {
                 timers.Run();
@@ -149,6 +153,7 @@ namespace NetUV.Core.Tests.Performance
         {
             if (string.IsNullOrEmpty(name))
             {
+                Console.WriteLine($"{nameof(RunAsyncBenchmark)} {nameof(MillionAsync)}");
                 using (var millionAsync = new MillionAsync())
                 {
                     millionAsync.Run();
@@ -157,6 +162,7 @@ namespace NetUV.Core.Tests.Performance
 
             if (string.IsNullOrEmpty(name))
             {
+                Console.WriteLine($"{nameof(RunAsyncBenchmark)} {nameof(AsyncHandles)} (1)");
                 using (var asyncThreads = new AsyncHandles(1))
                 {
                     asyncThreads.Run();
@@ -164,6 +170,7 @@ namespace NetUV.Core.Tests.Performance
 
                 if (processorCount >= 2)
                 {
+                    Console.WriteLine($"{nameof(RunAsyncBenchmark)} {nameof(AsyncHandles)} (2)");
                     using (var asyncThreads = new AsyncHandles(2))
                     {
                         asyncThreads.Run();
@@ -172,6 +179,7 @@ namespace NetUV.Core.Tests.Performance
 
                 if (processorCount >= 4)
                 {
+                    Console.WriteLine($"{nameof(RunAsyncBenchmark)} {nameof(AsyncHandles)} (4)");
                     using (var asyncThreads = new AsyncHandles(4))
                     {
                         asyncThreads.Run();
@@ -180,6 +188,7 @@ namespace NetUV.Core.Tests.Performance
 
                 if (processorCount >= 8)
                 {
+                    Console.WriteLine($"{nameof(RunAsyncBenchmark)} {nameof(AsyncHandles)} (8)");
                     using (var asyncThreads = new AsyncHandles(8))
                     {
                         asyncThreads.Run();
@@ -190,6 +199,7 @@ namespace NetUV.Core.Tests.Performance
             if (string.IsNullOrEmpty(name)
                 || string.Compare(name, "pummel", StringComparison.CurrentCultureIgnoreCase) == 0)
             {
+                Console.WriteLine($"{nameof(RunAsyncBenchmark)} {nameof(AsyncPummel)} (1)");
                 using (var asyncPummel = new AsyncPummel(1))
                 {
                     asyncPummel.Run();
@@ -197,6 +207,7 @@ namespace NetUV.Core.Tests.Performance
 
                 if (processorCount >= 2)
                 {
+                    Console.WriteLine($"{nameof(RunAsyncBenchmark)} {nameof(AsyncPummel)} (2)");
                     using (var asyncPummel = new AsyncPummel(2))
                     {
                         asyncPummel.Run();
@@ -205,6 +216,7 @@ namespace NetUV.Core.Tests.Performance
 
                 if (processorCount >= 4)
                 {
+                    Console.WriteLine($"{nameof(RunAsyncBenchmark)} {nameof(AsyncPummel)} (4)");
                     using (var asyncPummel = new AsyncPummel(4))
                     {
                         asyncPummel.Run();
@@ -213,6 +225,7 @@ namespace NetUV.Core.Tests.Performance
 
                 if (processorCount >= 8)
                 {
+                    Console.WriteLine($"{nameof(RunAsyncBenchmark)} {nameof(AsyncPummel)} (8)");
                     using (var asyncPummel = new AsyncPummel(8))
                     {
                         asyncPummel.Run();
@@ -226,6 +239,7 @@ namespace NetUV.Core.Tests.Performance
             if (string.IsNullOrEmpty(name)
                 || string.Compare(name, "writeBatch", StringComparison.CurrentCultureIgnoreCase) == 0)
             {
+                Console.WriteLine($"{nameof(RunTcpBenchmark)} {nameof(TcpWriteBatch)}");
                 using (var tcpWriteBatch = new TcpWriteBatch())
                 {
                     tcpWriteBatch.Run();
@@ -235,6 +249,7 @@ namespace NetUV.Core.Tests.Performance
             if (string.IsNullOrEmpty(name)
                 || string.Compare(name, "pingPong", StringComparison.CurrentCultureIgnoreCase) == 0)
             {
+                Console.WriteLine($"{nameof(RunTcpBenchmark)} {nameof(TcpPingPong)}");
                 using (var tcpPingPong = new TcpPingPong())
                 {
                     tcpPingPong.Run();
@@ -244,11 +259,13 @@ namespace NetUV.Core.Tests.Performance
             if (string.IsNullOrEmpty(name)
                 || string.Compare(name, "pump", StringComparison.CurrentCultureIgnoreCase) == 0)
             {
+                Console.WriteLine($"{nameof(RunTcpBenchmark)} {nameof(Pump)} (1)");
                 using (var tcpPump = new Pump(HandleType.Tcp, 1))
                 {
                     tcpPump.Run();
                 }
 
+                Console.WriteLine($"{nameof(RunTcpBenchmark)} {nameof(Pump)} (100)");
                 using (var tcpPump = new Pump(HandleType.Tcp, 100))
                 {
                     tcpPump.Run();
@@ -258,11 +275,13 @@ namespace NetUV.Core.Tests.Performance
             if (string.IsNullOrEmpty(name)
                 || string.Compare(name, "pound", StringComparison.CurrentCultureIgnoreCase) == 0)
             {
+                Console.WriteLine($"{nameof(RunTcpBenchmark)} {nameof(Pound)} (100)");
                 using (var tcpPound = new Pound(HandleType.Tcp, 100))
                 {
                     tcpPound.Run();
                 }
 
+                Console.WriteLine($"{nameof(RunTcpBenchmark)} {nameof(Pound)} (1000)");
                 using (var tcpPound = new Pound(HandleType.Tcp, 1000))
                 {
                     tcpPound.Run();
@@ -275,11 +294,13 @@ namespace NetUV.Core.Tests.Performance
             if (string.IsNullOrEmpty(name)
                 || string.Compare(name, "pump", StringComparison.CurrentCultureIgnoreCase) == 0)
             {
+                Console.WriteLine($"{nameof(RunPipeBenchmark)} {nameof(Pump)} (1)");
                 using (var pipePump = new Pump(HandleType.Pipe, 1))
                 {
                     pipePump.Run();
                 }
 
+                Console.WriteLine($"{nameof(RunPipeBenchmark)} {nameof(Pump)} (100)");
                 using (var pipePump = new Pump(HandleType.Pipe, 100))
                 {
                     pipePump.Run();
@@ -289,11 +310,13 @@ namespace NetUV.Core.Tests.Performance
             if (string.IsNullOrEmpty(name)
                 || string.Compare(name, "pound", StringComparison.CurrentCultureIgnoreCase) == 0)
             {
+                Console.WriteLine($"{nameof(RunPipeBenchmark)} {nameof(Pound)} (100)");
                 using (var tcpPound = new Pound(HandleType.Pipe, 100))
                 {
                     tcpPound.Run();
                 }
 
+                Console.WriteLine($"{nameof(RunPipeBenchmark)} {nameof(Pound)} (1000)");
                 using (var tcpPound = new Pound(HandleType.Pipe, 1000))
                 {
                     tcpPound.Run();
@@ -322,6 +345,7 @@ namespace NetUV.Core.Tests.Performance
 
                 foreach (Tuple<int, int> pair in pairs)
                 {
+                    Console.WriteLine($"{nameof(RunUdpBenchmark)} Sender ({pair.Item1}) Receiver ({pair.Item2})");
                     using (var udpPummel = new UdpPummel(pair.Item1, pair.Item2, 0))
                     {
                         udpPummel.Run();
@@ -330,6 +354,7 @@ namespace NetUV.Core.Tests.Performance
 
                 foreach (Tuple<int, int> pair in pairs)
                 {
+                    Console.WriteLine($"{nameof(RunUdpBenchmark)} Sender ({pair.Item1}) Receiver ({pair.Item2}) in 5 seconds.");
                     using (var udpPummel = new UdpPummel(pair.Item1, pair.Item2, 5000)) // ms
                     {
                         udpPummel.Run();
@@ -340,6 +365,7 @@ namespace NetUV.Core.Tests.Performance
 
         static void RunAddrInfoBenchmark()
         {
+            Console.WriteLine($"{nameof(RunAddrInfoBenchmark)}");
             using (var requests = new GetAddrInfo())
             {
                 requests.Run();

@@ -60,14 +60,16 @@ namespace NetUV.Core.Tests.Performance
             if (error != null)
             {
                 Console.WriteLine($"Tcp ping pong : client connection failed, error {error}.");
-                tcp.Dispose();
+                tcp.CloseHandle(OnClose);
             }
+            else
+            {
+                this.stream = tcp.TcpStream();
+                this.stream.Subscribe(this.OnNext, OnError, OnComplete);
 
-            this.stream = tcp.TcpStream();
-            this.stream.Subscribe(this.OnNext, OnError, OnComplete);
-
-            // Sending the first ping
-            this.stream.Write(this.dataBuffer, OnWriteCompleted);
+                // Sending the first ping
+                this.stream.Write(this.dataBuffer, OnWriteCompleted);
+            }
         }
 
         static void OnWriteCompleted(IStream<Tcp> stream, Exception error)
@@ -78,7 +80,7 @@ namespace NetUV.Core.Tests.Performance
             }
 
             Console.WriteLine($"Tcp ping pong : failed, error {error}.");
-            stream.Dispose();
+            stream.Handle.CloseHandle(OnClose);
         }
 
         void OnNext(IStream<Tcp> tcp, ReadableBuffer data)
@@ -114,12 +116,13 @@ namespace NetUV.Core.Tests.Performance
 
                     if (duration > DurationInMilliseconds)
                     {
-                        this.stream.Dispose();
-                        this.server.Dispose();
-                        return;
+                        this.stream.Handle.CloseHandle(OnClose);
+                        this.server.CloseServer();
                     }
-
-                    this.stream.Write(this.dataBuffer, OnWriteCompleted);
+                    else
+                    {
+                        this.stream.Write(this.dataBuffer, OnWriteCompleted);
+                    }
                 }
             }
         }
@@ -127,7 +130,9 @@ namespace NetUV.Core.Tests.Performance
         static void OnError(IStream<Tcp> stream, Exception exception) =>
             Console.WriteLine($"Tcp ping pong read error {exception}");
 
-        static void OnComplete(IStream<Tcp> stream) => stream.Dispose();
+        static void OnComplete(IStream<Tcp> stream) => stream.Handle.CloseHandle(OnClose);
+
+        static void OnClose(ScheduleHandle handle) => handle.Dispose();
 
         public void Dispose()
         {

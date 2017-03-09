@@ -22,12 +22,12 @@ namespace NetUV.Core.Tests.Performance
             this.tcpServer = this.Loop
                 .CreateTcp()
                 .NoDelay(true)
-                .Listen(LoopbackEndPoint, OnConnection);
+                .Listen(LoopbackEndPoint, this.OnConnection);
         }
 
         internal Loop Loop { get; }
 
-        static void OnConnection(Tcp tcp, Exception error)
+        void OnConnection(Tcp tcp, Exception error)
         {
             if (error != null)
             {
@@ -36,15 +36,25 @@ namespace NetUV.Core.Tests.Performance
                 return;
             }
 
-            tcp.TcpStream().Subscribe(OnNext, OnError, OnComplete);
+            tcp.TcpStream().Subscribe(OnNext, OnError, this.OnComplete);
         }
+
+        public void Shutdown() => this.tcpServer.Shutdown(OnShutdown);
 
         static void OnNext(IStream<Tcp> stream, ReadableBuffer data) => data.Dispose();
 
         static void OnError(IStream<Tcp> stream, Exception exception) => 
             Console.WriteLine($"{nameof(BlackholeServer)} read error {exception}");
 
-        static void OnComplete(IStream<Tcp> stream) => stream.Dispose();
+        void OnComplete(IStream<Tcp> stream)
+        {
+            stream.Handle.CloseHandle(OnClosed);
+            this.tcpServer.Shutdown(OnShutdown);
+        }
+
+        static void OnClosed(Tcp handle) => handle.Dispose();
+
+        static void OnShutdown(Tcp handle, Exception exception) => handle.Dispose();
 
         public void Dispose()
         {

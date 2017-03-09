@@ -161,8 +161,7 @@ namespace NetUV.Core.Channels
                 (handle, exception) => completion?.Invoke(this, exception));
 
         public void Shutdown(Action<IStream, Exception> completion = null) =>
-            base.Shutdown(
-                (handle, exception) => completion?.Invoke(this, exception));
+            base.Shutdown((handle, exception) => completion?.Invoke(this, exception));
     }
 
     sealed class Stream<T> : InternalStream, IStream<T> 
@@ -175,8 +174,7 @@ namespace NetUV.Core.Channels
         public T Handle => (T)this.InternalHandle;
 
         public void Write(WritableBuffer buffer, Action<IStream<T>, Exception> completion) => 
-            base.Write(buffer, 
-                (handle, exception) => completion?.Invoke(this, exception));
+            base.Write(buffer, (handle, exception) => completion?.Invoke(this, exception));
 
         public void Shutdown(Action<IStream<T>, Exception> completion = null) => 
             base.Shutdown((handle, exception) => completion?.Invoke(this, exception));

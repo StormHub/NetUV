@@ -60,12 +60,12 @@ namespace NetUV.Core.Tests.Performance
             if (error != null)
             {
                 Console.WriteLine($"Tcp write batch : Write request connection failed {error}.");
-                tcp.Dispose();
+                tcp.CloseHandle(OnClosed);
                 return;
             }
 
             IStream<Tcp> stream = tcp.TcpStream();
-            stream.Subscribe(OnNext, OnError);
+            stream.Subscribe(OnNext, OnError, OnCompleted);
 
             for (int i = 0; i < NumberOfRequests; i++)
             {
@@ -84,14 +84,16 @@ namespace NetUV.Core.Tests.Performance
             }
 
             this.batchWriteFinish = this.loop.NowInHighResolution;
-            stream.Dispose();
-            this.server.Dispose();
+            stream.Handle.CloseHandle(OnClosed);
+            this.server.Shutdown();
         }
 
         static void OnNext(IStream<Tcp> stream, ReadableBuffer readableBuffer)
         {
             // NOP
         }
+
+        static void OnCompleted(IStream<Tcp> stream) => stream.Dispose();
 
         static void OnError(IStream<Tcp> stream, Exception exception) => 
             Console.WriteLine($"Tcp write batch : read error {exception}.");
@@ -101,12 +103,12 @@ namespace NetUV.Core.Tests.Performance
             if (error != null)
             {
                 Console.WriteLine($"Tcp write batch : write error {error}.");
-                clientStream.Dispose();
-                return;
             }
 
             this.writeCount++;
         }
+
+        static void OnClosed(ScheduleHandle handle) => handle.Dispose();
 
         public void Dispose()
         {
