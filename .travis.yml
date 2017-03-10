@@ -31,21 +31,15 @@ install:
       exit 1;
     fi
 
-  - if test "$TRAVIS_OS_NAME" == "linux"; then
-      nvm install stable && nvm use stable;
-    fi
+  - if test "$TRAVIS_OS_NAME" == "linux"; then nvm install stable && nvm use stable; fi
+  - if test "$TRAVIS_OS_NAME" == "osx"; then brew update; brew install openssl; ln -s /usr/local/opt/openssl/lib/libcrypto.1.0.0.dylib /usr/local/lib/; ln -s /usr/local/opt/openssl/lib/libssl.1.0.0.dylib /usr/local/lib/; fiopenssl; fi
+
   - node -e "jsonPath='./src/NetUV.Core/project.json';data=require(jsonPath);fs=require('fs');delete data.frameworks.net46;fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2))"
   - node -e "jsonPath='./test/NetUV.Tests/project.json';data=require(jsonPath);fs=require('fs');delete data.frameworks.net461;fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2))"
   - node -e "jsonPath='./test/NetUV.Tests.Performance/project.json';data=require(jsonPath);fs=require('fs');delete data.frameworks.net461;fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2))"
-
-  # Restore dependencies
-  - dotnet restore
-
-  # Build projects
-  - dotnet build -c $CONFIGURATION ./src/NetUV.Core
-
+  
+before_script: 
+ - chmod a+x ./build.sh
+ 
 script:
-  # Run tests
-  - dotnet test -c $CONFIGURATION ./test/NetUV.Tests
-  # Run Benchmark
-  - dotnet run -c $CONFIGURATION -p ./test/NetUV.Tests.Performance
+  - ./build.sh
