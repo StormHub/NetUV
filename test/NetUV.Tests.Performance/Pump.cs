@@ -26,7 +26,7 @@ namespace NetUV.Core.Tests.Performance
         WritableBuffer dataBuffer;
 
         Loop loop;
-        IDisposable server;
+        StreamHandle server;
         Timer timer;
 
         long bytesRead;
@@ -102,7 +102,7 @@ namespace NetUV.Core.Tests.Performance
             }
         }
 
-        void OnServerConnected<T>(T client, Exception error) 
+        void OnServerConnected<T>(T client, Exception error)
             where T : StreamHandle
         {
             if (error != null)
@@ -165,11 +165,10 @@ namespace NetUV.Core.Tests.Performance
                 this.clients.Remove(stream);
             }
 
-            stream.Dispose();
-
+            stream.Handle.CloseHandle(OnClosed);
             if (this.clients.Count == 0)
             {
-                this.server.Dispose();
+                this.server.CloseHandle(OnClosed);
             }
         }
 
@@ -181,10 +180,10 @@ namespace NetUV.Core.Tests.Performance
         void ClientOnError(IStream stream, Exception error)
         {
             Console.WriteLine($"{this.handleType} pump {this.clientCount} client read error, {error}");
-            stream.Dispose();
+            stream.Handle.CloseHandle(OnClosed);
         }
 
-        static void ClientOnComplete(IStream stream) => stream.Dispose();
+        static void ClientOnComplete(IStream stream) => stream.Handle.CloseHandle(OnClosed);
 
         void StartStatistics()
         {
@@ -241,18 +240,19 @@ namespace NetUV.Core.Tests.Performance
             }
         }
 
-        void OnClientConected<T>(T client, Exception error) 
+        void OnClientConected<T>(T client, Exception error)
             where T : StreamHandle
         {
             if (error != null)
             {
                 Console.WriteLine($"{this.handleType} pump {this.clientCount} client connection error, {error}");
-                client.Dispose();
-                return;
+                client.CloseHandle(OnClosed);
             }
-
-            client.CreateStream()
-                .Subscribe(this.ServerOnNext, this.ServerOnError, ServerOnComplete);
+            else
+            {
+                client.CreateStream().Subscribe(
+                    this.ServerOnNext, this.ServerOnError, ServerOnComplete);
+            }
         }
 
         void ServerOnNext(IStream stream, ReadableBuffer buffer)
@@ -271,10 +271,12 @@ namespace NetUV.Core.Tests.Performance
         void ServerOnError(IStream stream, Exception error)
         {
             Console.WriteLine($"{this.handleType} pump {this.clientCount} server read error, {error}");
-            stream.Dispose();
+            stream.Handle.CloseHandle(OnClosed);
         }
 
-        static void ServerOnComplete(IStream stream) => stream.Dispose();
+        static void ServerOnComplete(IStream stream) => stream.Handle.CloseHandle(OnClosed);
+
+        static void OnClosed(ScheduleHandle handle) => handle.Dispose();
 
         public void Dispose()
         {
