@@ -5,6 +5,7 @@ namespace NetUV.Core.Tests
 {
     using System;
     using NetUV.Core.Handles;
+    using NetUV.Core.Native;
     using Xunit;
 
     public sealed class TtyTests : IDisposable
@@ -17,9 +18,14 @@ namespace NetUV.Core.Tests
             this.loop = new Loop();
         }
 
-        //[Fact] TODO:Fix file handle depending on platform, e.g. Windows/Unix.
+        [Fact]
         public void Types()
         {
+            if (Platform.IsWindows)
+            {
+                return;
+            }
+
             this.closeCount = 0;
 
             Tty ttyIn = this.loop.CreateTty(TtyType.In);
@@ -30,16 +36,16 @@ namespace NetUV.Core.Tests
             Assert.False(ttyOut.IsReadable);
             Assert.True(ttyOut.IsWritable);
 
+            /*
             int width;
             int height;
             ttyOut.WindowSize(out width, out height);
 
-            /*
-             * Is it a safe assumption that most people have terminals larger than
-             * 10x10?
-             */
+            // Is it a safe assumption that most people have terminals larger than
+            // 10x10?
             Assert.True(width > 10);
             Assert.True(height > 10);
+            */
 
             /* Turn on raw mode. */
             ttyIn.Mode(TtyMode.Raw);
