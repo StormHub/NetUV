@@ -50,8 +50,7 @@ namespace NetUV.Core.Tests.Performance
             {
                 while (!this.resetEvent.IsSet)
                 {
-                    if (this.counter.IsCompleted
-                        || !this.handle.IsValid)
+                    if (this.counter.IsCompleted)
                     {
                         break;
                     }

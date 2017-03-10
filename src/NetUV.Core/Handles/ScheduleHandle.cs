@@ -95,20 +95,25 @@ namespace NetUV.Core.Handles
         {
             try
             {
-                if (!this.IsValid)
-                {
-                    return;
-                }
-
-                this.closeCallback = handler;
-                this.Close();
-                this.handle.Dispose();
+                this.ScheduleClose(handler);
             }
             catch (Exception exception)
             {
-                Log.Error($"{nameof(ScheduleHandle)} {this.HandleType} Failed to close handle.", exception);
+                Log.Error($"{this.HandleType} Failed to close handle.", exception);
                 throw;
             }
+        }
+
+        protected virtual void ScheduleClose(Action<ScheduleHandle> handler = null)
+        {
+            if (!this.IsValid)
+            {
+                return;
+            }
+
+            this.closeCallback = handler;
+            this.Close();
+            this.handle.Dispose();
         }
 
         protected abstract void Close();

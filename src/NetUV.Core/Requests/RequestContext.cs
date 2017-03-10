@@ -48,7 +48,7 @@ namespace NetUV.Core.Requests
             {
                 initializer(handle);
             }
-            catch (Exception)
+            catch
             {
                 Marshal.FreeHGlobal(handle);
                 throw;
@@ -67,15 +67,14 @@ namespace NetUV.Core.Requests
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            IntPtr inernalHandle = ((uv_req_t*)handle)->data;
-            if (inernalHandle != IntPtr.Zero)
+            IntPtr internalHandle = ((uv_req_t*)handle)->data;
+            if (internalHandle != IntPtr.Zero)
             {
-                GCHandle gcHandle = GCHandle.FromIntPtr(inernalHandle);
+                GCHandle gcHandle = GCHandle.FromIntPtr(internalHandle);
                 if (gcHandle.IsAllocated)
                 {
                     return (T)gcHandle.Target;
                 }
-
             }
 
             return default(T);

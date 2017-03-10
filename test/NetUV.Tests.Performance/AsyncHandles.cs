@@ -45,11 +45,7 @@ namespace NetUV.Core.Tests.Performance
             void OnMainCallback(Async handle)
             {
                 this.mainCount++;
-                if (this.worker?.IsValid ?? false)
-                {
-                    this.worker?.Send();
-                }
-
+                this.worker?.Send();
                 if (this.mainCount >= PingCount)
                 {
                     this.main?.CloseHandle(OnClose);
@@ -59,11 +55,7 @@ namespace NetUV.Core.Tests.Performance
             void OnWorkerCallback(Async handle)
             {
                 this.workerCount++;
-
-                if (this.main?.IsValid ?? false)
-                {
-                    this.main?.Send();
-                }
+                this.main?.Send();
 
                 if (this.workerCount >= PingCount)
                 {

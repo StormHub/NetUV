@@ -1061,9 +1061,7 @@ namespace NetUV.Core.Native
 
         internal static void Send(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
-
-            if (uv_is_closing(handle) != 0)
+            if (handle == IntPtr.Zero)
             {
                 return;
             }

@@ -5,6 +5,7 @@ namespace NetUV.Core.Handles
 {
     using System;
     using System.Diagnostics.Contracts;
+    using NetUV.Core.Concurrency;
     using NetUV.Core.Native;
 
     /// <summary>
@@ -13,22 +14,46 @@ namespace NetUV.Core.Handles
     /// </summary>
     public sealed class Async : WorkHandle
     {
+        readonly Gate gate;
+        volatile bool closeScheduled;
+
         internal Async(LoopContext loop, Action<Async> callback)
             : base(loop, uv_handle_type.UV_ASYNC)
         {
             Contract.Requires(callback != null);
 
             this.Callback = state => callback.Invoke((Async)state);
+            this.gate = new Gate();
+            this.closeScheduled = false;
         }
 
         public Async Send()
         {
-            if (this.IsValid)
+            IDisposable guard = null;
+            try
             {
-                NativeMethods.Send(this.InternalHandle);
+                guard = this.gate.TryAquire();
+                if (guard != null 
+                    && !this.closeScheduled)
+                {
+                    NativeMethods.Send(this.InternalHandle);
+                }
+            }
+            finally
+            {
+                guard?.Dispose();
             }
 
             return this;
+        }
+
+        protected override void ScheduleClose(Action<ScheduleHandle> handler = null)
+        {
+            using (this.gate.Aquire())
+            {
+                this.closeScheduled = true;
+                base.ScheduleClose(handler);
+            }
         }
 
         public void CloseHandle(Action<Async> callback = null) => 
