@@ -17,7 +17,15 @@ namespace NetUV.Core.Handles
             IntPtr handle = Marshal.AllocHGlobal(size);
 
             this.Handle = handle;
-            NativeMethods.InitializeLoop(handle);
+            try
+            {
+                NativeMethods.InitializeLoop(handle);
+            }
+            catch
+            {
+                Marshal.FreeHGlobal(handle);
+                throw;
+            }
 
             GCHandle gcHandle = GCHandle.Alloc(this, GCHandleType.Normal);
             ((uv_loop_t*)handle)->data = GCHandle.ToIntPtr(gcHandle);

@@ -30,10 +30,16 @@ namespace NetUV.Core.Requests
             this.workCallback = workCallback;
             this.afterWorkCallback = afterWorkCallback;
 
-            this.handle = new RequestContext(
-                uv_req_type.UV_WORK, 
-                h => NativeMethods.QueueWork(loop.Handle, h), 
-                this);
+            try
+            {
+                this.handle = new RequestContext(uv_req_type.UV_WORK, 0, this);
+                NativeMethods.QueueWork(loop.Handle, this.handle.Handle);
+            }
+            catch
+            {
+                this.handle.Dispose();
+                throw;
+            }
         }
 
         public bool TryCancel() => this.Cancel();
@@ -48,18 +54,13 @@ namespace NetUV.Core.Requests
             }
             catch (Exception exception)
             {
-                Log.Error($"{this.GetType()} callback error.", exception);
+                Log.Error($"{this.RequestType} work callback error.", exception);
                 throw;
             }
         }
 
         static void OnWorkCallback(IntPtr handle)
         {
-            if (handle == IntPtr.Zero)
-            {
-                return;
-            }
-
             var request = RequestContext.GetTarget<Work>(handle);
             request?.OnWorkCallback();
         }
@@ -72,18 +73,13 @@ namespace NetUV.Core.Requests
             }
             catch (Exception exception)
             {
-                Log.Error($"{this.GetType()} callback error", exception);
+                Log.Error($"{this.RequestType} after callback error", exception);
                 throw;
             }
         }
 
         static void OnAfterWorkCallback(IntPtr handle, int status)
         {
-            if (handle == IntPtr.Zero)
-            {
-                return;
-            }
-
             var request = RequestContext.GetTarget<Work>(handle);
             request?.OnAfterWorkCallback();
         }

@@ -7,6 +7,7 @@ namespace NetUV.Core.Tests.Performance
     using System.Collections.Generic;
     using System.Linq;
     using System.Runtime.InteropServices;
+    using NetUV.Core.Handles;
     using NetUV.Core.Logging;
 
     public class Program
@@ -44,6 +45,7 @@ namespace NetUV.Core.Tests.Performance
                 LogFactory.AddConsoleProvider();
             }
 
+            Console.WriteLine($"\nNative version {Loop.NativeVersion}\n");
             Run(category, name);
 
             if (!shouldPause)
