@@ -1,6 +1,6 @@
 {
   "name": "NetUV.Core.Tests.Performance",
-  "version": "0.1.0",
+  "version": "0.1.87",
   "title": "NetUV: Libuv based network library performance tests.",
   "description": "NetUV Performance",
   "language": "en-US",

@@ -5,7 +5,6 @@ namespace NetUV.Core.Tests
 {
     using System;
     using System.Net;
-    using System.Net.NetworkInformation;
     using NetUV.Core.Handles;
     using NetUV.Core.Native;
     using Xunit;

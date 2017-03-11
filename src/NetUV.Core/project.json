@@ -1,14 +1,14 @@
 {
   "name": "NetUV.Core",
-  "version": "0.1.19",
-  "title": "NetUV: Libuv .NET/Core wrapper",
+  "version": "0.1.87",
+  "title": "NetUV: Libuv .NET/Core binding",
   "description": "Libuv .NET/Core binding",
   "language": "en-US",
   "authors": [
     "Johnny Z"
   ],
   "packOptions": {
-    "tags": [ "socket", "tcp", "protocol", "libuv", "network" ],
+    "tags": [ "libuv", "asyncio", "network", "socket", "protocol" ],
     "projectUrl": "https://github.com/StormHub/NetUV",
     "licenseUrl": "https://github.com/NetUV/LICENSE.txt",
     "repository": {

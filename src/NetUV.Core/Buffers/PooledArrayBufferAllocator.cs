@@ -173,8 +173,7 @@ namespace NetUV.Core.Buffers
         /// Return the size of the normal cache.
         public int NormalCacheSize { get; }
 
-        internal PoolThreadCache<T> ThreadCache() =>
-            (PoolThreadCache<T>)(object)this.threadCache.Value;
+        internal PoolThreadCache<T> ThreadCache() => this.threadCache.Value;
 
         /// Returns the status of the allocator (which contains all metrics) as string. 
         /// Be aware this may be expensive and so should not called too frequently.

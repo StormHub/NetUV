@@ -1,6 +1,6 @@
 {
   "name": "NetUV.Tests",
-  "version": "0.1.0",
+  "version": "0.1.87",
   "title": "NetUV: Libuv based network library unit tests.",
   "description": "Libuv managed wrapper unit tests",
   "language": "en-US",
@@ -8,7 +8,7 @@
     "Johnny Z"
   ],
   "packOptions": {
-    "tags": [ "socket", "tcp", "protocol", "libuv", "network" ],
+    "tags": [ "libuv", "asyncio", "network", "socket", "protocol" ],
     "projectUrl": "https://github.com/StormHub/NetUV",
     "repository": {
       "type": "git",
