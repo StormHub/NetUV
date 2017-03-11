@@ -24,14 +24,11 @@ namespace NetUV.Core.Tests
 
         void OnTimerRepeat(Timer handle)
         {
-            if (handle != null)
-            {
-                this.repeatCalled++;
+            this.repeatCalled++;
 
-                if (this.repeatCalled == 5)
-                {
-                    handle.Dispose();
-                }
+            if (this.repeatCalled == 5)
+            {
+                handle.CloseHandle(OnClose);
             }
         }
 
@@ -39,15 +36,12 @@ namespace NetUV.Core.Tests
 
         void OnTimerOnce(Timer handle)
         {
-            if (handle != null)
-            {
-                this.onceCalled++;
+            this.onceCalled++;
 
-                handle.Dispose();
+            handle.CloseHandle(OnClose);
 
-                /* Just call this randomly for the code coverage. */
-                this.loop?.UpdateTime();
-            }
+            /* Just call this randomly for the code coverage. */
+            this.loop?.UpdateTime();
         }
 
         [Fact]
@@ -130,10 +124,7 @@ namespace NetUV.Core.Tests
 
         void OrderCallback(Timer handle)
         {
-            if (handle != null)
-            {
-                this.orderTimers?.Add(handle);
-            }
+            this.orderTimers?.Add(handle);
             this.orderCalled++;
         }
 
@@ -185,9 +176,9 @@ namespace NetUV.Core.Tests
         {
             this.repeatCheck = handle != null && handle == this.tinyTimer;
 
-            this.tinyTimer.Dispose();
-            this.hugeTimer1.Dispose();
-            this.hugeTimer2.Dispose();
+            this.tinyTimer.CloseHandle(OnClose);
+            this.hugeTimer1.CloseHandle(OnClose);
+            this.hugeTimer2.CloseHandle(OnClose);
         }
 
         [Fact]
@@ -222,8 +213,8 @@ namespace NetUV.Core.Tests
             this.hugeRepeatCount++;
             if (this.hugeRepeatCount == 10)
             {
-                this.tinyTimer.Dispose();
-                this.hugeTimer1.Dispose();
+                this.tinyTimer.CloseHandle(OnClose);
+                this.hugeTimer1.CloseHandle(OnClose);
             }
         }
 
@@ -252,13 +243,7 @@ namespace NetUV.Core.Tests
             Assert.False(this.hugeTimer1.IsValid);
         }
 
-        void RunOnceTimerCallback(Timer handle)
-        {
-            if (handle != null)
-            {
-                this.runOnceTimerCalled++;
-            }
-        }
+        void RunOnceTimerCallback(Timer handle) => this.runOnceTimerCalled++;
 
         [Fact]
         public void RunOnce()
@@ -283,13 +268,7 @@ namespace NetUV.Core.Tests
             Assert.Equal(0, result);
         }
 
-        void EarlyCheckTimerCallback(Timer handle)
-        {
-            if (handle != null)
-            {
-                this.timeInHighResolution = this.loop.NowInHighResolution / 1000000;
-            }
-        }
+        void EarlyCheckTimerCallback(Timer handle) => this.timeInHighResolution = this.loop.NowInHighResolution / 1000000;
 
         [Fact]
         public void EarlyCheck()
@@ -310,6 +289,8 @@ namespace NetUV.Core.Tests
             result = this.loop.RunDefault();
             Assert.Equal(0, result);
         }
+
+        static void OnClose(ScheduleHandle handle) => handle.Dispose();
 
         public void Dispose()
         {

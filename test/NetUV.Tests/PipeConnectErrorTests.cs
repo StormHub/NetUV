@@ -4,7 +4,6 @@
 namespace NetUV.Core.Tests
 {
     using System;
-    using System.Runtime.InteropServices;
     using NetUV.Core.Handles;
     using NetUV.Core.Native;
     using Xunit;
@@ -58,7 +57,7 @@ namespace NetUV.Core.Tests
         }
 
         static string GetBadPipeName() =>
-            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            Platform.IsWindows
             ? "bad-pipe" 
             : "/path/to/unix/socket/that/really/should/not/be/there";
 

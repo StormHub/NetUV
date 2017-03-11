@@ -18,6 +18,7 @@ namespace NetUV.Core.Tests
         int prepareCalled;
         long asyncCalled;
         int closeCount;
+        ManualResetEventSlim resetEvent;
 
         void PrepareCallback(Prepare handle)
         {
@@ -32,35 +33,41 @@ namespace NetUV.Core.Tests
 
         void ThreadStart()
         {
-            while (true)
+            while (Interlocked.Read(ref this.asyncCalled) < 3)
             {
-                if (Interlocked.Read(ref this.asyncCalled) == 3)
-                {
-                    break;
-                }
-
                 this.async.Send();
             }
+
+            this.resetEvent.Wait();
         }
 
         void OnAsync(Async handle)
         {
-            if (Interlocked.Increment(ref this.asyncCalled) == 3)
+            if (Interlocked.Increment(ref this.asyncCalled) < 3)
             {
-                this.prepare.CloseHandle(this.OnClose);
-                this.async.CloseHandle(this.OnClose);
+                return;
             }
+
+            this.prepare.CloseHandle(this.OnClose);
+            this.async.CloseHandle(this.OnClose);
         }
 
         void OnClose(ScheduleHandle handle)
         {
             handle.Dispose();
             this.closeCount++;
+
+            if (!this.resetEvent.IsSet)
+            {
+                this.resetEvent.Set();
+            }
         }
 
         [Fact]
         public void Run()
         {
+            this.resetEvent = new ManualResetEventSlim(false);
+
             this.loop = new Loop();
             this.prepareCalled = 0;
             this.asyncCalled = 0;
@@ -71,7 +78,6 @@ namespace NetUV.Core.Tests
             this.async = this.loop.CreateAsync(this.OnAsync);
 
             this.loop.RunDefault();
-
             this.thread?.Join();
 
             Assert.Equal(2, this.closeCount);

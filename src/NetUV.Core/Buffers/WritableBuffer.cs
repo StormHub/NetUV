@@ -40,10 +40,7 @@ namespace NetUV.Core.Buffers
 
         public static WritableBuffer From(byte[] array)
         {
-            if (array == null)
-            {
-                throw new ArgumentNullException(nameof(array));
-            }
+            Contract.Requires(array != null && array.Length > 0);
 
             ByteBuffer byteBuffer = UnpooledByteBuffer.From(array);
             return new WritableBuffer(byteBuffer) { Index = array.Length };
@@ -51,11 +48,7 @@ namespace NetUV.Core.Buffers
 
         public void WriteBytes(byte[] source)
         {
-            if (source == null 
-                || source.Length == 0)
-            {
-                throw new ArgumentException($"{nameof(source)} array cannot be empty or null", nameof(source));
-            }
+            Contract.Requires(source != null && source.Length > 0);
 
             int writeIndex = this.Index;
             this.Validate(writeIndex, source.Length);
@@ -65,21 +58,9 @@ namespace NetUV.Core.Buffers
 
         public void WriteBytes(byte[] source, int offset, int length)
         {
-            if (source == null
-                || source.Length == 0)
-            {
-                throw new ArgumentException($"{nameof(source)} array cannot be empty or null", nameof(source));
-            }
-            if (length <= 0)
-            {
-                throw new ArgumentOutOfRangeException(
-                    $"{length} must be greater than zero.", nameof(length));
-            }
-            if (offset < 0
-                || offset <= source.Length - length)
-            {
-                throw new ArgumentException($"{nameof(offset)} must be positve and less than the length of the byte array", nameof(offset));
-            }
+            Contract.Requires(source != null && source.Length > 0);
+            Contract.Requires(length >= 0);
+            Contract.Requires(offset >= 0 && offset <= source.Length - length);
 
             int writeIndex = this.Index;
             this.Validate(writeIndex, length);
@@ -90,14 +71,8 @@ namespace NetUV.Core.Buffers
 
         public void WriteString(string value, Encoding encoding)
         {
-            if (string.IsNullOrEmpty(value))
-            {
-                throw new ArgumentNullException(nameof(value));
-            }
-            if (encoding == null)
-            {
-                throw new ArgumentNullException(nameof(encoding));
-            }
+            Contract.Requires(!string.IsNullOrEmpty(value));
+            Contract.Requires(encoding != null);
            
             byte[] bytes = encoding.GetBytes(value);
             this.Validate(this.Index, bytes.Length);

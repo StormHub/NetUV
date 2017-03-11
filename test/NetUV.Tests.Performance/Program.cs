@@ -267,10 +267,13 @@ namespace NetUV.Core.Tests.Performance
                     tcpPump.Run();
                 }
 
-                Console.WriteLine($"{nameof(RunTcpBenchmark)} {nameof(Pump)} (100)");
-                using (var tcpPump = new Pump(HandleType.Tcp, 100))
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    tcpPump.Run();
+                    Console.WriteLine($"{nameof(RunTcpBenchmark)} {nameof(Pump)} (100)");
+                    using (var tcpPump = new Pump(HandleType.Tcp, 100))
+                    {
+                        tcpPump.Run();
+                    }
                 }
             }
 

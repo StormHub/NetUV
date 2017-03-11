@@ -8,6 +8,7 @@ namespace NetUV.Core.Tests.Performance
     using NetUV.Core.Buffers;
     using NetUV.Core.Channels;
     using NetUV.Core.Handles;
+    using NetUV.Core.Native;
 
     sealed class Pound : IDisposable
     {
@@ -161,7 +162,18 @@ namespace NetUV.Core.Tests.Performance
 
         void OnError(IStream stream, Exception error)
         {
-            Console.WriteLine($"{this.handleType} conn pound : {this.clientCount} read error {error}");
+            var exception = error as OperationException;
+            if (exception != null 
+                && (exception.ErrorCode == ErrorCode.ECONNRESET 
+                || exception.ErrorCode == ErrorCode.ETIMEDOUT))
+            {
+                this.connectionsFailed++;
+            }
+            else
+            {
+                Console.WriteLine($"{this.handleType} conn pound : {this.clientCount} read error {error}");
+            }
+
             stream.Handle.CloseHandle(this.OnClosed);
         }
 

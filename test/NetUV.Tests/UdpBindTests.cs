@@ -26,19 +26,19 @@ namespace NetUV.Core.Tests
         [InlineData(false)]
         public void Bind(bool reuseAddress)
         {
-            var anyEndPoint = new IPEndPoint(IPAddress.Any, Port);
+            var endPoint = new IPEndPoint(IPAddress.Loopback, Port);
 
             Udp udp1 = this.loop.CreateUdp();
-            udp1.Bind(anyEndPoint, reuseAddress);
+            udp1.Bind(endPoint, reuseAddress);
 
             Udp udp2 = this.loop.CreateUdp();
             if (reuseAddress)
             {
-                udp2.Bind(anyEndPoint, true);
+                udp2.Bind(endPoint, true);
             }
             else
             {
-                var error = Assert.Throws<OperationException>(() => udp2.Bind(anyEndPoint));
+                var error = Assert.Throws<OperationException>(() => udp2.Bind(endPoint));
                 Assert.Equal(ErrorCode.EADDRINUSE, error.ErrorCode);
             }
 

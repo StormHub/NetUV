@@ -20,6 +20,7 @@ namespace NetUV.Core.Tests
         int connection;
         int connected;
         int closeCount;
+        Exception connectionError;
 
         public MultipleListenTests()
         {
@@ -43,7 +44,8 @@ namespace NetUV.Core.Tests
             this.loop.RunDefault();
             Assert.Equal(1, this.connection);
             Assert.Equal(1, this.connected);
-            Assert.Equal(2, this.closeCount);
+            Assert.Equal(3, this.closeCount);
+            Assert.Null(this.connectionError);
         }
 
         void OnConnected(Tcp tcp, Exception exception)
@@ -64,11 +66,10 @@ namespace NetUV.Core.Tests
 
         void OnConnection(Tcp tcp, Exception exception)
         {
-            Assert.Null(exception);
-
+            this.connectionError = exception;
             this.connection++;
-            tcp.Dispose();
 
+            tcp.CloseHandle(this.OnClose);
             this.server.CloseHandle(this.OnClose);
         }
 

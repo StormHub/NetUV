@@ -17,6 +17,7 @@ namespace NetUV.Core.Tests
 
         Loop loop;
         Udp client;
+        Udp server;
         int closeCount;
         int serverReceiveCount;
         Exception receiveError;
@@ -36,7 +37,7 @@ namespace NetUV.Core.Tests
             this.loop = new Loop();
 
             var anyEndPoint = new IPEndPoint(IPAddress.Any, Port);
-            this.loop
+            this.server = this.loop
                 .CreateUdp()
                 .ReceiveStart(anyEndPoint, this.OnServerReceive);
 
@@ -63,18 +64,19 @@ namespace NetUV.Core.Tests
         void OnServerReceive(Udp udp, IDatagramReadCompletion completion)
         {
             this.receiveError = completion.Error;
+
             ReadableBuffer data = completion.Data;
-            if (data.Count > 0)
+            string message = data.Count > 0 ? data.ReadString(data.Count, Encoding.UTF8) : null;
+            if (message == "EXIT")
             {
-                string message = data.ReadString(data.Count, Encoding.UTF8);
-                if (message == "EXIT")
-                {
-                    this.serverReceiveCount++;
-                }
+                this.serverReceiveCount++;
             }
 
             udp.CloseHandle(this.OnClose);
             this.client?.CloseHandle(this.OnClose);
+
+            this.server.ReceiveStop();
+            this.server.CloseHandle(this.OnClose);
         }
 
         void OnClose(Udp handle)

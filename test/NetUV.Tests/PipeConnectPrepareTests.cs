@@ -22,7 +22,9 @@ namespace NetUV.Core.Tests
             this.loop = new Loop();
 
             this.pipe = this.loop.CreatePipe();
-            this.prepare = this.loop.CreatePrepare().Start(this.OnPrepare);
+            this.prepare = this.loop
+                .CreatePrepare()
+                .Start(this.OnPrepare);
 
             this.loop.RunDefault();
 

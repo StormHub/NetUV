@@ -21,7 +21,8 @@ namespace NetUV.Core.Tests
         [Fact]
         public void Types()
         {
-            if (Platform.IsWindows)
+            if (Platform.IsWindows 
+                || Platform.IsMacOS)
             {
                 return;
             }

@@ -15,8 +15,6 @@ namespace NetUV.Core.Buffers
     /// </summary>
     sealed class PoolChunkList<T> : IPoolChunkListMetric
     {
-        static readonly IEnumerable<IPoolChunkMetric> EmptyMetrics = Enumerable.Empty<IPoolChunkMetric>();
-
         readonly PoolChunkList<T> nextList;
         readonly int minUsage;
         readonly int maxUsage;
@@ -193,7 +191,10 @@ namespace NetUV.Core.Buffers
 
         static int MinUsage0(int value) => Math.Max(1, value);
 
-        public IEnumerator<IPoolChunkMetric> GetEnumerator() => this.head == null ? EmptyMetrics.GetEnumerator() : this.GetEnumeratorInternal();
+        public IEnumerator<IPoolChunkMetric> GetEnumerator() => 
+            this.head == null 
+            ? Enumerable.Empty<IPoolChunkMetric>().GetEnumerator() 
+            : this.GetEnumeratorInternal();
 
         IEnumerator IEnumerable.GetEnumerator() => this.GetEnumerator();
 

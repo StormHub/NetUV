@@ -109,7 +109,8 @@ namespace NetUV.Core.Handles
         public void CloseHandle(Action<StreamHandle> callback = null) =>
             base.CloseHandle(state => callback?.Invoke((StreamHandle)state));
 
-        protected internal void QueueWriteStream(WritableBuffer writableBuffer, 
+        public void QueueWriteStream(
+            WritableBuffer writableBuffer, 
             Action<StreamHandle, Exception> completion)
         {
             Contract.Requires(completion != null);

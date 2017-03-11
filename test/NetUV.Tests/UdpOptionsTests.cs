@@ -21,7 +21,6 @@ namespace NetUV.Core.Tests
             this.loop = new Loop();
         }
 
-
         static IEnumerable<object[]> IpFamilyCases()
         {
             if (Platform.IsWindows)

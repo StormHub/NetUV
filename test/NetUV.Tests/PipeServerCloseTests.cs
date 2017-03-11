@@ -65,9 +65,10 @@ namespace NetUV.Core.Tests
             this.closeCount++;
         }
 
-        static string GetPipeName() => Platform.IsWindows
-                ? "\\\\?\\pipe\\uv-test4"
-                : "/tmp/uv-test4-sock";
+        static string GetPipeName() => 
+            Platform.IsWindows
+            ? "\\\\?\\pipe\\uv-test4"
+            : "/tmp/uv-test4-sock";
 
         public void Dispose()
         {

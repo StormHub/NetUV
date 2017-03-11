@@ -20,6 +20,8 @@ namespace NetUV.Core.Tests
         int closeCount;
         int bytesRead;
         int bytesWritten;
+        Exception connectedError;
+        Exception connectionError;
 
         [Fact]
         public void Run()
@@ -38,62 +40,65 @@ namespace NetUV.Core.Tests
             Assert.Equal(3, this.closeCount);
             Assert.True(this.bytesWritten > 0);
             Assert.True(this.bytesRead == this.bytesWritten);
+
+            Assert.Null(this.connectedError);
+            Assert.Null(this.connectionError);
         }
 
         void OnConnected(Tcp tcp, Exception exception)
         {
-            if (exception != null)
-            {
-                tcp.CloseHandle(this.OnClose);
-                this.server.CloseHandle(this.OnClose);
-
-                return;
-            }
-
+            this.connectedError = exception;
             this.connectedCount++;
 
-            // Send PING
-            byte[] content = Encoding.UTF8.GetBytes("PING");
-            do
+            if (exception == null)
             {
-                try
+                // Send PING
+                byte[] content = Encoding.UTF8.GetBytes("PING");
+                do
                 {
-                    tcp.TryWrite(content);
-                    this.bytesWritten += content.Length;
-                    break; // Try write success
-                }
-                catch (OperationException error)
-                {
-                    if (error.ErrorCode != ErrorCode.EAGAIN)
+                    try
                     {
-                        this.bytesWritten = 0;
-                        break;
+                        tcp.TryWrite(content);
+                        this.bytesWritten += content.Length;
+                        break; // Try write success
+                    }
+                    catch (OperationException error)
+                    {
+                        if (error.ErrorCode != ErrorCode.EAGAIN)
+                        {
+                            this.bytesWritten = 0;
+                            break;
+                        }
                     }
                 }
-            }
-            while (true);
+                while (true);
 
-            // Send Empty
-            content = Encoding.UTF8.GetBytes("");
-            do
-            {
-                try
+                // Send Empty
+                content = Encoding.UTF8.GetBytes("");
+                do
                 {
-                    tcp.TryWrite(content);
-                    break; // Try write success
-                }
-                catch (OperationException error)
-                {
-                    if (error.ErrorCode != ErrorCode.EAGAIN)
+                    try
                     {
-                        this.bytesWritten = 0;
-                        break;
+                        tcp.TryWrite(content);
+                        break; // Try write success
+                    }
+                    catch (OperationException error)
+                    {
+                        if (error.ErrorCode != ErrorCode.EAGAIN)
+                        {
+                            this.bytesWritten = 0;
+                            break;
+                        }
                     }
                 }
-            }
-            while (true);
+                while (true);
 
-            tcp.CloseHandle(this.OnClose);
+                tcp.CloseHandle(this.OnClose);
+            }
+            else
+            {
+                this.server.CloseHandle(this.OnClose);
+            }
         }
 
         void StartServer()
@@ -106,9 +111,11 @@ namespace NetUV.Core.Tests
 
         void OnConnection(Tcp tcp, Exception exception)
         {
+            this.connectionError = exception;
+            this.connectionCount++;
+
             if (exception == null)
             {
-                this.connectionCount++;
                 tcp.RegisterRead(this.OnRead);
             }
             else
