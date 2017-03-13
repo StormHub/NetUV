@@ -12,7 +12,7 @@ namespace NetUV.Core.Handles
     {
         readonly LoopContext handle;
 
-        public Loop() 
+        public Loop()
         {
             this.handle = new LoopContext();
         }

@@ -92,8 +92,8 @@ namespace NetUV.Core.Tests
 
         static string GetPipeName() =>
             Platform.IsWindows
-                ? "\\\\?\\pipe\\uv-test2"
-                : "/tmp/uv-test2-sock";
+            ? "\\\\?\\pipe\\uv-test2"
+            : "/tmp/uv-test2-sock";
 
         public void Dispose()
         {

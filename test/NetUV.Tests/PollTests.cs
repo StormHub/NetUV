@@ -480,6 +480,12 @@ namespace NetUV.Core.Tests
         [Fact]
         public void BadFileDescriptorType()
         {
+            if (Platform.IsMacOS)
+            {
+                // On macOS, the create poll actually sucessfully created.
+                return;
+            }
+
             using (FileStream file = TestHelper.OpenTempFile())
             {
                 Assert.NotNull(file);

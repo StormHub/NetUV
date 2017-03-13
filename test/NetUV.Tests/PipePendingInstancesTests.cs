@@ -39,9 +39,10 @@ namespace NetUV.Core.Tests
 
         static void OnClose(Pipe handle) => handle.Dispose();
 
-        static string GetPipeName() => Platform.IsWindows
-                ? "\\\\?\\pipe\\uv-test3"
-                : "/tmp/uv-test3-sock";
+        static string GetPipeName() => 
+            Platform.IsWindows
+            ? "\\\\?\\pipe\\uv-test3"
+            : "/tmp/uv-test3-sock";
 
         public void Dispose()
         {

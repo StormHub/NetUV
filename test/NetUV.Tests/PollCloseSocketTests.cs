@@ -15,6 +15,7 @@ namespace NetUV.Core.Tests
         Loop loop;
         Socket socket;
         int closeCount;
+        SocketAsyncEventArgs eventArgs;
 
         [Fact]
         public void Run()
@@ -22,10 +23,15 @@ namespace NetUV.Core.Tests
             this.loop = new Loop();
 
             var endPoint = new IPEndPoint(IPAddress.Loopback, Port);
-            this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
+            this.eventArgs = new SocketAsyncEventArgs
+            {
+                RemoteEndPoint = endPoint
+            };
+
+            this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             // There should be nothing listening on this
-            this.socket.ConnectAsync(endPoint);
+            this.socket.ConnectAsync(this.eventArgs);
 
             IntPtr handle = TestHelper.GetHandle(this.socket);
 
@@ -39,6 +45,7 @@ namespace NetUV.Core.Tests
 
         void OnPoll(Poll poll, PollStatus status)
         {
+            this.eventArgs.Dispose();
             poll.Start(PollMask.Readable, this.OnPoll);
             this.socket?.Dispose();
             poll.CloseHandle(this.OnClose);

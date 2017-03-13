@@ -20,6 +20,8 @@ namespace NetUV.Core.Tests
         int clientSendCount;
         int serverReceiveCount;
         int serverSendCount;
+        Exception serverSendError;
+
 
         [Fact]
         public void Run()
@@ -50,23 +52,14 @@ namespace NetUV.Core.Tests
             Assert.Equal(1, this.serverReceiveCount);
             Assert.Equal(1, this.clientReceiveCount);
             Assert.Equal(2, this.closeCount);
+
+            Assert.Null(this.serverSendError);
         }
 
         void OnClientReceive(Udp udp, IDatagramReadCompletion completion)
         {
-            if (completion.Error != null
-                || completion.RemoteEndPoint == null)
-            {
-                return;
-            }
-
             ReadableBuffer buffer = completion.Data;
-            if (buffer.Count == 0)
-            {
-                return;
-            }
-
-            string message = buffer.ReadString(buffer.Count, Encoding.UTF8);
+            string message = buffer.Count > 0 ? buffer.ReadString(buffer.Count, Encoding.UTF8) : null;
             if (message == "PONG")
             {
                 this.clientReceiveCount++;
@@ -77,48 +70,32 @@ namespace NetUV.Core.Tests
 
         void OnClientSendCompleted(Udp udp, Exception exception)
         {
-            if (exception != null)
+            if (exception == null)
             {
-                return;
+                udp.ReceiveStart(this.OnClientReceive);
             }
 
-            udp.ReceiveStart(this.OnClientReceive);
             this.clientSendCount++;
         }
 
         void OnServerReceive(Udp udp, IDatagramReadCompletion completion)
         {
-            if (completion.Error != null 
-                || completion.RemoteEndPoint == null)
-            {
-                return;
-            }
-
             ReadableBuffer buffer = completion.Data;
-            if (buffer.Count == 0)
-            {
-                return;
-            }
-
-            string message = buffer.ReadString(buffer.Count, Encoding.UTF8);
+            string message = buffer.Count > 0 ? buffer.ReadString(buffer.Count, Encoding.UTF8) : null;
             if (message == "PING")
             {
                 this.serverReceiveCount++;
             }
 
             udp.ReceiveStop();
-
             byte[] data = Encoding.UTF8.GetBytes("PONG");
             udp.QueueSend(data, completion.RemoteEndPoint, this.OnServerSendCompleted);
         }
 
         void OnServerSendCompleted(Udp udp, Exception exception)
         {
-            if (exception == null)
-            {
-                this.serverSendCount++;
-            }
-
+            this.serverSendError = exception;
+            this.serverSendCount++;
             udp.CloseHandle(this.OnClose);
         }
 

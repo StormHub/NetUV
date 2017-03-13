@@ -378,8 +378,10 @@ namespace NetUV.Core.Buffers
             if (bitmapIdx == 0)
             {
                 sbyte val = this.Value(memoryMapIdx);
-                Contract.Assert(val == this.unusable, val.ToString());
-                buf.Init(this, handle, this.RunOffset(memoryMapIdx), this.RunLength(memoryMapIdx),
+                Contract.Assert(val == this.unusable);
+                buf.Init(this, handle, 
+                    this.RunOffset(memoryMapIdx), 
+                    this.RunLength(memoryMapIdx),
                     this.Arena.Parent.ThreadCache());
             }
             else

@@ -59,6 +59,7 @@ namespace NetUV.Core.Tests
                 .Start(this.OnTimerCreateFile, 100, 0);
 
             this.loop.RunDefault();
+
             Assert.True(this.fileCreated + this.fileRemoved == this.callbackCount);
             Assert.Equal(2, this.closeCount);
         }

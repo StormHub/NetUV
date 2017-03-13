@@ -4,7 +4,6 @@
 namespace NetUV.Core.Tests
 {
     using System;
-    using System.Runtime.InteropServices;
     using NetUV.Core.Handles;
     using NetUV.Core.Native;
     using Xunit;
@@ -104,13 +103,13 @@ namespace NetUV.Core.Tests
             this.closeCount++;
         }
 
-        static string GetPipeName() => 
-            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+        static string GetPipeName() =>
+            Platform.IsWindows
             ? "\\\\?\\pipe\\uv-test"
             : "/tmp/uv-test-sock";
 
-        static string GetBadPipeName() => 
-            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+        static string GetBadPipeName() =>
+            Platform.IsWindows
             ? "bad-pipe"
             : "/path/to/unix/socket/that/really/should/not/be/there";
 

@@ -21,6 +21,9 @@ namespace NetUV.Core.Tests
         int serverSendCount;
         int clientReceiveCount;
 
+        Exception sendError;
+        Exception receiveError;
+
         [Fact]
         public void Run()
         {
@@ -63,8 +66,16 @@ namespace NetUV.Core.Tests
             }
             catch (OperationException error)
             {
-                Assert.Equal(ErrorCode.ENODEV, error.ErrorCode);
-                return;
+                if (Platform.IsMacOS)
+                {
+                    Assert.Equal(ErrorCode.EADDRNOTAVAIL, error.ErrorCode);
+                    return;
+                }
+                else if (Platform.IsLinux)
+                {
+                    Assert.Equal(ErrorCode.ENODEV, error.ErrorCode);
+                    return;
+                }
             }
 
             byte[] data = Encoding.UTF8.GetBytes("PING");
@@ -77,33 +88,25 @@ namespace NetUV.Core.Tests
             Assert.Equal(1, this.serverSendCount);
             Assert.Equal(1, this.clientReceiveCount);
 
+            Assert.Null(this.sendError);
+            Assert.Null(this.receiveError);
         }
 
         void OnServerSendCompleted(Udp udp, Exception exception)
         {
-            if (exception == null)
-            {
-                this.serverSendCount++;
-            }
-
+            this.sendError = exception;
+            this.serverSendCount++;
             udp.CloseHandle(this.OnClose);
         }
 
         void OnClientReceive(Udp udp, IDatagramReadCompletion completion)
         {
-            if (completion.Error != null
-                || completion.RemoteEndPoint == null)
-            {
-                return;
-            }
+            this.receiveError = completion.Error;
 
             ReadableBuffer buffer = completion.Data;
-            if (buffer.Count == 0)
-            {
-                return;
-            }
-
-            string message = buffer.ReadString(buffer.Count, Encoding.UTF8);
+            string message = buffer.Count > 0 
+                ? buffer.ReadString(buffer.Count, Encoding.UTF8) 
+                : null;
             if (message == "PING")
             {
                 this.clientReceiveCount++;

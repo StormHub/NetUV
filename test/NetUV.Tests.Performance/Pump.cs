@@ -4,7 +4,6 @@
 namespace NetUV.Core.Tests.Performance
 {
     using System;
-    using System.Collections.Generic;
     using NetUV.Core.Buffers;
     using NetUV.Core.Channels;
     using NetUV.Core.Handles;
@@ -12,42 +11,233 @@ namespace NetUV.Core.Tests.Performance
     sealed class Pump : IDisposable
     {
         const int WriteBufferSize = 8192;
+        const int MaxSimultaneousConnects = 100;
         const int StatisticsCount = 5;
         const int StatisticsInterval = 1000; // milliseconds
         const int MaximumWriteHandles = 1000; // backlog size
 
         readonly bool showIntervalStatistics;
         readonly HandleType handleType;
-        readonly int clientCount;
-        readonly List<IStream> clients;
-
-        int connectedClientCount;
-        int counnectionFailed;
-        WritableBuffer dataBuffer;
+        readonly int targetConnections;
 
         Loop loop;
         StreamHandle server;
-        Timer timer;
+        WritableBuffer dataBuffer;
 
-        long bytesRead;
-        long totalBytesRead;
+        StreamHandle[] writeHandles;
 
-        long bytesWrite;
-        long totalBytesWrite;
-
-        int statisticsCount;
+        int maxConnectSocket;
+        int writeSockets;
+        int readSockets;
+        int maxReadSockets;
+        int statsLeft;
 
         long startTime;
         long stopTime;
 
+        long receive;
+        long receiveTotal;
+        long sent;
+        long sentTotal;
+
+        int connectionErrorCount;
+
         public Pump(HandleType handleType, int clientCount, bool showIntervalStatistics = false)
         {
             this.handleType = handleType;
-            this.clientCount = clientCount;
-            this.clients = new List<IStream>();
+            this.targetConnections = clientCount;
             this.showIntervalStatistics = showIntervalStatistics;
-            this.counnectionFailed = 0;
+
+            var data = new byte[WriteBufferSize];
+            this.dataBuffer = WritableBuffer.From(data);
+
+            this.writeHandles = new StreamHandle[MaximumWriteHandles];
         }
+
+        public void Run()
+        {
+            this.loop = new Loop();
+
+            // Start server
+            switch (this.handleType)
+            {
+                case HandleType.Tcp:
+                    this.server = this.loop
+                        .CreateTcp()
+                        .SimultaneousAccepts(true)
+                        .Listen(TestHelper.LoopbackEndPoint, this.OnConnection, MaximumWriteHandles);
+                    break;
+                case HandleType.Pipe:
+                    this.server = this.loop
+                        .CreatePipe()
+                        .Listen(TestHelper.LocalPipeName, this.OnConnection, MaximumWriteHandles);
+                    break;
+                default:
+                    throw new InvalidOperationException($"{this.handleType} is not supported.");
+            }
+
+            this.ConnectToServer();
+
+            this.loop.RunDefault();
+
+            long diff = (this.stopTime - this.startTime);
+            double total = ToGigaBytes(this.sentTotal, diff);
+            Console.WriteLine($"{this.handleType} pump {this.targetConnections} client : {TestHelper.Format(total)} gbit/s");
+
+            total = ToGigaBytes(this.receiveTotal, diff);
+            Console.WriteLine($"{this.handleType} pump {this.targetConnections} server : {TestHelper.Format(total)} gbit/s ({this.readSockets})");
+        }
+
+        void ConnectToServer()
+        {
+            while (this.maxConnectSocket < this.targetConnections 
+                && this.maxConnectSocket < this.writeSockets + MaxSimultaneousConnects)
+            {
+                switch (this.handleType)
+                {
+                    case HandleType.Tcp:
+                        this.writeHandles[this.maxConnectSocket] = this.loop
+                            .CreateTcp()
+                            .ConnectTo(TestHelper.LoopbackEndPoint, this.OnConnected);
+                        break;
+                    case HandleType.Pipe:
+                        this.writeHandles[this.maxConnectSocket] = this.loop
+                            .CreatePipe()
+                            .ConnectTo(TestHelper.LocalPipeName, this.OnConnected);
+                        break;
+                    default:
+                        throw new InvalidOperationException($"{this.handleType} is not supported.");
+                }
+
+                this.maxConnectSocket++;
+            }
+        }
+
+        void OnConnected<T>(T client, Exception error) where T : StreamHandle
+        {
+            if (error != null)
+            {
+                if (this.connectionErrorCount == 0)
+                {
+                    Console.WriteLine($"{this.handleType} pump {this.targetConnections} error : {error}.");
+                    this.connectionErrorCount++;
+                }
+
+                client.CloseHandle(OnClosed);
+            }
+
+            this.writeSockets++;
+            this.ConnectToServer();
+
+            // Wait all connected to start writing
+            if (this.writeSockets == this.targetConnections)
+            {
+                this.StartStatistics();
+
+                for (int i = 0; i < this.writeSockets; i++)
+                {
+                    if (this.writeHandles[i].IsActive)
+                    {
+                        this.writeHandles[i].QueueWriteStream(this.dataBuffer, this.OnWriteCompleted);
+                    }
+                }
+            }
+        }
+
+        void StartStatistics()
+        {
+            this.statsLeft = StatisticsCount;
+            this.loop
+                .CreateTimer()
+                .Start(this.ShowStatistics, StatisticsInterval, StatisticsInterval);
+
+            this.loop.UpdateTime();
+            this.startTime = this.loop.Now;
+        }
+
+        void ShowStatistics(Timer handle)
+        {
+            if (this.showIntervalStatistics)
+            {
+                double sentStat = ToGigaBytes(this.sent, StatisticsInterval);
+                double receiveStat = ToGigaBytes(this.receive, StatisticsInterval);
+                Console.WriteLine($"{this.handleType} pump connections : {this.targetConnections},"
+                    + $" write : {TestHelper.Format(sentStat)} gbit/s, "
+                    + $" read : {TestHelper.Format(receiveStat)} gbit/s. {this.maxReadSockets} {this.readSockets}");
+            }
+
+            this.statsLeft--;
+            if (this.statsLeft == 0)
+            {
+                this.loop.UpdateTime();
+                this.stopTime = this.loop.Now;
+
+                for (int i = 0; i < this.writeSockets; i++)
+                {
+                    this.writeHandles[i].CloseHandle(OnClosed);
+                }
+
+                handle.Stop();
+                handle.CloseHandle(OnClosed);
+                this.server.CloseHandle(OnClosed);
+            }
+            else
+            {
+                this.receive = 0;
+                this.sent = 0;
+            }
+        }
+
+        void OnWriteCompleted(StreamHandle handle, Exception error)
+        {
+            if (error != null)
+            {
+                handle.CloseHandle(OnClosed);
+                return;
+            }
+
+            this.sent += WriteBufferSize;
+            this.sentTotal += WriteBufferSize;
+
+            if (this.statsLeft > 0 
+                && handle.IsActive)
+            {
+                handle.QueueWriteStream(this.dataBuffer, this.OnWriteCompleted);
+            }
+        }
+
+        void OnConnection<T>(T client, Exception error) where T : StreamHandle
+        {
+            if (error != null)
+            {
+                client.CloseHandle(OnClosed);
+            }
+            else
+            {
+                this.readSockets++;
+                this.maxReadSockets++;
+
+                client.CreateStream().Subscribe(this.OnNext, OnError, OnComplete);
+            }
+        }
+
+        void OnNext(IStream stream, ReadableBuffer readableBuffer)
+        {
+            if (this.receiveTotal == 0)
+            {
+                this.loop.UpdateTime();
+                this.startTime = this.loop.Now;
+            }
+
+            this.receive += readableBuffer.Count;
+            this.receiveTotal += readableBuffer.Count;
+        }
+
+        static void OnError(IStream stream, Exception error) => stream.Handle.CloseHandle(OnClosed);
+
+        static void OnComplete(IStream stream) => stream.Handle.CloseHandle(OnClosed);
+
+        static void OnClosed(ScheduleHandle handle) => handle.Dispose();
 
         static double ToGigaBytes(long total, long interval)
         {
@@ -61,231 +251,12 @@ namespace NetUV.Core.Tests.Performance
             return bits / duration;
         }
 
-        public void Run()
-        {
-            this.StartServer();
-            this.StartClient();
-
-            this.loop.RunDefault();
-
-            long diff = (this.stopTime - this.startTime);
-            double total = ToGigaBytes(this.totalBytesWrite, diff);
-
-            Console.WriteLine($"{this.handleType} pump {this.clientCount} client : {TestHelper.Format(total)} gbit/s");
-
-            total = ToGigaBytes(this.totalBytesRead, diff);
-            Console.WriteLine($"{this.handleType} pump {this.clientCount} server : {TestHelper.Format(total)} gbit/s");
-        }
-
-        void StartClient()
-        {
-            var data = new byte[WriteBufferSize];
-            this.dataBuffer = WritableBuffer.From(data);
-
-            for (int i = 0; i < this.clientCount; i++)
-            {
-                switch (this.handleType)
-                {
-                    case HandleType.Tcp:
-                        this.loop
-                            .CreateTcp()
-                            .ConnectTo(TestHelper.LoopbackEndPoint, this.OnServerConnected);
-                        break;
-                    case HandleType.Pipe:
-                        this.loop
-                            .CreatePipe()
-                            .ConnectTo(TestHelper.LocalPipeName, this.OnServerConnected);
-                        break;
-                    default:
-                        throw new InvalidOperationException($"{this.handleType} is not supported.");
-                }
-            }
-        }
-
-        void OnServerConnected<T>(T client, Exception error)
-            where T : StreamHandle
-        {
-            if (error != null)
-            {
-                if (this.counnectionFailed == 0)
-                {
-                    Console.WriteLine($"{this.handleType} pump {this.clientCount} failed, {error.Message}");
-                }
-                client.Dispose();
-                this.counnectionFailed++;
-            }
-            else
-            {
-                this.connectedClientCount++;
-
-                IStream stream = client.CreateStream();
-                this.clients.Add(stream);
-                stream.Subscribe(ClientOnNext, this.ClientOnError, ClientOnComplete);
-            }
-
-            // Wait until all connected
-            if (this.connectedClientCount != (this.clientCount - this.counnectionFailed))
-            {
-                return;
-            }
-
-            this.StartStatistics();
-            foreach (IStream streamClient in this.clients)
-            {
-                streamClient.Write(this.dataBuffer, this.OnWriteComplete);
-            }
-        }
-
-        void OnWriteComplete(IStream stream, Exception error)
-        {
-            if (error != null)
-            {
-                Console.WriteLine($"{this.handleType} pump {this.clientCount} client write error, {error}");
-                stream.Dispose();
-                return;
-            }
-
-            this.totalBytesWrite += WriteBufferSize;
-            this.bytesWrite += WriteBufferSize;
-
-            if (this.statisticsCount > 0)
-            {
-                stream.Write(this.dataBuffer, this.OnWriteComplete);
-            }
-            else
-            {
-                stream.Shutdown(this.OnShutdown);
-            }
-        }
-
-        void OnShutdown(IStream stream, Exception exception)
-        {
-            if (this.clients.Contains(stream))
-            {
-                this.clients.Remove(stream);
-            }
-
-            stream.Handle.CloseHandle(OnClosed);
-            if (this.clients.Count == 0)
-            {
-                this.server.CloseHandle(OnClosed);
-            }
-        }
-
-        static void ClientOnNext(IStream stream, ReadableBuffer readableBuffer)
-        {
-            // NOP
-        }
-
-        void ClientOnError(IStream stream, Exception error)
-        {
-            Console.WriteLine($"{this.handleType} pump {this.clientCount} client read error, {error}");
-            stream.Handle.CloseHandle(OnClosed);
-        }
-
-        static void ClientOnComplete(IStream stream) => stream.Handle.CloseHandle(OnClosed);
-
-        void StartStatistics()
-        {
-            this.statisticsCount = StatisticsCount;
-            this.timer = this.loop.CreateTimer();
-            this.timer.Start(this.ShowStatistics, StatisticsInterval, StatisticsInterval);
-
-            this.loop.UpdateTime();
-            this.startTime = this.loop.Now;
-        }
-
-        void ShowStatistics(Timer handle)
-        {
-            if (this.showIntervalStatistics)
-            {
-                Console.WriteLine($"{this.handleType} pump connections : {this.connectedClientCount}, write : {ToGigaBytes(this.bytesWrite, StatisticsInterval)} gbit/s, read : {ToGigaBytes(this.bytesRead, StatisticsInterval)} gbit/s.");
-            }
-
-            this.statisticsCount--;
-
-            if (this.statisticsCount > 0)
-            {
-                this.bytesWrite = 0;
-                this.bytesRead = 0;
-                return;
-            }
-
-            this.loop.UpdateTime();
-            this.stopTime = this.loop.Now;
-
-            handle.Stop();
-            handle.Dispose();
-        }
-
-        void StartServer()
-        {
-            this.loop = new Loop();
-
-            switch (this.handleType)
-            {
-                case HandleType.Tcp:
-                    this.server = this.loop
-                        .CreateTcp()
-                        .SimultaneousAccepts(true)
-                        .Listen(TestHelper.LoopbackEndPoint, this.OnClientConected, MaximumWriteHandles);
-                    break;
-                case HandleType.Pipe:
-                    this.server = this.loop
-                        .CreatePipe()
-                        .Listen(TestHelper.LocalPipeName, this.OnClientConected, MaximumWriteHandles);
-                    break;
-                default:
-                    throw new InvalidOperationException($"{this.handleType} is not supported.");
-            }
-        }
-
-        void OnClientConected<T>(T client, Exception error)
-            where T : StreamHandle
-        {
-            if (error != null)
-            {
-                Console.WriteLine($"{this.handleType} pump {this.clientCount} client connection error, {error}");
-                client.CloseHandle(OnClosed);
-            }
-            else
-            {
-                client.CreateStream().Subscribe(
-                    this.ServerOnNext, this.ServerOnError, ServerOnComplete);
-            }
-        }
-
-        void ServerOnNext(IStream stream, ReadableBuffer buffer)
-        {
-            if (this.totalBytesRead == 0)
-            {
-                this.loop.UpdateTime();
-                this.startTime = this.loop.Now;
-            }
-
-            int count = buffer.Count;
-            this.bytesRead += count;
-            this.totalBytesRead += count;
-        }
-
-        void ServerOnError(IStream stream, Exception error)
-        {
-            Console.WriteLine($"{this.handleType} pump {this.clientCount} server read error, {error}");
-            stream.Handle.CloseHandle(OnClosed);
-        }
-
-        static void ServerOnComplete(IStream stream) => stream.Handle.CloseHandle(OnClosed);
-
-        static void OnClosed(ScheduleHandle handle) => handle.Dispose();
-
         public void Dispose()
         {
-            this.clients.Clear();
             this.dataBuffer.Dispose();
-            this.server.Dispose();
-            this.loop.Dispose();
+            this.writeHandles = null;
 
-            this.server = null;
+            this.loop?.Dispose();
             this.loop = null;
         }
     }

@@ -35,10 +35,7 @@ namespace NetUV.Core.Buffers
 
         public string ReadString(int length, Encoding encoding)
         {
-            if (encoding == null)
-            {
-                throw new ArgumentNullException(nameof(encoding));
-            }
+            Contract.Requires(encoding != null);
 
             int readIndex = this.Index;
             this.Validate(readIndex, length);
@@ -55,15 +52,8 @@ namespace NetUV.Core.Buffers
 
         public void ReadBytes(byte[] destination, int length)
         {
-            if (destination == null)
-            {
-                throw new ArgumentNullException(nameof(destination));
-            }
-            if (length <= 0)
-            {
-                throw new ArgumentOutOfRangeException(
-                    $"{length} must be greater than zero.", nameof(length));
-            }
+            Contract.Requires(destination != null);
+            Contract.Requires(length > 0);
 
             int readIndex = this.Index;
             this.Validate(readIndex, length);
