@@ -48,7 +48,7 @@
         "System.Diagnostics.StackTrace": "4.3.0"
       }
     },
-    "netcoreapp1.0": {
+    "netcoreapp1.1": {
       "dependencies": {
         "System.Diagnostics.Contracts": "4.3.0",
         "System.Threading.Thread": "4.3.0",
