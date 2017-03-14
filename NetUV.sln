@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26228.9
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{5B746760-8E71-497D-9D7C-87EE1A67DEFD}"
 EndProject
@@ -9,20 +9,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{53222498-29C
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{D69BA951-91F0-4BCD-97D2-77414F8B07A9}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "EchoServer", "examples\EchoServer\EchoServer.xproj", "{DA1BF15E-0F9D-4FB6-99BF-AB13093C05A7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EchoServer", "examples\EchoServer\EchoServer.csproj", "{DA1BF15E-0F9D-4FB6-99BF-AB13093C05A7}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{32AA041D-3302-4E27-9066-775E52763FF5}"
-	ProjectSection(SolutionItems) = preProject
-		global.json = global.json
-	EndProjectSection
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EchoClient", "examples\EchoClient\EchoClient.csproj", "{98C6CD6F-2F5C-4992-98B7-CA26E815D9F2}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "EchoClient", "examples\EchoClient\EchoClient.xproj", "{98C6CD6F-2F5C-4992-98B7-CA26E815D9F2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetUV.Core", "src\NetUV.Core\NetUV.Core.csproj", "{C0EDAB20-D22F-47AB-BEE5-AB90DDC913A0}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "NetUV.Core.Tests", "test\NetUV.Tests\NetUV.Core.Tests.xproj", "{F1ED3254-8CF8-422E-8547-6F13BB8AB0A7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetUV.Core.Tests", "test\NetUV.Core.Tests\NetUV.Core.Tests.csproj", "{08F6BEE9-992F-43D4-9531-5F9CD4173C6F}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "NetUV.Core.Tests.Performance", "test\NetUV.Tests.Performance\NetUV.Core.Tests.Performance.xproj", "{967A6FF1-33F8-4230-A247-F0F9FB411BD9}"
-EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "NetUV.Core", "src\NetUV.Core\NetUV.Core.xproj", "{C0EDAB20-D22F-47AB-BEE5-AB90DDC913A0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetUV.Core.Tests.Performance", "test\NetUV.Core.Tests.Performance\NetUV.Core.Tests.Performance.csproj", "{788F597A-9F98-45E4-98A8-9603E43E19E3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,18 +33,18 @@ Global
 		{98C6CD6F-2F5C-4992-98B7-CA26E815D9F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{98C6CD6F-2F5C-4992-98B7-CA26E815D9F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{98C6CD6F-2F5C-4992-98B7-CA26E815D9F2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F1ED3254-8CF8-422E-8547-6F13BB8AB0A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F1ED3254-8CF8-422E-8547-6F13BB8AB0A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F1ED3254-8CF8-422E-8547-6F13BB8AB0A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F1ED3254-8CF8-422E-8547-6F13BB8AB0A7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{967A6FF1-33F8-4230-A247-F0F9FB411BD9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{967A6FF1-33F8-4230-A247-F0F9FB411BD9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{967A6FF1-33F8-4230-A247-F0F9FB411BD9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{967A6FF1-33F8-4230-A247-F0F9FB411BD9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C0EDAB20-D22F-47AB-BEE5-AB90DDC913A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C0EDAB20-D22F-47AB-BEE5-AB90DDC913A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C0EDAB20-D22F-47AB-BEE5-AB90DDC913A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C0EDAB20-D22F-47AB-BEE5-AB90DDC913A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{08F6BEE9-992F-43D4-9531-5F9CD4173C6F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{08F6BEE9-992F-43D4-9531-5F9CD4173C6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{08F6BEE9-992F-43D4-9531-5F9CD4173C6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{08F6BEE9-992F-43D4-9531-5F9CD4173C6F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{788F597A-9F98-45E4-98A8-9603E43E19E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{788F597A-9F98-45E4-98A8-9603E43E19E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{788F597A-9F98-45E4-98A8-9603E43E19E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{788F597A-9F98-45E4-98A8-9603E43E19E3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -57,8 +52,8 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{DA1BF15E-0F9D-4FB6-99BF-AB13093C05A7} = {5B746760-8E71-497D-9D7C-87EE1A67DEFD}
 		{98C6CD6F-2F5C-4992-98B7-CA26E815D9F2} = {5B746760-8E71-497D-9D7C-87EE1A67DEFD}
-		{F1ED3254-8CF8-422E-8547-6F13BB8AB0A7} = {D69BA951-91F0-4BCD-97D2-77414F8B07A9}
-		{967A6FF1-33F8-4230-A247-F0F9FB411BD9} = {D69BA951-91F0-4BCD-97D2-77414F8B07A9}
 		{C0EDAB20-D22F-47AB-BEE5-AB90DDC913A0} = {53222498-29CF-4D3C-B016-9A88F5387400}
+		{08F6BEE9-992F-43D4-9531-5F9CD4173C6F} = {D69BA951-91F0-4BCD-97D2-77414F8B07A9}
+		{788F597A-9F98-45E4-98A8-9603E43E19E3} = {D69BA951-91F0-4BCD-97D2-77414F8B07A9}
 	EndGlobalSection
 EndGlobal

@@ -1,4 +1,7 @@
-﻿using System.Reflection;
+﻿// Copyright (c) Johnny Z. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following 
@@ -10,7 +13,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("NetUV.Core.Tests")]
-[assembly: AssemblyCopyright("Copyright ©  2016")]
+[assembly: AssemblyCopyright("Copyright ©  2017 Johnny Z")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

@@ -8,10 +8,8 @@ echo $CONFIGURATION
 
 dotnet restore
 
-dotnet build -c $CONFIGURATION ./src/NetUV.Core
+dotnet build -c $CONFIGURATION -f netstandard1.3 ./src/NetUV.Core/NetUV.Core.csproj
 
-if test "$TRAVIS_OS_NAME" != "osx"; then
-  dotnet test -c $CONFIGURATION ./test/NetUV.Tests -verbose
-fi
+dotnet test -c $CONFIGURATION -f netcoreapp1.1 ./test/NetUV.Core.Tests/NetUV.Core.Tests.csproj
 
-dotnet run -c $CONFIGURATION -p ./test/NetUV.Tests.Performance
+dotnet run -c $CONFIGURATION -f netcoreapp1.1 -p ./test/NetUV.Core.Tests.Performance/NetUV.Core.Tests.Performance.csproj

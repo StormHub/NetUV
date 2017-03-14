@@ -23,24 +23,18 @@ namespace NetUV.Core.Tests
 
         static IEnumerable<object[]> IpFamilyCases()
         {
-            if (Platform.IsWindows)
+            yield return new object[] { "0.0.0.0" };
+            if (!Platform.OSSupportsIPv6)
             {
-                yield return new object[] { new IPEndPoint(IPAddress.Any, Port) };
-            }
-            else
-            {
-                yield return new object[] { new IPEndPoint(IPAddress.Parse("0.0.0.0"), Port) };
-            }
-            if (Platform.OSSupportsIPv6)
-            {
-                yield return new object[] { new IPEndPoint(IPAddress.Parse("::"), Port) };
+                yield return new object[] { "::" };
             }
         }
 
         [Theory]
         [MemberData(nameof(IpFamilyCases))]
-        public void IpFamily(IPEndPoint endPoint)
+        public void IpFamily(string ipString)
         {
+            var endPoint = new IPEndPoint(IPAddress.Parse(ipString), Port);
             Udp udp = this.loop.CreateUdp();
 
             /* don't keep the loop alive */
