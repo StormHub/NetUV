@@ -35,13 +35,10 @@ namespace EchoClient
 
             try
             {
-                var serverType = ServerType.Tcp;
-                if (args.Length > 0)
+                if (args.Length == 0
+                    || !Enum.TryParse(args[0], true, out ServerType serverType))
                 {
-                    if (!Enum.TryParse(args[0], true, out serverType))
-                    {
-                        serverType = ServerType.Tcp;
-                    }
+                    serverType = ServerType.Tcp;
                 }
 
                 RunLoop(serverType);
@@ -97,6 +94,11 @@ namespace EchoClient
 
         static void OnReceive(Udp udp, IDatagramReadCompletion completion)
         {
+            if (completion.Error != null)
+            {
+                Console.WriteLine($"Echo client receive error {completion.Error}");
+            }
+
             IPEndPoint remoteEndPoint = completion.RemoteEndPoint;
             ReadableBuffer data = completion.Data;
             if (data.Count == 0)
@@ -104,15 +106,9 @@ namespace EchoClient
                 return;
             }
 
-            if (completion.Error != null)
-            {
-                Console.WriteLine($"Echo client receive error {completion.Error}");
-                return;
-            }
-
             string message = data.ReadString(data.Count, Encoding.UTF8);
             Console.WriteLine($"Echo client received : {message} from {remoteEndPoint}");
-            udp.Dispose();
+            udp.CloseHandle(OnClosed);
         }
 
         static void OnSendCompleted(Udp udp, Exception exception)
@@ -120,6 +116,7 @@ namespace EchoClient
             if (exception != null)
             {
                 Console.WriteLine($"Echo server send error {exception}");
+                udp.CloseHandle(OnClosed);
             }
         }
 
@@ -129,13 +126,13 @@ namespace EchoClient
             if (exception != null)
             {
                 Console.WriteLine($"{typeof(T).Name}:Echo client error {exception}");
-                client.Dispose();
+                client.CloseHandle(OnClosed);
                 return;
             }
 
             Console.WriteLine($"{typeof(T).Name}:Echo client connected, request write message.");
             IStream stream = client.CreateStream();
-            stream.Subscribe(OnNext, OnError);
+            stream.Subscribe(OnNext, OnError, OnCompleted);
 
             WritableBuffer buffer = CreateMessage();
             stream.Write(buffer, OnWriteCompleted);
@@ -165,6 +162,8 @@ namespace EchoClient
             stream.Write(buffer, OnWriteCompleted);
         }
 
+        static void OnCompleted(IStream stream) => stream.Handle.CloseHandle(OnClosed);
+
         static void OnWriteCompleted(IStream stream, Exception error) 
         {
             if (error == null)
@@ -173,8 +172,10 @@ namespace EchoClient
             }
 
             Console.WriteLine($"Echo client write error {error}");
-            stream.Dispose();
+            stream.Handle.CloseHandle(OnClosed);
         }
+
+        static void OnClosed(ScheduleHandle handle) => handle.Dispose();
 
         static void OnError(IStream stream, Exception error)
             => Console.WriteLine($"Echo client read error {error}");

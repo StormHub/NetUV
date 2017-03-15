@@ -87,8 +87,7 @@ namespace NetUV.Core.Concurrency
 
                     while (!this.queue.IsEmpty)
                     {
-                        Activator activator;
-                        if (this.queue.TryDequeue(out activator))
+                        if (this.queue.TryDequeue(out Activator activator))
                         {
                             await activator.ExecuteAsync();
                         }

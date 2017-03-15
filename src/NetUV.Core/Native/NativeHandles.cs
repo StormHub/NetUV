@@ -9,6 +9,7 @@ namespace NetUV.Core.Native
     using System.Diagnostics.Contracts;
     using System.Net;
     using System.Net.Sockets;
+    using System.Runtime.CompilerServices;
     using System.Runtime.InteropServices;
     using NetUV.Core.Handles;
     using NetUV.Core.Requests;
@@ -439,6 +440,7 @@ namespace NetUV.Core.Native
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static int GetSize(uv_handle_type handleType)
         {
             IntPtr value = uv_handle_size(handleType);
@@ -573,9 +575,8 @@ namespace NetUV.Core.Native
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            sockaddr sockaddr;
             int namelen = Marshal.SizeOf<sockaddr>();
-            int result = uv_udp_getsockname(handle, out sockaddr, ref namelen);
+            int result = uv_udp_getsockname(handle, out sockaddr sockaddr, ref namelen);
             if (result < 0)
             {
                 throw CreateError((uv_err_code)result);
@@ -831,9 +832,8 @@ namespace NetUV.Core.Native
             Contract.Requires(endPoint != null);
             Contract.Requires(handle != IntPtr.Zero);
 
-            sockaddr addr;
-            GetSocketAddress(endPoint, out addr);
-            
+            GetSocketAddress(endPoint, out sockaddr addr);
+
             int result = uv_tcp_bind(handle, ref addr, (uint)(dualStack ? 1 : 0));
             if (result < 0)
             {
@@ -847,8 +847,7 @@ namespace NetUV.Core.Native
             Contract.Requires(requestHandle != IntPtr.Zero);
             Contract.Requires(handle != IntPtr.Zero);
 
-            sockaddr addr;
-            GetSocketAddress(endPoint, out addr);
+            GetSocketAddress(endPoint, out sockaddr addr);
 
             int result = uv_tcp_connect(requestHandle, handle, ref addr, WatcherRequest.WatcherCallback);
             if (result < 0)
@@ -861,9 +860,8 @@ namespace NetUV.Core.Native
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            sockaddr sockaddr;
             int namelen = Marshal.SizeOf<sockaddr>();
-            uv_tcp_getsockname(handle, out sockaddr, ref namelen);
+            uv_tcp_getsockname(handle, out sockaddr sockaddr, ref namelen);
 
             return sockaddr.GetIPEndPoint();
         }
@@ -872,9 +870,8 @@ namespace NetUV.Core.Native
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            sockaddr sockaddr;
             int namelen = Marshal.SizeOf<sockaddr>();
-            int result = uv_tcp_getpeername(handle, out sockaddr, ref namelen);
+            int result = uv_tcp_getpeername(handle, out sockaddr sockaddr, ref namelen);
             if (result < 0)
             {
                 throw CreateError((uv_err_code)result);

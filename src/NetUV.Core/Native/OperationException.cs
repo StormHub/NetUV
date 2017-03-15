@@ -16,8 +16,7 @@ namespace NetUV.Core.Native
             this.Code = errorCode;
             this.Name = errorName;
 
-            ErrorCode value;
-            if (!Enum.TryParse(errorName, out value))
+            if (!Enum.TryParse(errorName, out ErrorCode value))
             {
                 value = ErrorCode.UNKNOWN;
             }

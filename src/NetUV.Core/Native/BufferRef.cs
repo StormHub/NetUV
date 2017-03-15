@@ -17,7 +17,7 @@ namespace NetUV.Core.Native
         GCHandle array;
         GCHandle handle;
 
-        internal BufferRef(WritableBuffer writableBuffer)
+        internal BufferRef(ref WritableBuffer writableBuffer)
         {
             Contract.Requires(writableBuffer.InternalBuffer != null);
 

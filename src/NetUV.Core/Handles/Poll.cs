@@ -94,7 +94,7 @@ namespace NetUV.Core.Handles
 
         protected override void Close() => this.pollCallback = null;
 
-        public void CloseHandle(Action<Poll> callback = null) =>
+        public void CloseHandle(Action<Poll> callback = null) => 
             base.CloseHandle(state => callback?.Invoke((Poll)state));
     }
 }
