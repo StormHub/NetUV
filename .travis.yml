@@ -1,5 +1,5 @@
 language: csharp
-dotnet: 1.0.0-preview2-1-003177
+dotnet: 1.0.1
 addons:
   apt:
     packages:
@@ -36,10 +36,6 @@ install:
   - if test "$TRAVIS_OS_NAME" == "linux"; then nvm install stable && nvm use stable; fi
   - if test "$TRAVIS_OS_NAME" == "osx"; then brew update; brew install openssl; ln -s /usr/local/opt/openssl/lib/libcrypto.1.0.0.dylib /usr/local/lib/; ln -s /usr/local/opt/openssl/lib/libssl.1.0.0.dylib /usr/local/lib/; fiopenssl; ulimit -S -n 8192;fi
 
-  - node -e "jsonPath='./src/NetUV.Core/project.json';data=require(jsonPath);fs=require('fs');delete data.frameworks.net46;fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2))"
-  - node -e "jsonPath='./test/NetUV.Tests/project.json';data=require(jsonPath);fs=require('fs');delete data.frameworks.net461;fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2))"
-  - node -e "jsonPath='./test/NetUV.Tests.Performance/project.json';data=require(jsonPath);fs=require('fs');delete data.frameworks.net461;fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2))"
-  
 before_script: 
  - chmod a+x ./build.sh
  

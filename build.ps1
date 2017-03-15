@@ -1,15 +1,9 @@
-$CakeVersion = "0.16.2"
-$DotNetVersion = "1.0.0-preview2-1-003177";
-$DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0-preview2/scripts/obtain/dotnet-install.ps1";
+$Configuration="Release";
+$DotNetVersion = "1.0.1";
+$DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.1/scripts/obtain/dotnet-install.ps1";
 
 # Make sure tools folder exists
 $PSScriptRoot = $pwd
-
-$ToolPath = Join-Path $PSScriptRoot "tools"
-if (!(Test-Path $ToolPath)) {
-    Write-Verbose "Creating tools directory..."
-    New-Item -Path $ToolPath -Type directory | out-null
-}
 
 ###########################################################################
 # INSTALL .NET CORE CLI
@@ -55,42 +49,59 @@ if($FoundDotNetCliVersion -ne $DotNetVersion) {
 }
 
 ###########################################################################
-# INSTALL CAKE
-###########################################################################
-
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-Function Unzip
-{
-    param([string]$zipfile, [string]$outpath)
-
-    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipfile, $outpath)
-}
-
-
-# Make sure Cake has been installed.
-$CakePath = Join-Path $ToolPath "Cake.CoreCLR.$CakeVersion/Cake.dll"
-if (!(Test-Path $CakePath)) {
-    Write-Host "Installing Cake..."
-     (New-Object System.Net.WebClient).DownloadFile("https://www.nuget.org/api/v2/package/Cake.CoreCLR/$CakeVersion", "$ToolPath\Cake.CoreCLR.zip")
-     Unzip "$ToolPath\Cake.CoreCLR.zip" "$ToolPath/Cake.CoreCLR.$CakeVersion"
-     Remove-Item "$ToolPath\Cake.CoreCLR.zip"
-}
-
-###########################################################################
-# INSTALL NUGET
-###########################################################################
-
-# Make sure NuGet has been installed.
-$NugetPath = Join-Path $PSScriptRoot ".nuget/nuget.exe"
-if (!(Test-Path $NugetPath)) {
-    Write-Host "Installing Nuget..."
-    (New-Object System.Net.WebClient).DownloadFile("https://www.nuget.org/nuget.exe", $NugetPath)
-    & "$NugetPath" update -self
-}
-
-###########################################################################
 # RUN BUILD SCRIPT
 ###########################################################################
+$env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = 1
 
-& dotnet "$CakePath" $args
-exit $LASTEXITCODE
+Write-Host "Restoring all packages"
+Invoke-Expression "& dotnet restore"
+if ($lastexitcode -ne 0) {
+    Write-Error "Failed to restore packages."
+    exit -1
+}
+
+$errorsEncountered = 0
+$projectsFailed = New-Object System.Collections.Generic.List[String]
+
+foreach ($file in [System.IO.Directory]::EnumerateFiles("$PSScriptRoot\src", "*.csproj", "AllDirectories")) {
+    Write-Host "Building $file..."
+    Invoke-Expression "& dotnet build $file -c $Configuration"
+
+    if ($lastexitcode -ne 0) {
+        Write-Error "Failed to build project $file"
+        $projectsFailed.Add($file)
+        $errorsEncountered++
+    }
+}
+
+$file="./test/NetUV.Core.Tests/NetUV.Core.Tests.csproj"
+Write-Host "Building and running tests for project $file..."
+Invoke-Expression "& dotnet test $file -c $Configuration"
+
+if ($lastexitcode -ne 0) {
+    Write-Error "Some tests failed in project $file"
+    $projectsFailed.Add($file)
+    $errorsEncountered++
+}
+
+$file="./test/NetUV.Core.Tests.Performance/NetUV.Core.Tests.Performance.csproj"
+Write-Host "Building and running performance tests for project $file..."
+Invoke-Expression "& dotnet run -c $Configuration -f netcoreapp1.1 -p $file"
+
+if ($lastexitcode -ne 0) {
+    Write-Error "Performance tests failed in project $file"
+    $projectsFailed.Add($file)
+    $errorsEncountered++
+}
+
+if ($errorsEncountered -eq 0) {
+    Write-Host "** Build succeeded. **" -foreground "green"
+}
+else {
+    Write-Host "** Build failed. $errorsEncountered projects failed to build or test. **" -foreground "red"
+    foreach ($file in $projectsFailed) {
+        Write-Host "    $file" -foreground "red"
+    }
+}
+
+exit $errorsEncountered
