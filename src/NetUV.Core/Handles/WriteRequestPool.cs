@@ -25,8 +25,7 @@ namespace NetUV.Core.Handles
 
         public WriteRequest Take()
         {
-            WriteRequest request;
-            if (!this.requestPool.TryDequeue(out request))
+            if (!this.requestPool.TryDequeue(out WriteRequest request))
             {
                 request = new WriteRequest(this.requestType);
             }
@@ -49,8 +48,7 @@ namespace NetUV.Core.Handles
 
         public void Dispose()
         {
-            WriteRequest request;
-            while (this.requestPool.TryDequeue(out request))
+            while (this.requestPool.TryDequeue(out WriteRequest request))
             {
                 request.Dispose();
             }

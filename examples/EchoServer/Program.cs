@@ -15,7 +15,7 @@ namespace EchoServer
     public class Program
     {
         const int Port = 9988;
-        static readonly IPEndPoint EndPoint = new IPEndPoint(IPAddress.IPv6Loopback, Port);
+        static readonly IPEndPoint EndPoint = new IPEndPoint(IPAddress.Loopback, Port);
 
         static Loop loop;
         static IDisposable server;
@@ -38,13 +38,10 @@ namespace EchoServer
 
             try
             {
-                var serverType = ServerType.Tcp;
-                if (args.Length > 0)
+                if (args.Length == 0
+                    || !Enum.TryParse(args[0], true, out ServerType serverType))
                 {
-                    if (!Enum.TryParse(args[0], true, out serverType))
-                    {
-                        serverType = ServerType.Tcp;
-                    }
+                    serverType = ServerType.Tcp;
                 }
 
                 StartServer(serverType);
@@ -99,19 +96,19 @@ namespace EchoServer
 
         static void OnReceive(Udp udp, IDatagramReadCompletion completion)
         {
+            if (completion.Error != null)
+            {
+                Console.WriteLine($"Echo server receive error {completion.Error}");
+                udp.CloseHandle(OnClosed);
+                return;
+            }
+
             IPEndPoint remoteEndPoint = completion.RemoteEndPoint;
             ReadableBuffer data = completion.Data;
             if (data.Count == 0)
             {
                 return;
             }
-
-            if (completion.Error != null)
-            {
-                Console.WriteLine($"Echo server receive error {completion.Error}");
-                return;
-            }
-
             string message = data.ReadString(data.Count, Encoding.UTF8);
             Console.WriteLine($"Echo server received : {message} from {remoteEndPoint}");
 
@@ -127,7 +124,7 @@ namespace EchoServer
             {
                 Console.WriteLine($"Echo server send error {exception}");
             }
-            udp.Dispose();
+            udp.CloseHandle(OnClosed);
         }
 
         static void OnConnection<T>(T client, Exception error)
@@ -136,7 +133,7 @@ namespace EchoServer
             if (error != null)
             {
                 Console.WriteLine($"{typeof(T).Name}:Echo server client connection failed {error}");
-                client?.Dispose();
+                client.CloseHandle(OnClosed);
                 return;
             }
 
@@ -153,7 +150,7 @@ namespace EchoServer
             }
 
             IStream stream = client.CreateStream();
-            stream.Subscribe(OnNext, OnError);
+            stream.Subscribe(OnNext, OnError, OnCompleted);
         }
 
         static void OnNext(IStream stream, ReadableBuffer data) 
@@ -201,8 +198,12 @@ namespace EchoServer
             }
 
             Console.WriteLine($"Echo server write error {error}");
-            stream.Dispose();
+            stream.Handle.CloseHandle(OnClosed);
         }
+
+        static void OnCompleted(IStream stream) => stream.Handle.CloseHandle(OnClosed);
+
+        static void OnClosed(ScheduleHandle handle) => handle.Dispose();
 
         static void OnError(IStream stream, Exception error) 
             => Console.WriteLine($"Echo server read error {error}");

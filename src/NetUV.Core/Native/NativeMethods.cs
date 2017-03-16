@@ -198,10 +198,10 @@ namespace NetUV.Core.Native
         }
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr uv_strerror(uv_err_code err);
+        static extern IntPtr uv_strerror(uv_err_code err);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr uv_err_name(uv_err_code err);
+        static extern IntPtr uv_err_name(uv_err_code err);
 
         #endregion Error
 

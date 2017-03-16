@@ -27,8 +27,7 @@ namespace NetUV.Core.Common
 
         static ResourceLeakDetector()
         {
-            bool value;
-            if (!Configuration.TryGetValue(ResourceLeakDetectorEnabled, out value))
+            if (!Configuration.TryGetValue(ResourceLeakDetectorEnabled, out bool value))
             {
                 value = false;
             }
@@ -119,8 +118,7 @@ namespace NetUV.Core.Common
             public DefaultResourceLeak(ResourceLeakDetector owner, object referent)
             {
                 this.owner = owner;
-                GCNotice existingNotice;
-                if (owner.gcNotificationMap.TryGetValue(referent, out existingNotice))
+                if (owner.gcNotificationMap.TryGetValue(referent, out GCNotice existingNotice))
                 {
                     existingNotice.Rearm(this);
                 }

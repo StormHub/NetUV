@@ -132,7 +132,7 @@ namespace NetUV.Core.Handles
                 return;
             }
 
-            var bufferRef = new BufferRef(writableBuffer);
+            var bufferRef = new BufferRef(ref writableBuffer);
             this.QueueSend(bufferRef, remoteEndPoint, completion);
         }
 

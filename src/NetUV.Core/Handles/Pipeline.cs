@@ -91,8 +91,7 @@ namespace NetUV.Core.Handles
         {
             ByteBuffer byteBuffer = null;
 
-            BufferRef bufferRef;
-            if (this.bufferQueue.TryDequeue(out bufferRef))
+            if (this.bufferQueue.TryDequeue(out BufferRef bufferRef))
             {
                 byteBuffer = bufferRef.GetByteBuffer();
             }

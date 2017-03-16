@@ -197,8 +197,7 @@ namespace NetUV.Core.Native
         {
             Contract.Requires(handle != IntPtr.Zero);
 
-            IntPtr value;
-            int result = uv_fileno(handle, out value);
+            int result = uv_fileno(handle, out IntPtr value);
             if (result < 0)
             {
                 throw CreateError((uv_err_code)result);

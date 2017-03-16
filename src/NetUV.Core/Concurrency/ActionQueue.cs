@@ -70,8 +70,7 @@ namespace NetUV.Core.Concurrency
 
                     while (!this.queue.IsEmpty)
                     {
-                        Activator activator;
-                        if (this.queue.TryDequeue(out activator))
+                        if (this.queue.TryDequeue(out Activator activator))
                         {
                             activator.Invoke();
                         }
@@ -90,8 +89,7 @@ namespace NetUV.Core.Concurrency
             {
                 this.disposed = true;
 
-                Activator ignore;
-                while (this.queue.TryDequeue(out ignore)) { }
+                while (this.queue.TryDequeue(out Activator ignore)) { }
             }
         }
     }

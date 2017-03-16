@@ -40,8 +40,7 @@ namespace NetUV.Core.Common
                 }
 
                 ConditionalWeakTable<Stack, WeakOrderQueue> queueDictionary = DelayedPool.Value;
-                WeakOrderQueue delayedRecycled;
-                if (!queueDictionary.TryGetValue(stack, out delayedRecycled))
+                if (!queueDictionary.TryGetValue(stack, out WeakOrderQueue delayedRecycled))
                 {
                     var newQueue = new WeakOrderQueue(stack, thread);
                     delayedRecycled = newQueue;
@@ -326,8 +325,7 @@ namespace NetUV.Core.Common
                     }
 
                     WeakOrderQueue next = cursor.Next;
-                    Thread ownerThread;
-                    if (!cursor.OwnerThread.TryGetTarget(out ownerThread))
+                    if (!cursor.OwnerThread.TryGetTarget(out Thread ownerThread))
                     {
                         // If the thread associated with the queue is gone, unlink it, after
                         // performing a volatile read to confirm there is no data left to collect.

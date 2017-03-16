@@ -120,7 +120,7 @@ namespace NetUV.Core.Handles
                 return;
             }
 
-            var bufferRef = new BufferRef(writableBuffer);
+            var bufferRef = new BufferRef(ref writableBuffer);
             this.pipeline.QueueWrite(bufferRef, completion);
         }
 

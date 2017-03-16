@@ -25,8 +25,8 @@ namespace NetUV.Core.Channels
 
             public void Dispose()
             {
-                IObserver<ReadableBuffer> ignore;
-                this.stream.observers.TryRemove(this, out ignore);
+                this.stream.observers.TryRemove(this, out IObserver<ReadableBuffer> observer);
+                observer?.OnCompleted();
             }
         }
 

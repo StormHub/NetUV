@@ -90,7 +90,7 @@ namespace NetUV.Core.Tests
 
         public static string CreateTempDirectory()
         {
-            string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            string tempDirectory = GetRandomTempFileName();
             Directory.CreateDirectory(tempDirectory);
             return tempDirectory;
         }
@@ -101,6 +101,8 @@ namespace NetUV.Core.Tests
             Directory.CreateDirectory(directory);
             return directory;
         }
+
+        public static string GetRandomTempFileName() => Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
         public static string CreateTempFile(string directory)
         {
@@ -136,14 +138,22 @@ namespace NetUV.Core.Tests
         public static string[] GetFiles(string directory) => 
             Directory.Exists(directory) ? Directory.GetFiles(directory) : new string[0];
 
-        public static void TouchFile(string fullName)
+        public static void TouchFile(string fullName, int count = 1)
         {
-            using (File.Open(fullName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
+            using (FileStream stream = File.Open(fullName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
             {
-                // NOP
+                if (count > 1)
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        stream.WriteByte(1);
+                    }
+                }
+                else
+                {
+                    stream.WriteByte(1);
+                }
             }
-
-            File.SetLastWriteTimeUtc(fullName, DateTime.UtcNow);
         }
 
         public static IntPtr GetHandle(Socket socket)

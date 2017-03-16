@@ -29,17 +29,7 @@ namespace NetUV.Core.Tests
         [Fact]
         public void Poll()
         {
-            if (Platform.IsMacOS)
-            {
-                // TODO: This test causes macOS unit tests to hang, needs fixing.
-                return;
-            }
-
-            string directory = TestHelper.CreateTempDirectory();
-            this.directoryList.Add(directory);
-
-            this.file = TestHelper.CreateTempFile(directory);
-            TestHelper.DeleteFile(this.file);
+            this.file = TestHelper.GetRandomTempFileName();
 
             this.loop
                 .CreateFSPoll()
@@ -55,13 +45,18 @@ namespace NetUV.Core.Tests
 
         void OnFSPollCount(FSPoll fsPoll, FSPollStatus fsPollStatus)
         {
+            bool checkFailed = false;
             if (this.callbackCount == 0)
             {
                 var error = fsPollStatus.Error as OperationException;
-                if (error != null 
+                if (error != null
                     && error.ErrorCode == ErrorCode.ENOENT)
                 {
                     TestHelper.CreateFile(this.file);
+                }
+                else
+                {
+                    checkFailed = true;
                 }
             }
             else if (this.callbackCount == 1)
@@ -70,6 +65,10 @@ namespace NetUV.Core.Tests
                 {
                     this.timer.Start(this.OnTimer, 20, 0);
                 }
+                else
+                {
+                    checkFailed = true;
+                }
             }
             else if (this.callbackCount == 2)
             {
@@ -77,12 +76,20 @@ namespace NetUV.Core.Tests
                 {
                     this.timer.Start(this.OnTimer, 200, 0);
                 }
+                else
+                {
+                    checkFailed = true;
+                }
             }
             else if (this.callbackCount == 3)
             {
                 if (fsPollStatus.Error == null)
                 {
                     TestHelper.DeleteFile(this.file);
+                }
+                else
+                {
+                    checkFailed = true;
                 }
             }
             else if (this.callbackCount == 4)
@@ -93,14 +100,32 @@ namespace NetUV.Core.Tests
                 {
                     fsPoll.CloseHandle(this.OnClose);
                 }
+                else
+                {
+                    checkFailed = true;
+                }
+            }
+            else
+            {
+                checkFailed = true;
             }
 
-            this.callbackCount++;
+            if (checkFailed)
+            {
+                fsPoll.CloseHandle(this.OnClose);
+                this.timer.CloseHandle(this.OnClose);
+            }
+            else
+            {
+                this.callbackCount++;
+            }
         }
 
         void OnTimer(Timer handle)
         {
-            TestHelper.TouchFile(this.file);
+            // Need to change the file size because the poller may not pick up
+            // sub-second mtime changes.
+            TestHelper.TouchFile(this.file, this.callbackCount * 10);
             this.timerCount++;
         }
 

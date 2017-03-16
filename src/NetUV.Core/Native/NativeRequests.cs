@@ -259,6 +259,7 @@ namespace NetUV.Core.Native
         internal static bool Cancel(IntPtr handle) => 
             handle != IntPtr.Zero && uv_cancel(handle) == 0;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static int GetSize(uv_req_type requestType)
         {
             IntPtr value = uv_req_size(requestType);
