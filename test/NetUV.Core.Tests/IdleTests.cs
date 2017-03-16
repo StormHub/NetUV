@@ -12,40 +12,23 @@ namespace NetUV.Core.Tests
         Loop loop;
         Idle idle;
         Check check;
-        Timer timer;
 
-        int idleCalled;
-        int checkCalled;
-        int timerCalled;
+        int idleCount;
+        int checkCount;
+        int timerCount;
+        int closeCount;
 
-        void OnIdle(Idle handle)
-        {
-            if (handle != null)
-            {
-                this.idleCalled++;
-            }
-        }
+        void OnIdle(Idle handle) => this.idleCount++;
 
-        void OnCheck(Check handle)
-        {
-            if (handle != null 
-                && handle == this.check)
-            {
-                this.checkCalled++;
-            }
-        }
+        void OnCheck(Check handle) => this.checkCount++;
 
         void OnTimer(Timer handle)
         {
-            if (handle != null 
-                && handle == this.timer)
-            {
-                this.idle?.Dispose();
-                this.check?.Dispose();
-                this.timer?.Dispose();
+            this.idle?.CloseHandle(this.OnClose);
+            this.check?.CloseHandle(this.OnClose);
+            handle.CloseHandle(this.OnClose);
 
-                this.timerCalled++;
-            }
+            this.timerCount++;
         }
 
         [Fact]
@@ -53,29 +36,22 @@ namespace NetUV.Core.Tests
         {
             this.loop = new Loop();
 
-            this.idle = this.loop.CreateIdle();
-            this.idle.Start(this.OnIdle);
-
-            this.check = this.loop.CreateCheck();
-            this.check.Start(this.OnCheck);
-
-            this.timer = this.loop.CreateTimer();
-            this.timer.Start(this.OnTimer, 50, 0);
+            this.idle = this.loop.CreateIdle().Start(this.OnIdle);
+            this.check = this.loop.CreateCheck().Start(this.OnCheck);
+            this.loop.CreateTimer().Start(this.OnTimer, 50, 0);
 
             this.loop.RunDefault();
 
-            Assert.True(this.idleCalled > 0, "Idle callback should be invoked at least once.");
-            Assert.Equal(1, this.timerCalled);
-            Assert.True(this.checkCalled > 0, "Check callback should be invoked at least once.");
+            Assert.True(this.idleCount > 0);
+            Assert.Equal(1, this.timerCount);
+            Assert.True(this.checkCount > 0);
+            Assert.Equal(3, this.closeCount);
+        }
 
-            Assert.NotNull(this.idle);
-            Assert.False(this.idle.IsValid);
-
-            Assert.NotNull(this.check);
-            Assert.False(this.check.IsValid);
-
-            Assert.NotNull(this.timer);
-            Assert.False(this.timer.IsValid);
+        void OnClose(ScheduleHandle handle)
+        {
+            handle.Dispose();
+            this.closeCount++;
         }
 
         public void Dispose()

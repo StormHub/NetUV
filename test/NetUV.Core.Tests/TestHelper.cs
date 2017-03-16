@@ -164,7 +164,10 @@ namespace NetUV.Core.Tests
             FieldInfo fieldInfo =
                 typeof(Socket).GetField("m_Handle", BindingFlags.Instance | BindingFlags.NonPublic)
                 ?? typeof(Socket).GetField("_handle", BindingFlags.Instance | BindingFlags.NonPublic);
-
+            if (fieldInfo == null)
+            {
+                throw new InvalidOperationException("Attempt to get Socket internal handle failed.");
+            }
             var safeHandle = (SafeHandle)fieldInfo.GetValue(socket);
             return safeHandle.DangerousGetHandle();
         }

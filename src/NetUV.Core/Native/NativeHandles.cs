@@ -445,8 +445,9 @@ namespace NetUV.Core.Native
         {
             IntPtr value = uv_handle_size(handleType);
             int size = value.ToInt32();
+#if DEBUG
             Contract.Assert(size > 0);
-
+#endif        
             return size;
         }
 
