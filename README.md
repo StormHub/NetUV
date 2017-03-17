@@ -1,5 +1,5 @@
 # NetUV
-[Libuv](http://libuv.org) wrapper for .NET standard, .Net Core
+[Libuv](http://libuv.org) binding for .NET standard, .Net Core
 
 [Libuv Documentation](http://docs.libuv.org/en/v1.x/#documentation)
 
