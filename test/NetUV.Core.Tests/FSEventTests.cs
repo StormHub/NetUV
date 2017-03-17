@@ -172,11 +172,11 @@ namespace NetUV.Core.Tests
 
             if (this.touchCount == 1)
             {
-                TestHelper.TouchFile(this.currentFileName);
+                TestHelper.TouchFile(this.currentFileName, 10);
             }
             else
             {
-                TestHelper.TouchFile(this.currentFileName1);
+                TestHelper.TouchFile(this.currentFileName1, 10);
                 handle.CloseHandle(this.OnClose);
             }
         }
@@ -236,7 +236,7 @@ namespace NetUV.Core.Tests
         void OnTimerTouch(Timer handle)
         {
             this.touchCount++;
-            TestHelper.TouchFile(this.currentFileName);
+            TestHelper.TouchFile(this.currentFileName, 10);
             handle.CloseHandle(this.OnClose);
         }
 
@@ -287,7 +287,7 @@ namespace NetUV.Core.Tests
                 .Start(file, this.OnFSEventFile);
             fsEvent.CloseHandle(this.OnClose);
 
-            TestHelper.TouchFile(file);
+            TestHelper.TouchFile(file, 10);
 
             this.loop.RunDefault();
             Assert.Equal(0, this.callbackCount);
@@ -357,7 +357,7 @@ namespace NetUV.Core.Tests
                 .CreateFSEvent()
                 .Start(file, this.OnFSEvent);
 
-            TestHelper.TouchFile(file);
+            TestHelper.TouchFile(file, 10);
             fsEvent.CloseHandle(this.OnClose);
 
             this.loop.RunDefault();
@@ -382,11 +382,11 @@ namespace NetUV.Core.Tests
             fsEvent.Start(directory, this.OnFSeventClose);
 
             /* Generate a couple of fs events. */
-            TestHelper.TouchFile(file1);
-            TestHelper.TouchFile(file2);
-            TestHelper.TouchFile(file3);
-            TestHelper.TouchFile(file4);
-            TestHelper.TouchFile(file5);
+            TestHelper.TouchFile(file1, 10);
+            TestHelper.TouchFile(file2, 10);
+            TestHelper.TouchFile(file3, 10);
+            TestHelper.TouchFile(file4, 10);
+            TestHelper.TouchFile(file5, 10);
 
             this.loop.RunDefault();
 
