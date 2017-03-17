@@ -9,7 +9,7 @@
     <Copyright>Copyright © Johnny Z</Copyright>
     <AssemblyTitle>NetUV: Libuv .NET/Core binding</AssemblyTitle>
     <NeutralLanguage>en-US</NeutralLanguage>
-    <VersionPrefix>0.1.87</VersionPrefix>
+    <VersionPrefix>0.1.96</VersionPrefix>
     <Authors>Johnny Z</Authors>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
