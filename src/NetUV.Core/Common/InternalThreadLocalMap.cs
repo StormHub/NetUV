@@ -151,9 +151,8 @@ namespace NetUV.Core.Common
         }
 
         /**
-     * @return {@code true} if and only if a new thread-local variable has been created
-     */
-
+         * @return {@code true} if and only if a new thread-local variable has been created
+         */
         public bool SetIndexedVariable(int index, object value)
         {
             object[] lookup = this.indexedVariables;

@@ -5,7 +5,9 @@ namespace NetUV.Core.Buffers
 {
     using System;
     using System.Collections.Generic;
+    using System.Collections.ObjectModel;
     using System.Diagnostics.Contracts;
+    using System.Runtime.CompilerServices;
     using System.Text;
     using System.Threading;
     using NetUV.Core.Common;
@@ -27,11 +29,15 @@ namespace NetUV.Core.Buffers
         internal readonly PooledArrayBufferAllocator<T> Parent;
 
         readonly int maxOrder;
+
         internal readonly int PageSize;
         internal readonly int PageShifts;
         internal readonly int ChunkSize;
         internal readonly int SubpageOverflowMask;
         internal readonly int NumSmallSubpagePools;
+        internal readonly int DirectMemoryCacheAlignment;
+        internal readonly int DirectMemoryCacheAlignmentMask;
+
         readonly PoolSubpage<T>[] tinySubpagePools;
         readonly PoolSubpage<T>[] smallSubpagePools;
 
@@ -41,8 +47,6 @@ namespace NetUV.Core.Buffers
         readonly PoolChunkList<T> qInit;
         readonly PoolChunkList<T> q075;
         readonly PoolChunkList<T> q100;
-
-        readonly List<IPoolChunkListMetric> chunkListMetrics;
 
         // Metrics for allocations and deallocations
         // We need to use the LongCounter here as this is not guarded via synchronized block.
@@ -55,13 +59,21 @@ namespace NetUV.Core.Buffers
         // Number of thread caches backed by this arena.
         int numThreadCaches;
 
-        internal PoolArena(PooledArrayBufferAllocator<T> parent, int pageSize, int maxOrder, int pageShifts, int chunkSize)
+        internal PoolArena(
+            PooledArrayBufferAllocator<T> parent, 
+            int pageSize, 
+            int maxOrder, 
+            int pageShifts, 
+            int chunkSize, 
+            int cacheAlignment)
         {
             this.Parent = parent;
             this.PageSize = pageSize;
             this.maxOrder = maxOrder;
             this.PageShifts = pageShifts;
             this.ChunkSize = chunkSize;
+            this.DirectMemoryCacheAlignment = cacheAlignment;
+            this.DirectMemoryCacheAlignmentMask = cacheAlignment - 1;
             this.SubpageOverflowMask = ~(pageSize - 1);
             this.tinySubpagePools = NewSubpagePoolArray(NumTinySubpagePools);
             for (int i = 0; i < this.tinySubpagePools.Length; i++)
@@ -76,12 +88,12 @@ namespace NetUV.Core.Buffers
                 this.smallSubpagePools[i] = NewSubpagePoolHead(pageSize);
             }
 
-            this.q100 = new PoolChunkList<T>(null, 100, int.MaxValue, chunkSize);
-            this.q075 = new PoolChunkList<T>(this.q100, 75, 100, chunkSize);
-            this.q050 = new PoolChunkList<T>(this.q075, 50, 100, chunkSize);
-            this.q025 = new PoolChunkList<T>(this.q050, 25, 75, chunkSize);
-            this.q000 = new PoolChunkList<T>(this.q025, 1, 50, chunkSize);
-            this.qInit = new PoolChunkList<T>(this.q000, int.MinValue, 25, chunkSize);
+            this.q100 = new PoolChunkList<T>(this, null, 100, int.MaxValue, chunkSize);
+            this.q075 = new PoolChunkList<T>(this, this.q100, 75, 100, chunkSize);
+            this.q050 = new PoolChunkList<T>(this, this.q075, 50, 100, chunkSize);
+            this.q025 = new PoolChunkList<T>(this, this.q050, 25, 75, chunkSize);
+            this.q000 = new PoolChunkList<T>(this, this.q025, 1, 50, chunkSize);
+            this.qInit = new PoolChunkList<T>(this, this.q000, int.MinValue, 25, chunkSize);
 
             this.q100.PrevList(this.q075);
             this.q075.PrevList(this.q050);
@@ -90,22 +102,17 @@ namespace NetUV.Core.Buffers
             this.q000.PrevList(null);
             this.qInit.PrevList(this.qInit);
 
-            this.chunkListMetrics = new List<IPoolChunkListMetric>(6)
-            {
-                this.qInit,
-                this.q000,
-                this.q025,
-                this.q050,
-                this.q075,
-                this.q100
-            };
+            this.ChunkLists = new ReadOnlyCollection<IPoolChunkListMetric>(
+                new List<IPoolChunkListMetric>(6)
+                {
+                    this.qInit,
+                    this.q000,
+                    this.q025,
+                    this.q050,
+                    this.q075,
+                    this.q100
+                });
         }
-
-        public int NumThreadCaches => Volatile.Read(ref this.numThreadCaches);
-
-        public void RegisterThreadCache() => Interlocked.Increment(ref this.numThreadCaches);
-
-        public void DeregisterThreadCache() => Interlocked.Decrement(ref this.numThreadCaches);
 
         static PoolSubpage<T> NewSubpagePoolHead(int pageSize)
         {
@@ -143,6 +150,12 @@ namespace NetUV.Core.Buffers
 
         // normCapacity < 512
         internal static bool IsTiny(int normCapacity) => (normCapacity & 0xFFFFFE00) == 0;
+
+        public int NumThreadCaches => Volatile.Read(ref this.numThreadCaches);
+
+        public void RegisterThreadCache() => Interlocked.Increment(ref this.numThreadCaches);
+
+        public void DeregisterThreadCache() => Interlocked.Decrement(ref this.numThreadCaches);
 
         void Allocate(PoolThreadCache<T> cache, PooledArrayBuffer<T> buf, int reqCapacity)
         {
@@ -345,7 +358,9 @@ namespace NetUV.Core.Buffers
 
             if (reqCapacity >= this.ChunkSize)
             {
-                return reqCapacity;
+                return this.DirectMemoryCacheAlignment == 0 
+                    ? reqCapacity 
+                    : this.AlignCapacity(reqCapacity);
             }
 
             if (!IsTiny(reqCapacity))
@@ -370,6 +385,11 @@ namespace NetUV.Core.Buffers
                 return normalizedCapacity;
             }
 
+            if (this.DirectMemoryCacheAlignment > 0)
+            {
+                return this.AlignCapacity(reqCapacity);
+            }
+
             // Quantum-spaced
             if ((reqCapacity & 15) == 0)
             {
@@ -377,6 +397,14 @@ namespace NetUV.Core.Buffers
             }
 
             return (reqCapacity & ~15) + 16;
+        }
+
+        int AlignCapacity(int reqCapacity)
+        {
+            int delta = reqCapacity & this.DirectMemoryCacheAlignmentMask;
+            return delta == 0 
+                ? reqCapacity 
+                : reqCapacity + this.DirectMemoryCacheAlignment - delta;
         }
 
         internal void Reallocate(PooledArrayBuffer<T> buf, int newCapacity, bool freeOldMemory)
@@ -419,18 +447,18 @@ namespace NetUV.Core.Buffers
 
         public int NumSmallSubpages => this.smallSubpagePools.Length;
 
-        public int NumChunkLists => this.chunkListMetrics.Count;
+        public int NumChunkLists => this.ChunkLists.Count;
 
-        public IReadOnlyList<IPoolSubpageMetric> TinySubpages => SubPageMetricList(this.tinySubpagePools);
+        public IReadOnlyCollection<IPoolSubpageMetric> TinySubpages => SubPageMetricList(this.tinySubpagePools);
 
-        public IReadOnlyList<IPoolSubpageMetric> SmallSubpages => SubPageMetricList(this.smallSubpagePools);
+        public IReadOnlyCollection<IPoolSubpageMetric> SmallSubpages => SubPageMetricList(this.smallSubpagePools);
 
-        public IReadOnlyList<IPoolChunkListMetric> ChunkLists => this.chunkListMetrics;
+        public IReadOnlyCollection<IPoolChunkListMetric> ChunkLists { get; }
 
-        static List<IPoolSubpageMetric> SubPageMetricList(PoolSubpage<T>[] pages)
+        static IReadOnlyCollection<IPoolSubpageMetric> SubPageMetricList(IReadOnlyList<PoolSubpage<T>> pages)
         {
             var metrics = new List<IPoolSubpageMetric>();
-            for (int i = 1; i < pages.Length; i++)
+            for (int i = 1; i < pages.Count; i++)
             {
                 PoolSubpage<T> head = pages[i];
                 if (head.Next == head)
@@ -448,6 +476,7 @@ namespace NetUV.Core.Buffers
                     }
                 }
             }
+
             return metrics;
         }
 
@@ -501,7 +530,7 @@ namespace NetUV.Core.Buffers
                 long val = Volatile.Read(ref this.activeBytesHuge);
                 lock (this)
                 {
-                    foreach (IPoolChunkListMetric chunkListMetric in this.chunkListMetrics)
+                    foreach (IPoolChunkListMetric chunkListMetric in this.ChunkLists)
                     {
                         foreach (IPoolChunkMetric m in chunkListMetric)
                         {
@@ -515,25 +544,28 @@ namespace NetUV.Core.Buffers
         }
 
         protected PoolChunk<T> NewChunk(int newPageSize, int newMaxOrder, int newPageShifts, int newChunkSize) => 
-            new PoolChunk<T>(this, new T[newChunkSize], newPageSize, newMaxOrder, newPageShifts, newChunkSize);
+            new PoolChunk<T>(this, new T[newChunkSize], newPageSize, newMaxOrder, newPageShifts, newChunkSize, 0);
 
         protected PoolChunk<T> NewUnpooledChunk(int capacity) =>
-            new PoolChunk<T>(this, new T[capacity], capacity);
+            new PoolChunk<T>(this, new T[capacity], capacity, 0);
 
         protected PooledArrayBuffer<T> NewByteBuf(int maxCapacity) =>
             PooledArrayBuffer<T>.NewInstance(maxCapacity);
 
-        protected void MemoryCopy(T[] src, int srcOffset, T[] dst, int dstOffset, int length)
+        protected unsafe void MemoryCopy(T[] src, int srcOffset, T[] dst, int dstOffset, int length)
         {
             if (length == 0)
             {
                 return;
             }
 
-            Array.Copy(src, srcOffset, dst, dstOffset, length);
+            Unsafe.CopyBlock(
+                Unsafe.AsPointer(ref dst[dstOffset]),
+                Unsafe.AsPointer(ref src[srcOffset]),
+                (uint)(Unsafe.SizeOf<T>() * length));
         }
 
-        protected void DestroyChunk(PoolChunk<T> chunk)
+        protected internal void DestroyChunk(PoolChunk<T> chunk)
         {
             // Rely on GC.
         }
@@ -619,77 +651,5 @@ namespace NetUV.Core.Buffers
                 return buf.ToString();
             }
         }
-    }
-
-    public interface IPoolArenaMetric
-    {
-        /// Returns the number of thread caches backed by this arena.
-        int NumThreadCaches { get; }
-
-        /// Returns the number of tiny sub-pages for the arena.
-        int NumTinySubpages { get; }
-
-        /// Returns the number of small sub-pages for the arena.
-        int NumSmallSubpages { get; }
-
-        /// Returns the number of chunk lists for the arena.
-        int NumChunkLists { get; }
-
-        /// Returns an unmodifiable {@link List} which holds {@link PoolSubpageMetric}s for tiny sub-pages.
-        IReadOnlyList<IPoolSubpageMetric> TinySubpages { get; }
-
-        /// Returns an unmodifiable {@link List} which holds {@link PoolSubpageMetric}s for small sub-pages.
-        IReadOnlyList<IPoolSubpageMetric> SmallSubpages { get; }
-
-        /// Returns an unmodifiable {@link List} which holds {@link PoolChunkListMetric}s.
-        IReadOnlyList<IPoolChunkListMetric> ChunkLists { get; }
-
-        /// Return the number of allocations done via the arena. This includes all sizes.
-        long NumAllocations { get; }
-
-        /// Return the number of tiny allocations done via the arena.
-        long NumTinyAllocations { get; }
-
-        /// Return the number of small allocations done via the arena.
-        long NumSmallAllocations { get; }
-
-        /// Return the number of normal allocations done via the arena.
-        long NumNormalAllocations { get; }
-
-        /// Return the number of huge allocations done via the arena.
-        long NumHugeAllocations { get; }
-
-        /// Return the number of deallocations done via the arena. This includes all sizes.
-        long NumDeallocations { get; }
-
-        /// Return the number of tiny deallocations done via the arena.
-        long NumTinyDeallocations { get; }
-
-        /// Return the number of small deallocations done via the arena.
-        long NumSmallDeallocations { get; }
-
-        /// Return the number of normal deallocations done via the arena.
-        long NumNormalDeallocations { get; }
-
-        /// Return the number of huge deallocations done via the arena.
-        long NumHugeDeallocations { get; }
-
-        /// Return the number of currently active allocations.
-        long NumActiveAllocations { get; }
-
-        /// Return the number of currently active tiny allocations.
-        long NumActiveTinyAllocations { get; }
-
-        /// Return the number of currently active small allocations.
-        long NumActiveSmallAllocations { get; }
-
-        /// Return the number of currently active normal allocations.
-        long NumActiveNormalAllocations { get; }
-
-        /// Return the number of currently active huge allocations.
-        long NumActiveHugeAllocations { get; }
-
-        /// Return the number of active bytes that are currently allocated by the arena.
-        long NumActiveBytes { get; }
     }
 }

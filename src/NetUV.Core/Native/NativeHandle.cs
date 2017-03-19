@@ -4,6 +4,7 @@
 namespace NetUV.Core.Native
 {
     using System;
+    using System.Runtime.CompilerServices;
     using NetUV.Core.Logging;
 
     abstract class NativeHandle : IDisposable
@@ -21,7 +22,14 @@ namespace NetUV.Core.Native
             protected set;
         }
 
-        internal bool IsValid => this.Handle != IntPtr.Zero;
+        internal bool IsValid
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                return this.Handle != IntPtr.Zero;
+            }
+        } 
 
         protected internal void Validate()
         {

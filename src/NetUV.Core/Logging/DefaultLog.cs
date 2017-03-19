@@ -81,7 +81,7 @@ namespace NetUV.Core.Logging
             }
 
             string message = string.Format(formatProvider, format, args);
-            this.logger.Log(LogLevel.Trace, 0, message, null, MessageFormatter);
+            this.logger?.Log(LogLevel.Trace, 0, message, null, MessageFormatter);
         }
 
         public void Debug(object obj)
@@ -124,7 +124,7 @@ namespace NetUV.Core.Logging
             }
 
             string message = string.Format(formatProvider, format, args);
-            this.logger.Log(LogLevel.Debug, 0, message, null, MessageFormatter);
+            this.logger?.Log(LogLevel.Debug, 0, message, null, MessageFormatter);
         }
 
         public void Info(object obj)
@@ -167,7 +167,7 @@ namespace NetUV.Core.Logging
             }
 
             string message = string.Format(formatProvider, format, args);
-            this.logger.Log(LogLevel.Debug, 0, message, null, MessageFormatter);
+            this.logger?.Log(LogLevel.Debug, 0, message, null, MessageFormatter);
         }
 
         public void Warn(object obj)
@@ -210,7 +210,7 @@ namespace NetUV.Core.Logging
             }
 
             string message = string.Format(formatProvider, format, args);
-            this.logger.Log(LogLevel.Warning, 0, message, null, MessageFormatter);
+            this.logger?.Log(LogLevel.Warning, 0, message, null, MessageFormatter);
         }
 
         public void Error(object obj)
@@ -253,7 +253,7 @@ namespace NetUV.Core.Logging
             }
 
             string message = string.Format(formatProvider, format, args);
-            this.logger.Log(LogLevel.Error, 0, message, null, MessageFormatter);
+            this.logger?.Log(LogLevel.Error, 0, message, null, MessageFormatter);
         }
 
         public void Critical(object obj)
@@ -296,7 +296,7 @@ namespace NetUV.Core.Logging
             }
 
             string message = string.Format(formatProvider, format, args);
-            this.logger.Log(LogLevel.Critical, 0, message, null, MessageFormatter);
+            this.logger?.Log(LogLevel.Critical, 0, message, null, MessageFormatter);
         }
     }
 }

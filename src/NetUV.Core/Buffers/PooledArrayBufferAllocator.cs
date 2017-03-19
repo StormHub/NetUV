@@ -30,7 +30,8 @@ namespace NetUV.Core.Buffers
                  maxOrder,
                  PoolOptions.DefaultTinyCacheSize,
                  PoolOptions.DefaultSmallCacheSize,
-                 PoolOptions.DefaultNormalCacheSize)
+                 PoolOptions.DefaultNormalCacheSize,
+                 PoolOptions.DefaultDirectMemoryCacheAlignment)
         { }
 
         internal PooledArrayBufferAllocator(
@@ -39,7 +40,8 @@ namespace NetUV.Core.Buffers
             int maxOrder,
             int tinyCacheSize,
             int smallCacheSize,
-            int normalCacheSize)
+            int normalCacheSize,
+            int directMemoryCacheAlignment)
         {
             Contract.Requires(nHeapArena >= 0);
 
@@ -57,7 +59,13 @@ namespace NetUV.Core.Buffers
                 var metrics = new List<IPoolArenaMetric>(this.heapArenas.Length);
                 for (int i = 0; i < this.heapArenas.Length; i++)
                 {
-                    var arena = new PoolArena<T>(this, pageSize, maxOrder, pageShifts, chunkSize);
+                    var arena = new PoolArena<T>(
+                        this, 
+                        pageSize,
+                        maxOrder, 
+                        pageShifts, 
+                        chunkSize, 
+                        directMemoryCacheAlignment);
                     this.heapArenas[i] = arena;
                     metrics.Add(arena);
                 }
@@ -70,8 +78,7 @@ namespace NetUV.Core.Buffers
             }
         }
 
-        static PoolArena<T>[] NewArenaArray(int size) =>
-            new PoolArena<T>[size];
+        static PoolArena<T>[] NewArenaArray(int size) => new PoolArena<T>[size];
 
         protected override IArrayBuffer<T> NewBuffer(int initialCapacity, int capacity)
         {
@@ -211,6 +218,7 @@ namespace NetUV.Core.Buffers
         internal static readonly int DefaultMaxCachedBufferCapacity;
         internal static readonly int DefaultCacheTrimInterval;
         internal static readonly int DefaultChunkSize;
+        internal static readonly int DefaultDirectMemoryCacheAlignment;
 
         const int MinPageSize = 4096;
         const int MaxChunkSize = (int)((int.MaxValue + 1L) / 2);
@@ -305,11 +313,18 @@ namespace NetUV.Core.Buffers
 
             // the number of threshold of allocations when cached entries will be freed up if not frequently used
             int cacheTrimInterval;
-            if (!Configuration.TryGetValue($"{nameof(cacheTrimInterval)}", out cacheTrimInterval))
+            if (!Configuration.TryGetValue(nameof(cacheTrimInterval), out cacheTrimInterval))
             {
                 cacheTrimInterval = 8192;
             }
             DefaultCacheTrimInterval = cacheTrimInterval;
+
+            int defaultDirectMemoryCacheAlignment;
+            if (!Configuration.TryGetValue(nameof(defaultDirectMemoryCacheAlignment), out defaultDirectMemoryCacheAlignment))
+            {
+                defaultDirectMemoryCacheAlignment = 64;
+            }
+            DefaultDirectMemoryCacheAlignment = defaultDirectMemoryCacheAlignment;
 
             if (!Log.IsDebugEnabled)
             {
@@ -327,6 +342,7 @@ namespace NetUV.Core.Buffers
             Log.Debug($"{nameof(DefaultNormalCacheSize)} = {DefaultNormalCacheSize}");
             Log.Debug($"{nameof(DefaultMaxCachedBufferCapacity)} = {DefaultMaxCachedBufferCapacity}");
             Log.Debug($"{nameof(DefaultCacheTrimInterval)} = {DefaultCacheTrimInterval}");
+            Log.Debug($"{nameof(DefaultDirectMemoryCacheAlignment)} = {DefaultDirectMemoryCacheAlignment}");
         }
 
         internal static int ValidateAndCalculatePageShifts(int pageSize)

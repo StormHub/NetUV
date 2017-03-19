@@ -70,20 +70,19 @@ namespace NetUV.Core.Buffers
 
         public sbyte ReadSByte() => (sbyte)this.ReadByte();
 
-        byte ReadRawByte() => 
-            this.byteBuffer.ReadByte(this.Index++);
+        byte ReadRawByte() => this.byteBuffer.ReadByte(this.Index++);
 
         public ushort ReadUInt16() 
         {
             this.Validate(this.Index, sizeof(short));
             if (BitConverter.IsLittleEndian)
             {
-                return (ushort)(this.ReadRawByte() | 
-                    this.ReadRawByte() << 8);
+                return (ushort)(this.ReadRawByte() 
+                    | this.ReadRawByte() << 8);
             }
 
-            return  (ushort)(this.ReadRawByte() << 8 | 
-                this.ReadRawByte() & 0xFF);
+            return  (ushort)(this.ReadRawByte() << 8 
+                | this.ReadRawByte() & 0xFF);
         }
 
         public short ReadInt16() => (short)this.ReadUInt16();
@@ -115,24 +114,24 @@ namespace NetUV.Core.Buffers
             if (BitConverter.IsLittleEndian)
             {
                 // ReSharper disable once RedundantCast
-                return ((long)this.ReadRawByte() | 
-                    (long)this.ReadRawByte() << 8 | 
-                    (long)this.ReadRawByte() << 16 | 
-                    (long)this.ReadRawByte() << 24 | 
-                    (long)this.ReadRawByte() << 32 | 
-                    (long)this.ReadRawByte() << 40 | 
-                    (long)this.ReadRawByte() << 48 | 
-                    (long)this.ReadRawByte() << 56);
+                return ((long)this.ReadRawByte() 
+                    | (long)this.ReadRawByte() << 8 
+                    | (long)this.ReadRawByte() << 16 
+                    | (long)this.ReadRawByte() << 24 
+                    | (long)this.ReadRawByte() << 32 
+                    | (long)this.ReadRawByte() << 40 
+                    | (long)this.ReadRawByte() << 48 
+                    | (long)this.ReadRawByte() << 56);
             }
 
-            return ((long)this.ReadRawByte() & 0xFF) << 56 |
-                ((long)this.ReadRawByte() & 0xFF) << 48 |
-                ((long)this.ReadRawByte() & 0xFF) << 40 |
-                ((long)this.ReadRawByte() & 0xFF) << 32 |
-                ((long)this.ReadRawByte() & 0xFF) << 24 |
-                ((long)this.ReadRawByte() & 0xFF) << 16 |
-                ((long)this.ReadRawByte() & 0xFF) << 8 |
-                (long)this.ReadRawByte() & 0xFF;
+            return ((long)this.ReadRawByte() & 0xFF) << 56 
+                | ((long)this.ReadRawByte() & 0xFF) << 48 
+                | ((long)this.ReadRawByte() & 0xFF) << 40 
+                | ((long)this.ReadRawByte() & 0xFF) << 32 
+                | ((long)this.ReadRawByte() & 0xFF) << 24 
+                | ((long)this.ReadRawByte() & 0xFF) << 16 
+                | ((long)this.ReadRawByte() & 0xFF) << 8 
+                | (long)this.ReadRawByte() & 0xFF;
         }
 
         public ulong ReadUInt64() => (ulong)this.ReadInt64();

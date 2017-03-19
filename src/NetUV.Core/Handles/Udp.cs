@@ -7,19 +7,23 @@ namespace NetUV.Core.Handles
     using System.Diagnostics.Contracts;
     using System.Net;
     using NetUV.Core.Buffers;
+    using NetUV.Core.Common;
     using NetUV.Core.Native;
     using NetUV.Core.Requests;
 
     public sealed class Udp : ScheduleHandle
     {
+        const int DefaultPoolSize = 1024;
         const int FixedBufferSize = 2048;
 
         internal static readonly uv_alloc_cb AllocateCallback = OnAllocateCallback;
         internal static readonly uv_udp_recv_cb ReceiveCallback = OnReceiveCallback;
 
+        static readonly ThreadLocalPool<SendRequest> Recycler =
+            new ThreadLocalPool<SendRequest>(handle => new SendRequest(handle), DefaultPoolSize);
+
         readonly ByteBufferAllocator allocator;
         readonly BufferQueue bufferQueue;
-        readonly WriteRequestPool sendRequestPool;
 
         Action<Udp, IDatagramReadCompletion> readAction;
 
@@ -34,7 +38,6 @@ namespace NetUV.Core.Handles
 
             this.allocator = allocator;
             this.bufferQueue = new BufferQueue();
-            this.sendRequestPool = new WriteRequestPool(uv_req_type.UV_UDP_SEND);
         }
 
         public int GetSendBufferSize()
@@ -144,16 +147,11 @@ namespace NetUV.Core.Handles
 
             try
             {
-                WriteRequest request = this.sendRequestPool.Take();
+                SendRequest request = Recycler.Take();
                 Contract.Assert(request != null);
 
-                // ReSharper disable once PossibleNullReferenceException
                 request.Prepare(bufferRef,
-                    (sendRequest, exception) =>
-                    {
-                        this.sendRequestPool.Return(sendRequest);
-                        completion?.Invoke(this, exception);
-                    });
+                    (sendRequest, exception) => completion?.Invoke(this, exception));
 
                 uv_buf_t[] bufs = request.Bufs;
                 NativeMethods.UdpSend(
@@ -312,10 +310,8 @@ namespace NetUV.Core.Handles
 
         void InvokeRead(ByteBuffer byteBuffer, int size, IPEndPoint remoteEndPoint, Exception error = null)
         {
-            var completion = new DatagramReadCompletion(
-                byteBuffer?.ToReadableBuffer(size) ?? ReadableBuffer.Empty,
-                error,
-                remoteEndPoint);
+            ReadableBuffer buffer = byteBuffer?.ToReadableBuffer(size) ?? ReadableBuffer.Empty;
+            var completion = new DatagramReadCompletion(ref buffer, error,remoteEndPoint);
             try
             {
                 this.readAction?.Invoke(this, completion);
@@ -376,8 +372,7 @@ namespace NetUV.Core.Handles
         {
             ByteBuffer byteBuffer = null;
 
-            BufferRef bufferRef;
-            if (this.bufferQueue.TryDequeue(out bufferRef))
+            if (this.bufferQueue.TryDequeue(out BufferRef bufferRef))
             {
                 byteBuffer = bufferRef.GetByteBuffer();
             }
@@ -404,8 +399,8 @@ namespace NetUV.Core.Handles
 
         sealed class DatagramReadCompletion : ReadCompletion, IDatagramReadCompletion
         {
-            internal DatagramReadCompletion(ReadableBuffer data, Exception error, IPEndPoint remoteEndPoint)
-                : base(data, error)
+            internal DatagramReadCompletion(ref ReadableBuffer data, Exception error, IPEndPoint remoteEndPoint)
+                : base(ref data, error)
             {
                 this.RemoteEndPoint = remoteEndPoint;
             }

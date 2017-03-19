@@ -13,7 +13,7 @@ namespace NetUV.Core.Tests.Performance
 
     sealed class UdpPummel : IDisposable
     {
-        const int Port = 12345;
+        const int Port = 8980;
         const string ExpectedMessage = "RANG TANG DING DONG I AM THE JAPANESE SANDMAN";
         const int PacketCount = 1000 * 1000;
         const long NanoSeconds = 1000000000;

@@ -354,7 +354,7 @@ namespace NetUV.Core.Common
 
         public override void Clear()
         {
-            while (this.TryDequeue(out T item) || !this.IsEmpty)
+            while (this.TryDequeue(out T _) || !this.IsEmpty)
             {
                 // looping
             }

@@ -325,7 +325,9 @@ namespace NetUV.Core.Common
                     }
 
                     WeakOrderQueue next = cursor.Next;
-                    if (!cursor.OwnerThread.TryGetTarget(out Thread ownerThread))
+#pragma warning disable 168
+                    if (!cursor.OwnerThread.TryGetTarget(out Thread _))
+#pragma warning restore 168
                     {
                         // If the thread associated with the queue is gone, unlink it, after
                         // performing a volatile read to confirm there is no data left to collect.
@@ -420,8 +422,7 @@ namespace NetUV.Core.Common
         public T Take()
         {
             Stack stack = this.threadLocal.Value;
-            Handle handle;
-            if (!stack.TryPop(out handle))
+            if (!stack.TryPop(out Handle handle))
             {
                 handle = this.CreateValue(stack);
             }

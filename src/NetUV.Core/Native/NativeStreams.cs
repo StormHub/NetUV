@@ -118,7 +118,7 @@ namespace NetUV.Core.Native
             Contract.Requires(streamHandle != IntPtr.Zero);
             Contract.Requires(bufs != null && bufs.Length > 0);
 
-            int result = uv_write(requestHandle, streamHandle, bufs, bufs.Length, WriteRequest.WriteCallback);
+            int result = uv_write(requestHandle, streamHandle, bufs, bufs.Length, WriteBufferRequest.WriteCallback);
             if (result < 0)
             {
                 throw CreateError((uv_err_code)result);
