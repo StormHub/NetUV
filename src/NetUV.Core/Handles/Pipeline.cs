@@ -7,16 +7,19 @@ namespace NetUV.Core.Handles
     using System.Diagnostics.Contracts;
     using NetUV.Core.Buffers;
     using NetUV.Core.Channels;
+    using NetUV.Core.Common;
     using NetUV.Core.Logging;
     using NetUV.Core.Native;
     using NetUV.Core.Requests;
 
     sealed class Pipeline : IDisposable
     {
+        const int DefaultPoolSize = 1024;
         static readonly ILog Log = LogFactory.ForContext<Pipeline>();
+        static readonly ThreadLocalPool<WriteRequest> Recycler = 
+            new ThreadLocalPool<WriteRequest>(handle => new WriteRequest(handle), DefaultPoolSize);
 
         readonly StreamHandle streamHandle;
-        readonly WriteRequestPool writeRequestPool;
         readonly ByteBufferAllocator allocator;
         readonly ReceiveBufferSizeEstimate receiveBufferSizeEstimate;
         readonly BufferQueue bufferQueue;
@@ -33,7 +36,6 @@ namespace NetUV.Core.Handles
             Contract.Requires(allocator != null);
 
             this.streamHandle = streamHandle;
-            this.writeRequestPool = new WriteRequestPool(uv_req_type.UV_WRITE);
             this.allocator = allocator;
             this.receiveBufferSizeEstimate = new ReceiveBufferSizeEstimate();
             this.bufferQueue = new BufferQueue();
@@ -124,10 +126,8 @@ namespace NetUV.Core.Handles
 
         void InvokeRead(ByteBuffer byteBuffer, int size, Exception error = null, bool completed = false)
         {
-            var completion = new StreamReadCompletion(
-                byteBuffer?.ToReadableBuffer(size) ?? ReadableBuffer.Empty, 
-                error, 
-                completed);
+            ReadableBuffer buffer = byteBuffer?.ToReadableBuffer(size) ?? ReadableBuffer.Empty;
+            var completion = new StreamReadCompletion(ref buffer,  error, completed);
             try
             {
                 this.ReadAction?.Invoke(this.streamHandle, completion);
@@ -151,16 +151,11 @@ namespace NetUV.Core.Handles
 
             try
             {
-                WriteRequest request = this.writeRequestPool.Take();
+                WriteRequest request = Recycler.Take();
                 Contract.Assert(request != null);
 
-                // ReSharper disable once PossibleNullReferenceException
                 request.Prepare(bufferRef, 
-                    (writeRequest, exception) =>
-                    {
-                        this.writeRequestPool.Return(writeRequest);
-                        completion?.Invoke(this.streamHandle, exception);
-                    });
+                    (writeRequest, exception) => completion?.Invoke(this.streamHandle, exception));
 
                 this.streamHandle.WriteStream(request);
             }
@@ -173,15 +168,14 @@ namespace NetUV.Core.Handles
 
         public void Dispose()
         {
-            this.writeRequestPool.Dispose();
             this.bufferQueue.Dispose();
             this.readAction = null;
         }
 
         sealed class StreamReadCompletion : ReadCompletion, IStreamReadCompletion
         {
-            internal StreamReadCompletion(ReadableBuffer data, Exception error, bool completed) 
-                : base(data, error)
+            internal StreamReadCompletion(ref ReadableBuffer data, Exception error, bool completed) 
+                : base(ref data, error)
             {
                 this.Completed = completed;
             }

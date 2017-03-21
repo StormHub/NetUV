@@ -89,7 +89,7 @@ namespace NetUV.Core.Concurrency
             {
                 this.disposed = true;
 
-                while (this.queue.TryDequeue(out Activator ignore)) { }
+                while (this.queue.TryDequeue(out Activator _)) { }
             }
         }
     }

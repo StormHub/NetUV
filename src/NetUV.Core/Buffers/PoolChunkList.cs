@@ -15,6 +15,7 @@ namespace NetUV.Core.Buffers
     /// </summary>
     sealed class PoolChunkList<T> : IPoolChunkListMetric
     {
+        readonly PoolArena<T> arena;
         readonly PoolChunkList<T> nextList;
         readonly int minUsage;
         readonly int maxUsage;
@@ -25,10 +26,11 @@ namespace NetUV.Core.Buffers
         // This is only update once when create the linked like list of PoolChunkList in PoolArena constructor.
         PoolChunkList<T> prevList;
 
-        public PoolChunkList(PoolChunkList<T> nextList, int minUsage, int maxUsage, int chunkSize)
+        public PoolChunkList(PoolArena<T> arena, PoolChunkList<T> nextList, int minUsage, int maxUsage, int chunkSize)
         {
             Contract.Assert(minUsage <= maxUsage);
 
+            this.arena = arena;
             this.nextList = nextList;
             this.minUsage = minUsage;
             this.maxUsage = maxUsage;
@@ -191,11 +193,15 @@ namespace NetUV.Core.Buffers
 
         static int MinUsage0(int value) => Math.Max(1, value);
 
-        public IEnumerator<IPoolChunkMetric> GetEnumerator() => 
-            this.head == null 
-            ? Enumerable.Empty<IPoolChunkMetric>().GetEnumerator() 
-            : this.GetEnumeratorInternal();
-
+        public IEnumerator<IPoolChunkMetric> GetEnumerator()
+        {
+            lock (this.arena)
+            {
+                return this.head == null
+                ? Enumerable.Empty<IPoolChunkMetric>().GetEnumerator()
+                : this.GetEnumeratorInternal();
+            }
+        }
         IEnumerator IEnumerable.GetEnumerator() => this.GetEnumerator();
 
         IEnumerator<IPoolChunkMetric> GetEnumeratorInternal()
@@ -228,14 +234,16 @@ namespace NetUV.Core.Buffers
 
             return buf.ToString();
         }
-    }
 
-    public interface IPoolChunkListMetric : IEnumerable<IPoolChunkMetric>
-    {
-        /// Return the minum usage of the chunk list before which chunks are promoted to the previous list.
-        int MinUsage { get; }
-
-        /// Return the minum usage of the chunk list after which chunks are promoted to the next list.
-        int MaxUsage { get; }
+        internal void Destroy(PoolArena<T> poolArena)
+        {
+            PoolChunk<T> chunk = this.head;
+            while (chunk != null)
+            {
+                poolArena.DestroyChunk(chunk);
+                chunk = chunk.Next;
+            }
+            this.head = null;
+        }
     }
 }

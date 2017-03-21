@@ -383,10 +383,10 @@ namespace NetUV.Core.Tests
 
             /* Generate a couple of fs events. */
             TestHelper.TouchFile(file1, 10);
-            TestHelper.TouchFile(file2, 10);
-            TestHelper.TouchFile(file3, 10);
-            TestHelper.TouchFile(file4, 10);
-            TestHelper.TouchFile(file5, 10);
+            TestHelper.TouchFile(file2, 20);
+            TestHelper.TouchFile(file3, 30);
+            TestHelper.TouchFile(file4, 40);
+            TestHelper.TouchFile(file5, 50);
 
             this.loop.RunDefault();
 

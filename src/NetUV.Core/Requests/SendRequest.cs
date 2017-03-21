@@ -6,12 +6,12 @@ namespace NetUV.Core.Requests
     using NetUV.Core.Common;
     using NetUV.Core.Native;
 
-    sealed class WriteRequest : WriteBufferRequest
+    sealed class SendRequest : WriteBufferRequest
     {
         readonly ThreadLocalPool.Handle recyclerHandle;
 
-        internal WriteRequest(ThreadLocalPool.Handle recyclerHandle)
-            : base(uv_req_type.UV_WRITE)
+        internal SendRequest(ThreadLocalPool.Handle recyclerHandle)
+            : base(uv_req_type.UV_UDP_SEND)
         {
             this.recyclerHandle = recyclerHandle;
         }

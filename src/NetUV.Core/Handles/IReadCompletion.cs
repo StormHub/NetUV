@@ -26,7 +26,7 @@ namespace NetUV.Core.Handles
 
     class ReadCompletion : IReadCompletion
     {
-        internal ReadCompletion(ReadableBuffer data, Exception error)
+        internal ReadCompletion(ref ReadableBuffer data, Exception error)
         {
             this.Data = data;
             this.Error = error;

@@ -32,7 +32,7 @@ namespace NetUV.Core.Buffers
             this.Capacity = capacity;
         }
 
-        internal void Init(PoolChunk<T> chunk, long handle, int offset, int length, PoolThreadCache<T> cache)
+        internal void Init(PoolChunk<T> chunk, long handle, int offset, int reqCapacity, int length, PoolThreadCache<T> cache)
         {
             Contract.Assert(handle >= 0);
             Contract.Assert(chunk != null);
@@ -54,7 +54,7 @@ namespace NetUV.Core.Buffers
             this.Handle = 0;
             // ReSharper disable once PossibleNullReferenceException
             this.Array = chunk.Memory;
-            this.Offset = 0;
+            this.Offset = chunk.Offset;
             this.Count = length;
             this.Cache = null;
         }

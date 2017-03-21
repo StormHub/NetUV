@@ -14,6 +14,7 @@ namespace NetUV.Core.Buffers
         internal readonly PoolChunk<T> Chunk;
         readonly int memoryMapIdx;
         readonly int runOffset;
+        readonly int pageSize;
         readonly long[] bitmap;
 
         internal PoolSubpage<T> Prev;
@@ -31,27 +32,27 @@ namespace NetUV.Core.Buffers
             this.memoryMapIdx = -1;
             this.runOffset = -1;
             this.ElemSize = -1;
-            this.PageSize = pageSize;
+            this.pageSize = pageSize;
             this.bitmap = null;
         }
 
-        public PoolSubpage(PoolChunk<T> chunk, int memoryMapIdx, int runOffset, int pageSize, int elemSize)
+        public PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, int memoryMapIdx, int runOffset, int pageSize, int elemSize)
         {
             this.Chunk = chunk;
             this.memoryMapIdx = memoryMapIdx;
             this.runOffset = runOffset;
-            this.PageSize = pageSize;
+            this.pageSize = pageSize;
             this.bitmap = new long[pageSize.RightUShift(10)]; // pageSize / 16 / 64
-            this.Init(elemSize);
+            this.Init(head, elemSize);
         }
 
-        public void Init(int elemSize)
+        public void Init(PoolSubpage<T> head, int elemSize)
         {
             this.DoNotDestroy = true;
             this.ElemSize = elemSize;
             if (elemSize != 0)
             {
-                this.MaxNumElements = this.NumAvailable = this.PageSize / elemSize;
+                this.MaxNumElements = this.NumAvailable = this.pageSize / elemSize;
                 this.nextAvail = 0;
                 this.bitmapLength = this.MaxNumElements.RightUShift(6);
                 if ((this.MaxNumElements & 63) != 0)
@@ -65,11 +66,7 @@ namespace NetUV.Core.Buffers
                 }
             }
 
-            PoolSubpage<T> head = this.Chunk.Arena.FindSubpagePoolHead(elemSize);
-            lock (head)
-            {
-                this.AddToPool(head);
-            }
+            this.AddToPool(head);
         }
 
         /**
@@ -115,53 +112,43 @@ namespace NetUV.Core.Buffers
          *         {@code false} if this subpage is not used by its chunk and thus it's OK to be released.
          */
 
-        internal bool Free(int bitmapIdx)
+        internal bool Free(PoolSubpage<T> head, int bitmapIdx)
         {
             if (this.ElemSize == 0)
             {
                 return true;
             }
 
-            /**
-             * Synchronize on the head of the SubpagePool stored in the {@link PoolArena. This is needed as we synchronize
-             * on it when calling {@link PoolArena#allocate(PoolThreadCache, int, int)} und try to allocate out of the
-             * {@link PoolSubpage} pool for a given size.
-             */
-            PoolSubpage<T> head = this.Chunk.Arena.FindSubpagePoolHead(this.ElemSize);
+            int q = bitmapIdx.RightUShift(6);
+            int r = bitmapIdx & 63;
+            Contract.Assert((this.bitmap[q].RightUShift(r) & 1) != 0);
+            this.bitmap[q] ^= 1L << r;
 
-            lock (head)
+            this.SetNextAvail(bitmapIdx);
+
+            if (this.NumAvailable++ == 0)
             {
-                int q = bitmapIdx.RightUShift(6);
-                int r = bitmapIdx & 63;
-                Contract.Assert((this.bitmap[q].RightUShift(r) & 1) != 0);
-                this.bitmap[q] ^= 1L << r;
+                this.AddToPool(head);
+                return true;
+            }
 
-                this.SetNextAvail(bitmapIdx);
-
-                if (this.NumAvailable++ == 0)
+            if (this.NumAvailable != this.MaxNumElements)
+            {
+                return true;
+            }
+            else
+            {
+                // Subpage not in use (numAvail == maxNumElems)
+                if (this.Prev == this.Next)
                 {
-                    this.AddToPool(head);
+                    // Do not remove if this subpage is the only one left in the pool.
                     return true;
                 }
 
-                if (this.NumAvailable != this.MaxNumElements)
-                {
-                    return true;
-                }
-                else
-                {
-                    // Subpage not in use (numAvail == maxNumElems)
-                    if (this.Prev == this.Next)
-                    {
-                        // Do not remove if this subpage is the only one left in the pool.
-                        return true;
-                    }
-
-                    // Remove this subpage from the pool if there are other subpages left in the pool.
-                    this.DoNotDestroy = false;
-                    this.RemoveFromPool();
-                    return false;
-                }
+                // Remove this subpage from the pool if there are other subpages left in the pool.
+                this.DoNotDestroy = false;
+                this.RemoveFromPool();
+                return false;
             }
         }
 
@@ -239,20 +226,15 @@ namespace NetUV.Core.Buffers
             return -1;
         }
 
+        public void Destroy() => this.Chunk?.Destroy();
+
 #pragma warning disable CS0675 // Bitwise-or operator used on a sign-extended operand
         long ToHandle(int bitmapIdx) => 0x4000000000000000L | (long)bitmapIdx << 32 | this.memoryMapIdx;
 #pragma warning restore CS0675 // Bitwise-or operator used on a sign-extended operand
 
-        public override string ToString()
-        {
-            if (!this.DoNotDestroy)
-            {
-                return "(" + this.memoryMapIdx + ": not in use)";
-            }
-
-            return '(' + this.memoryMapIdx + ": " + (this.MaxNumElements - this.NumAvailable) + '/' + this.MaxNumElements +
-                ", offset: " + this.runOffset + ", length: " + this.PageSize + ", elemSize: " + this.ElemSize + ')';
-        }
+        public override string ToString() => !this.DoNotDestroy 
+            ? $"({this.memoryMapIdx}: not in use)" 
+            : $"({this.memoryMapIdx}: {(this.MaxNumElements - this.NumAvailable)} / {this.MaxNumElements}, offset: {this.runOffset}, length: {this.pageSize}, elemSize: {this.ElemSize})";
 
         public int MaxNumElements { get; private set; }
 
@@ -260,21 +242,6 @@ namespace NetUV.Core.Buffers
 
         public int ElementSize => this.ElemSize;
 
-        public int PageSize { get; }
-    }
-
-    public interface IPoolSubpageMetric
-    {
-        /// Return the number of maximal elements that can be allocated out of the sub-page.
-        int MaxNumElements { get; }
-
-        /// Return the number of available elements to be allocated.
-        int NumAvailable { get; }
-
-        /// Return the size (in bytes) of the elements that will be allocated.
-        int ElementSize { get; }
-
-        /// Return the size (in bytes) of this page.
-        int PageSize { get; }
+        public int PageSize => this.pageSize;
     }
 }

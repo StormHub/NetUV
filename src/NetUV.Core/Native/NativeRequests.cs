@@ -260,15 +260,8 @@ namespace NetUV.Core.Native
             handle != IntPtr.Zero && uv_cancel(handle) == 0;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static int GetSize(uv_req_type requestType)
-        {
-            IntPtr value = uv_req_size(requestType);
-            int size = value.ToInt32();
-#if DEBUG
-            Contract.Assert(size > 0);
-#endif        
-            return size;
-        }
+        internal static int GetSize(uv_req_type requestType) => RequestSizeTable[(int)requestType - 1];
+
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         static extern int uv_getnameinfo(IntPtr loopHandle, IntPtr handle, uv_getnameinfo_cb cb, ref sockaddr addr, int flags);

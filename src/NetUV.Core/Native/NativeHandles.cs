@@ -440,16 +440,48 @@ namespace NetUV.Core.Native
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static int GetSize(uv_handle_type handleType)
+        static readonly int[] HandleSizeTable;
+        static readonly int[] RequestSizeTable;
+
+        static NativeMethods()
         {
-            IntPtr value = uv_handle_size(handleType);
-            int size = value.ToInt32();
-#if DEBUG
-            Contract.Assert(size > 0);
-#endif        
-            return size;
+            HandleSizeTable = new []
+            {
+                uv_handle_size(uv_handle_type.UV_ASYNC).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_CHECK).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_FS_EVENT).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_FS_POLL).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_HANDLE).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_IDLE).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_NAMED_PIPE).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_POLL).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_PREPARE).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_PROCESS).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_STREAM).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_TCP).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_TIMER).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_TTY).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_UDP).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_SIGNAL).ToInt32(),
+                uv_handle_size(uv_handle_type.UV_FILE).ToInt32(),
+            };
+
+            RequestSizeTable = new []
+            {
+                uv_req_size(uv_req_type.UV_REQ).ToInt32(),
+                uv_req_size(uv_req_type.UV_CONNECT).ToInt32(),
+                uv_req_size(uv_req_type.UV_WRITE).ToInt32(),
+                uv_req_size(uv_req_type.UV_SHUTDOWN).ToInt32(),
+                uv_req_size(uv_req_type.UV_UDP_SEND).ToInt32(),
+                uv_req_size(uv_req_type.UV_FS).ToInt32(),
+                uv_req_size(uv_req_type.UV_WORK).ToInt32(),
+                uv_req_size(uv_req_type.UV_GETADDRINFO).ToInt32(),
+                uv_req_size(uv_req_type.UV_GETNAMEINFO).ToInt32()
+            };
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static int GetSize(uv_handle_type handleType) => HandleSizeTable[(int)handleType - 1];
 
         #endregion Common
 
@@ -492,7 +524,7 @@ namespace NetUV.Core.Native
                 handle, 
                 bufs, bufs.Length, 
                 ref addr, 
-                WriteRequest.WriteCallback);
+                WriteBufferRequest.WriteCallback);
             if (result < 0)
             {
                 throw CreateError((uv_err_code)result);

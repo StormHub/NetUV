@@ -5,6 +5,7 @@ namespace NetUV.Core.Handles
 {
     using System;
     using System.Diagnostics.Contracts;
+    using System.Runtime.CompilerServices;
     using NetUV.Core.Logging;
     using NetUV.Core.Native;
 
@@ -37,7 +38,14 @@ namespace NetUV.Core.Handles
 
         public bool IsClosing => this.handle.IsClosing;
 
-        public bool IsValid => this.handle.IsValid;
+        public bool IsValid
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                return this.handle.IsValid;
+            }
+        } 
 
         public object UserToken { get; set; }
 
