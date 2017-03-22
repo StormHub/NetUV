@@ -50,7 +50,16 @@ namespace NetUV.Core.Handles
             workHandle?.OnWorkCallback();
         }
 
-        protected void CloseHandle<T>(Action<T> callback = null) 
-            where T : WorkHandle => base.CloseHandle(state => callback?.Invoke((T)state));
+        protected void CloseHandle<T>(Action<T> callback = null)
+            where T : WorkHandle
+        {
+            Action<ScheduleHandle> handler = null;
+            if (callback != null)
+            {
+                handler = state => callback((T)state);
+            }
+
+            base.CloseHandle(handler);
+        } 
     }
 }

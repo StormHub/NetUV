@@ -24,12 +24,9 @@ namespace NetUV.Core.Handles
             Contract.Requires(loop != null);
 
             HandleContext initialHandle = NativeMethods.Initialize(loop.Handle, handleType, this, args);
-            if (initialHandle == null)
-            {
-                throw new InvalidOperationException(
-                    $"Initialize {handleType} for loop {loop.Handle} failed.");
-            }
-
+#if DEBUG
+            Contract.Assert(initialHandle != null);
+#endif
             this.handle = initialHandle;
             this.HandleType = handleType;
         }
@@ -49,7 +46,14 @@ namespace NetUV.Core.Handles
 
         public object UserToken { get; set; }
 
-        internal IntPtr InternalHandle => this.handle.Handle;
+        internal IntPtr InternalHandle
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                return this.handle.Handle;
+            }
+        } 
 
         internal uv_handle_type HandleType { get; }
 

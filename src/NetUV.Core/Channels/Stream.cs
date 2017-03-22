@@ -5,6 +5,7 @@ namespace NetUV.Core.Channels
 {
     using System;
     using System.Collections.Concurrent;
+    using System.Collections.Generic;
     using System.Diagnostics.Contracts;
     using NetUV.Core.Buffers;
     using NetUV.Core.Handles;
@@ -86,7 +87,8 @@ namespace NetUV.Core.Channels
             Contract.Assert(this.InternalHandle == handle);
             Contract.Requires(completion != null);
 
-            foreach (IObserver<ReadableBuffer> observer in this.observers.Values)
+            ICollection<IObserver<ReadableBuffer>> observerList = this.observers.Values;
+            foreach (IObserver<ReadableBuffer> observer in observerList)
             {
                 NotifyReadCompletion(observer, completion);
             }

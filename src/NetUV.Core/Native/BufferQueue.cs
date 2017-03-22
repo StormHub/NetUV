@@ -4,75 +4,59 @@
 namespace NetUV.Core.Native
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Diagnostics.Contracts;
-    using NetUV.Core.Common;
-    using NetUV.Core.Concurrency;
+    using System.Threading;
 
     sealed class BufferQueue : IDisposable
     {
-        readonly Deque<BufferRef> queue;
-        readonly Gate gate;
-        volatile bool disposed;
+        readonly ConcurrentQueue<BufferRef> queue;
+        bool disposed;
 
         internal BufferQueue()
         {
-            this.queue = new Deque<BufferRef>();
-            this.gate = new Gate();
+            this.queue = new ConcurrentQueue<BufferRef>();
             this.disposed = false;
         }
-
-        internal int Count => this.queue.Count;
 
         internal void Enqueue(BufferRef bufferRef)
         {
             Contract.Requires(bufferRef != null);
 
-            using (this.gate.Aquire())
-            {
-                if (this.disposed)
-                {
-                    throw new ObjectDisposedException(nameof(BufferQueue));
-                }
-
-                this.queue.AddToFront(bufferRef);
-            }
+            this.CheckDisposed();
+            this.queue.Enqueue(bufferRef);
         }
 
         internal bool TryDequeue(out BufferRef bufferRef)
         {
-            bufferRef = null;
+            this.CheckDisposed();
+            return this.queue.TryDequeue(out bufferRef);
+        }
 
-            using (this.gate.Aquire())
+        void CheckDisposed()
+        {
+            if (Volatile.Read(ref this.disposed))
             {
-                if (this.disposed)
-                {
-                    throw new ObjectDisposedException(nameof(BufferQueue));
-                }
-
-                if (this.queue.Count > 0)
-                {
-                    bufferRef = this.queue.RemoveFromBack();
-                }
+                throw new ObjectDisposedException(nameof(BufferQueue));
             }
-
-            return bufferRef != null;
         }
 
         internal void Clear()
         {
-            using (this.gate.Aquire())
+            while (this.queue.TryDequeue(out BufferRef bufferRef))
             {
-                while (this.queue.Count > 0)
-                {
-                    BufferRef bufferRef = this.queue.RemoveFromBack();
-                    bufferRef.Dispose();
-                }
+                bufferRef.Dispose();
             }
         }
 
         public void Dispose()
         {
-            this.disposed = true;
+            if (this.disposed)
+            {
+                return;
+            }
+
+            Volatile.Write(ref this.disposed, true);
             this.Clear();
         }
     }

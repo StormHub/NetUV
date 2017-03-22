@@ -8,7 +8,6 @@ namespace NetUV.Core.Channels
     using NetUV.Core.Buffers;
     using NetUV.Core.Handles;
 
-
     sealed class StreamObserver : IObserver<ReadableBuffer>
     {
         readonly IStream stream;

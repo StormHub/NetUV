@@ -88,7 +88,6 @@ namespace NetUV.Core.Concurrency
             using (this.gate.Aquire())
             {
                 this.disposed = true;
-
                 while (this.queue.TryDequeue(out Activator _)) { }
             }
         }

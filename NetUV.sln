@@ -19,6 +19,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetUV.Core.Tests", "test\Ne
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetUV.Core.Tests.Performance", "test\NetUV.Core.Tests.Performance\NetUV.Core.Tests.Performance.csproj", "{788F597A-9F98-45E4-98A8-9603E43E19E3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LoopThread", "examples\LoopThread\LoopThread.csproj", "{D438713F-3B93-484C-9364-A85D115E9C97}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,10 @@ Global
 		{788F597A-9F98-45E4-98A8-9603E43E19E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{788F597A-9F98-45E4-98A8-9603E43E19E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{788F597A-9F98-45E4-98A8-9603E43E19E3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D438713F-3B93-484C-9364-A85D115E9C97}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D438713F-3B93-484C-9364-A85D115E9C97}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D438713F-3B93-484C-9364-A85D115E9C97}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D438713F-3B93-484C-9364-A85D115E9C97}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -55,5 +61,6 @@ Global
 		{C0EDAB20-D22F-47AB-BEE5-AB90DDC913A0} = {53222498-29CF-4D3C-B016-9A88F5387400}
 		{08F6BEE9-992F-43D4-9531-5F9CD4173C6F} = {D69BA951-91F0-4BCD-97D2-77414F8B07A9}
 		{788F597A-9F98-45E4-98A8-9603E43E19E3} = {D69BA951-91F0-4BCD-97D2-77414F8B07A9}
+		{D438713F-3B93-484C-9364-A85D115E9C97} = {5B746760-8E71-497D-9D7C-87EE1A67DEFD}
 	EndGlobalSection
 EndGlobal

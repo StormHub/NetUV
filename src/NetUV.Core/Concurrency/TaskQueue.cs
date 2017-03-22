@@ -106,7 +106,9 @@ namespace NetUV.Core.Concurrency
             {
                 this.disposed = true;
 
+#pragma warning disable 168
                 while (this.queue.TryDequeue(out Activator _)) { }
+#pragma warning restore 168
             }
         }
     }
