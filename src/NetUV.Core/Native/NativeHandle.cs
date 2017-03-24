@@ -38,7 +38,7 @@ namespace NetUV.Core.Native
                 return;
             }
 
-            throw new ObjectDisposedException($"{nameof(NativeHandle)} has already been disposed");
+            throw new ObjectDisposedException($"{this.GetType().Name} has already been disposed");
         }
 
         internal void SetHandleAsInvalid() => this.Handle = IntPtr.Zero;

@@ -106,8 +106,16 @@ namespace NetUV.Core.Handles
             }
         }
 
-        public void CloseHandle(Action<StreamHandle> callback = null) =>
-            base.CloseHandle(state => callback?.Invoke((StreamHandle)state));
+        public void CloseHandle(Action<StreamHandle> callback = null)
+        {
+            Action<ScheduleHandle> handler = null;
+            if (callback != null)
+            {
+                handler = state => callback((StreamHandle)state);
+            }
+
+            base.CloseHandle(handler);
+        }
 
         public void QueueWriteStream(
             WritableBuffer writableBuffer, 

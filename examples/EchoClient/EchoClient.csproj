@@ -1,14 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>Example of Echo Client</Description>
+    <OutputType>Exe</OutputType>
     <TargetFrameworks>netcoreapp1.1;net461</TargetFrameworks>
     <AssemblyName>EchoClient</AssemblyName>
-    <OutputType>Exe</OutputType>
+    <Description>Example of Echo Client</Description>
     <AssemblyOriginatorKeyFile>../../NetUV.snk</AssemblyOriginatorKeyFile>
     <SignAssembly>true</SignAssembly>
     <NetStandardImplicitPackageVersion>1.6.1</NetStandardImplicitPackageVersion>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net461' ">
+    <RuntimeIdentifier>win10-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>

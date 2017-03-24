@@ -3,8 +3,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFrameworks>netcoreapp1.1;net461</TargetFrameworks>
-    <AssemblyName>EchoServer</AssemblyName>
-    <Description>Example of Echo Server</Description>
+    <AssemblyName>LoopThread</AssemblyName>
+    <Description>Example of EventLoop Thread</Description>
     <AssemblyOriginatorKeyFile>../../NetUV.snk</AssemblyOriginatorKeyFile>
     <SignAssembly>true</SignAssembly>
     <NetStandardImplicitPackageVersion>1.6.1</NetStandardImplicitPackageVersion>
