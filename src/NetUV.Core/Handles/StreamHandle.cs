@@ -263,12 +263,11 @@ namespace NetUV.Core.Handles
         void OnAllocateCallback(out uv_buf_t buf)
         {
             BufferRef bufferRef = this.pipeline.AllocateReadBuffer();
-            Contract.Assert(bufferRef != null);
-            // ReSharper disable PossibleNullReferenceException
             uv_buf_t[] bufs = bufferRef.GetBuffer();
+#if DEBUG
             Contract.Assert(bufs != null && bufs.Length > 0);
+#endif
             buf = bufs[0];
-            // ReSharper restore PossibleNullReferenceException
         }
 
         static void OnAllocateCallback(IntPtr handle, IntPtr suggestedSize, out uv_buf_t buf)

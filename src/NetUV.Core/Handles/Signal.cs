@@ -51,7 +51,15 @@ namespace NetUV.Core.Handles
 
         protected override void Close() => this.signalCallback = null;
 
-        public void CloseHandle(Action<Signal> callback = null) =>
-            base.CloseHandle(state => callback?.Invoke((Signal)state));
+        public void CloseHandle(Action<Signal> onClosed = null)
+        {
+            Action<ScheduleHandle> handler = null;
+            if (onClosed != null)
+            {
+                handler = state => onClosed((Signal)state);
+            }
+
+            base.CloseHandle(handler);
+        }
     }
 }

@@ -22,14 +22,14 @@ namespace NetUV.Core.Handles
             Contract.Requires(callback != null);
 
             this.Validate();
-            this.ScheduleStart(state => callback.Invoke((Idle)state));
+            this.ScheduleStart(state => callback((Idle)state));
 
             return this;
         }
 
         public void Stop() => this.StopHandle();
 
-        public void CloseHandle(Action<Idle> callback = null) =>
-            base.CloseHandle(callback);
+        public void CloseHandle(Action<Idle> onClosed = null) =>
+            base.CloseHandle(onClosed);
     }
 }

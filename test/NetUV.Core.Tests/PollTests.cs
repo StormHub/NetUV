@@ -13,7 +13,7 @@ namespace NetUV.Core.Tests
 
     public sealed class PollTests : IDisposable
     {
-        const int Port = 9879;
+        const int Port = 9889;
         const int NumberOfClients = 5;
         const int TransferBytes = 1 << 16;
 

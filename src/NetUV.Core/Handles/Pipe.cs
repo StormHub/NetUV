@@ -77,7 +77,7 @@ namespace NetUV.Core.Handles
             Contract.Requires(readAction != null);
 
             this.RegisterReadAction(
-                (stream, completion) => readAction.Invoke((Pipe)stream, completion));
+                (stream, completion) => readAction((Pipe)stream, completion));
 
             return this;
         }
@@ -137,7 +137,15 @@ namespace NetUV.Core.Handles
         public void Shutdown(Action<Pipe, Exception> completedAction = null) =>
             this.ShutdownStream((state, error) => completedAction?.Invoke((Pipe)state, error));
 
-        public void CloseHandle(Action<Pipe> callback = null) =>
-            base.CloseHandle(state => callback?.Invoke((Pipe)state));
+        public void CloseHandle(Action<Pipe> onClosed = null)
+        {
+            Action<ScheduleHandle> handler = null;
+            if (onClosed != null)
+            {
+                handler = state => onClosed((Pipe)state);
+            }
+
+            base.CloseHandle(handler);
+        }
     }
 }

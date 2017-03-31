@@ -78,7 +78,7 @@ namespace NetUV.Core.Handles
                     Log.DebugFormat("{0} {1} client {2} accepted", server.HandleType, handle, client.InternalHandle);
                 }
 
-                server.connectionHandler.Invoke(client, error);
+                server.connectionHandler(client, error);
             }
             catch
             {

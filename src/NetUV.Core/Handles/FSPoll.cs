@@ -88,7 +88,15 @@ namespace NetUV.Core.Handles
 
         protected override void Close() => this.pollCallback = null;
 
-        public void CloseHandle(Action<FSPoll> callback = null) =>
-            base.CloseHandle(state => callback?.Invoke((FSPoll)state));
+        public void CloseHandle(Action<FSPoll> onClosed = null)
+        {
+            Action<ScheduleHandle> handler = null;
+            if (onClosed != null)
+            {
+                handler = state => onClosed((FSPoll)state);
+            }
+
+            base.CloseHandle(handler);
+        }
     }
 }

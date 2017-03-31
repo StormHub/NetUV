@@ -24,7 +24,7 @@ namespace NetUV.Core.Handles
 
             this.Validate();
 
-            this.Callback = state => callback.Invoke((Timer)state);
+            this.Callback = state => callback((Timer)state);
             NativeMethods.Start(this.InternalHandle, timeout, repeat);
 
             return this;
@@ -56,7 +56,7 @@ namespace NetUV.Core.Handles
 
         public void Stop() => this.StopHandle();
 
-        public void CloseHandle(Action<Timer> callback = null) =>
-            base.CloseHandle(callback);
+        public void CloseHandle(Action<Timer> onClosed = null) =>
+            base.CloseHandle(onClosed);
     }
 }
