@@ -5,7 +5,7 @@ namespace NetUV.Core.Handles
 {
     using System;
     using System.Diagnostics.Contracts;
-    using NetUV.Core.Channels;
+    using NetUV.Core.Buffers;
     using NetUV.Core.Native;
 
     public enum TtyType
@@ -36,15 +36,13 @@ namespace NetUV.Core.Handles
             this.ttyType = ttyType;
         }
 
-        public IStream<Tty> TtyStream()
+        public Tty OnRead(
+            Action<Tty, ReadableBuffer> onAccept,
+            Action<Tty, Exception> onError,
+            Action<Tty> onCompleted = null)
         {
-            this.Validate();
-            return this.CreateStream<Tty>();
-        }
-
-        public Tty RegisterRead(Action<Tty, IStreamReadCompletion> readAction)
-        {
-            Contract.Requires(readAction != null);
+            Contract.Requires(onAccept != null);
+            Contract.Requires(onError != null);
 
             if (this.ttyType != TtyType.In)
             {
@@ -52,16 +50,30 @@ namespace NetUV.Core.Handles
                     $"{this.HandleType} {this.InternalHandle} mode {this.ttyType} is not readable");
             }
 
-            this.RegisterReadAction(
-                (stream, completion) => readAction((Tty)stream, completion));
-
-            this.ReadStart();
+            base.OnRead(
+                (stream, buffer) => onAccept((Tty)stream, buffer),
+                (stream, error) => onError((Tty)stream, error),
+                stream => onCompleted?.Invoke((Tty)stream));
 
             return this;
         }
 
+        public Tty OnRead(Action<Tty, IStreamReadCompletion> onRead)
+        {
+            Contract.Requires(onRead != null);
+
+            if (this.ttyType != TtyType.In)
+            {
+                throw new InvalidOperationException(
+                    $"{this.HandleType} {this.InternalHandle} mode {this.ttyType} is not readable");
+            }
+
+            base.OnRead((stream, completion) => onRead((Tty)stream, completion));
+            return this;
+        }
+
         public void Shutdown(Action<Tty, Exception> completedAction = null) =>
-            this.ShutdownStream((state, error) => completedAction?.Invoke((Tty)state, error));
+            base.Shutdown((state, error) => completedAction?.Invoke((Tty)state, error));
 
         public Tty Mode(TtyMode mode)
         {

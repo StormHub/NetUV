@@ -74,7 +74,14 @@ namespace NetUV.Core.Handles
             return NativeMethods.GetFileDescriptor(this.InternalHandle);
         }
 
-        public void RegisterReceiveAction(Action<Udp, IDatagramReadCompletion> action)
+        public WritableBuffer Allocate(int size)
+        {
+            Contract.Requires(size > 0);
+
+            return ((IByteBufferAllocator)this.allocator).Buffer(size);
+        }
+
+        public void OnReceive(Action<Udp, IDatagramReadCompletion> action)
         {
             Contract.Requires(action != null);
 

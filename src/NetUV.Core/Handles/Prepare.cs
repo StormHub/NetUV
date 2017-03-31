@@ -22,7 +22,7 @@ namespace NetUV.Core.Handles
             Contract.Requires(callback != null);
 
             this.Validate();
-            this.ScheduleStart(state => callback.Invoke((Prepare)state));
+            this.ScheduleStart(state => callback((Prepare)state));
             return this;
         }
 

@@ -7,7 +7,6 @@ namespace EchoServer
     using System.Net;
     using System.Runtime.InteropServices;
     using System.Text;
-    using NetUV.Core.Channels;
     using NetUV.Core.Buffers;
     using NetUV.Core.Handles;
     using NetUV.Core.Logging;
@@ -149,20 +148,18 @@ namespace EchoServer
                 Console.WriteLine($"{typeof(T).Name}:Echo server client connection accepted {pipe.GetPeerName()}");
             }
 
-            IStream stream = client.CreateStream();
-            stream.Subscribe(OnNext, OnError, OnCompleted);
+            client.OnRead(OnAccept, OnError);
         }
 
-        static void OnNext(IStream stream, ReadableBuffer data) 
+        static void OnAccept(StreamHandle stream, ReadableBuffer data) 
         {
-            if (data.Count == 0)
+            string message = data.Count > 0 ? data.ReadString(data.Count, Encoding.UTF8) : null;
+            if (string.IsNullOrEmpty(message))
             {
                 return;
             }
 
-            string message = data.ReadString(data.Count, Encoding.UTF8);
             Console.WriteLine($"Echo server received : {message}");
-            data.Dispose();
 
             //
             // Scan for the letter Q which signals that we should quit the server.
@@ -186,11 +183,11 @@ namespace EchoServer
                 Console.WriteLine("Echo server sending echo back.");
                 byte[] array = Encoding.UTF8.GetBytes($"ECHO [{message}]");
                 WritableBuffer buffer = WritableBuffer.From(array);
-                stream.Write(buffer, OnWriteCompleted);
+                stream.QueueWriteStream(buffer, OnWriteCompleted);
             }
         }
 
-        static void OnWriteCompleted(IStream stream, Exception error) 
+        static void OnWriteCompleted(StreamHandle stream, Exception error) 
         {
             if (error == null)
             {
@@ -198,14 +195,12 @@ namespace EchoServer
             }
 
             Console.WriteLine($"Echo server write error {error}");
-            stream.Handle.CloseHandle(OnClosed);
+            stream.CloseHandle(OnClosed);
         }
-
-        static void OnCompleted(IStream stream) => stream.Handle.CloseHandle(OnClosed);
 
         static void OnClosed(ScheduleHandle handle) => handle.Dispose();
 
-        static void OnError(IStream stream, Exception error) 
+        static void OnError(StreamHandle stream, Exception error) 
             => Console.WriteLine($"Echo server read error {error}");
     }
 }

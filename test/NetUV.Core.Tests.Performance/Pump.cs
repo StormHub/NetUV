@@ -5,7 +5,6 @@ namespace NetUV.Core.Tests.Performance
 {
     using System;
     using NetUV.Core.Buffers;
-    using NetUV.Core.Channels;
     using NetUV.Core.Handles;
 
     sealed class Pump : IDisposable
@@ -216,12 +215,11 @@ namespace NetUV.Core.Tests.Performance
             {
                 this.readSockets++;
                 this.maxReadSockets++;
-
-                client.CreateStream().Subscribe(this.OnNext, OnError, OnComplete);
+                client.OnRead(this.OnAccept, OnError);
             }
         }
 
-        void OnNext(IStream stream, ReadableBuffer readableBuffer)
+        void OnAccept(StreamHandle stream, ReadableBuffer readableBuffer)
         {
             if (this.receiveTotal == 0)
             {
@@ -233,9 +231,7 @@ namespace NetUV.Core.Tests.Performance
             this.receiveTotal += readableBuffer.Count;
         }
 
-        static void OnError(IStream stream, Exception error) => stream.Handle.CloseHandle(OnClosed);
-
-        static void OnComplete(IStream stream) => stream.Handle.CloseHandle(OnClosed);
+        static void OnError(StreamHandle stream, Exception error) => stream.CloseHandle(OnClosed);
 
         static void OnClosed(ScheduleHandle handle) => handle.Dispose();
 

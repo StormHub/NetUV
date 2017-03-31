@@ -6,7 +6,6 @@ namespace NetUV.Core.Tests.Performance
     using System;
     using System.Text;
     using NetUV.Core.Buffers;
-    using NetUV.Core.Channels;
     using NetUV.Core.Handles;
 
     sealed class TcpWriteBatch : IDisposable
@@ -64,19 +63,17 @@ namespace NetUV.Core.Tests.Performance
                 return;
             }
 
-            IStream<Tcp> stream = tcp.TcpStream();
-            stream.Subscribe(OnNext, OnError, OnCompleted);
-
+            tcp.OnRead(OnAccept, OnError);
             for (int i = 0; i < NumberOfRequests; i++)
             {
-                stream.Write(this.dataBuffer, this.OnWriteComplete);
+                tcp.QueueWriteStream(this.dataBuffer, this.OnWriteComplete);
             }
 
             this.batchWriteCommit = this.loop.NowInHighResolution;
-            stream.Shutdown(this.OnShutdown);
+            tcp.Shutdown(this.OnShutdown);
         }
 
-        void OnShutdown(IStream<Tcp> stream, Exception error)
+        void OnShutdown(StreamHandle stream, Exception error)
         {
             if (error != null)
             {
@@ -84,21 +81,19 @@ namespace NetUV.Core.Tests.Performance
             }
 
             this.batchWriteFinish = this.loop.NowInHighResolution;
-            stream.Handle.CloseHandle(OnClosed);
+            stream.CloseHandle(OnClosed);
             this.server.Shutdown();
         }
 
-        static void OnNext(IStream<Tcp> stream, ReadableBuffer readableBuffer)
+        static void OnAccept(StreamHandle stream, ReadableBuffer readableBuffer)
         {
             // NOP
         }
 
-        static void OnCompleted(IStream<Tcp> stream) => stream.Dispose();
-
-        static void OnError(IStream<Tcp> stream, Exception exception) => 
+        static void OnError(StreamHandle stream, Exception exception) => 
             Console.WriteLine($"Tcp write batch : read error {exception}.");
 
-        void OnWriteComplete(IStream<Tcp> clientStream, Exception error)
+        void OnWriteComplete(StreamHandle stream, Exception error)
         {
             if (error != null)
             {

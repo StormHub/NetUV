@@ -6,7 +6,6 @@ namespace NetUV.Core.Tests.Performance
     using System;
     using System.Text;
     using NetUV.Core.Buffers;
-    using NetUV.Core.Channels;
     using NetUV.Core.Handles;
 
     sealed class TcpPingPong : IDisposable
@@ -18,7 +17,6 @@ namespace NetUV.Core.Tests.Performance
         WritableBuffer dataBuffer;
         EchoServer server;
         Loop loop;
-        IStream<Tcp> stream;
 
         long startTime;
         int pongs;
@@ -64,15 +62,14 @@ namespace NetUV.Core.Tests.Performance
             }
             else
             {
-                this.stream = tcp.TcpStream();
-                this.stream.Subscribe(this.OnNext, OnError, OnComplete);
+                tcp.OnRead(this.OnAccept, OnError);
 
                 // Sending the first ping
-                this.stream.Write(this.dataBuffer, OnWriteCompleted);
+                tcp.QueueWriteStream(this.dataBuffer, OnWriteCompleted);
             }
         }
 
-        static void OnWriteCompleted(IStream<Tcp> stream, Exception error)
+        static void OnWriteCompleted(StreamHandle stream, Exception error)
         {
             if (error == null)
             {
@@ -80,10 +77,10 @@ namespace NetUV.Core.Tests.Performance
             }
 
             Console.WriteLine($"Tcp ping pong : failed, error {error}.");
-            stream.Handle.CloseHandle(OnClose);
+            stream.CloseHandle(OnClose);
         }
 
-        void OnNext(IStream<Tcp> tcp, ReadableBuffer data)
+        void OnAccept(StreamHandle stream, ReadableBuffer data)
         {
             if (data.Count == 0)
             {
@@ -102,7 +99,7 @@ namespace NetUV.Core.Tests.Performance
                     if (token != PingMessage[this.state])
                     {
                         Console.WriteLine($"Tcp ping pong : failed, wrong message token received {token}.");
-                        this.stream.Dispose();
+                        stream.Dispose();
                         return;
                     }
 
@@ -116,21 +113,19 @@ namespace NetUV.Core.Tests.Performance
 
                     if (duration > DurationInMilliseconds)
                     {
-                        this.stream.Handle.CloseHandle(OnClose);
+                        stream.CloseHandle(OnClose);
                         this.server.CloseServer();
                     }
                     else
                     {
-                        this.stream.Write(this.dataBuffer, OnWriteCompleted);
+                        stream.QueueWriteStream(this.dataBuffer, OnWriteCompleted);
                     }
                 }
             }
         }
 
-        static void OnError(IStream<Tcp> stream, Exception exception) =>
+        static void OnError(StreamHandle stream, Exception exception) =>
             Console.WriteLine($"Tcp ping pong read error {exception}");
-
-        static void OnComplete(IStream<Tcp> stream) => stream.Handle.CloseHandle(OnClose);
 
         static void OnClose(ScheduleHandle handle) => handle.Dispose();
 

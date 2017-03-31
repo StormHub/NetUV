@@ -116,7 +116,7 @@ namespace NetUV.Core.Tests
 
             if (exception == null)
             {
-                tcp.RegisterRead(this.OnRead);
+                tcp.OnRead(this.OnRead);
             }
             else
             {

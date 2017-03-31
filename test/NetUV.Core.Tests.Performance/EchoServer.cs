@@ -7,7 +7,6 @@ namespace NetUV.Core.Tests.Performance
     using System.Net;
     using System.Text;
     using NetUV.Core.Buffers;
-    using NetUV.Core.Channels;
     using NetUV.Core.Handles;
 
     sealed class EchoServer : IDisposable
@@ -90,15 +89,13 @@ namespace NetUV.Core.Tests.Performance
             }
             else
             {
-                client.CreateStream().Subscribe(this.OnNext, OnError, OnComplete);
+                client.OnRead(this.OnAccept, OnError);
             }
         }
 
-        void OnNext(IStream stream, ReadableBuffer data)
+        void OnAccept(StreamHandle stream, ReadableBuffer data)
         {
             string message = data.Count > 0 ? data.ReadString(data.Count, Encoding.UTF8) : null;
-            data.Dispose();
-
             if (string.IsNullOrEmpty(message))
             {
                 return;
@@ -112,7 +109,7 @@ namespace NetUV.Core.Tests.Performance
             {
                 if (message.EndsWith("QS"))
                 {
-                    stream.Handle.CloseHandle(OnClose);
+                    stream.CloseHandle(OnClose);
                 }
                 else
                 {
@@ -123,7 +120,7 @@ namespace NetUV.Core.Tests.Performance
             else
             {
                 WritableBuffer buffer = WritableBuffer.From(Encoding.UTF8.GetBytes(message));
-                stream.Write(buffer, OnWriteCompleted);
+                stream.QueueWriteStream(buffer, OnWriteCompleted);
             }
         }
 
@@ -140,7 +137,7 @@ namespace NetUV.Core.Tests.Performance
             }
         }
 
-        static void OnWriteCompleted(IStream stream, Exception error)
+        static void OnWriteCompleted(StreamHandle stream, Exception error)
         {
             if (error == null)
             {
@@ -148,20 +145,18 @@ namespace NetUV.Core.Tests.Performance
             }
 
             Console.WriteLine($"{nameof(EchoServer)} write failed, {error}");
-            stream.Handle.CloseHandle(OnClose);
+            stream.CloseHandle(OnClose);
         }
 
-        static void OnError(IStream stream, Exception exception)
+        static void OnError(StreamHandle stream, Exception exception)
         {
             Console.WriteLine($"{nameof(EchoServer)} read error {exception}");
             stream.Shutdown(OnShutdown);
         }
 
-        static void OnShutdown(IStream handle, Exception exception) => handle.Handle.CloseHandle(OnClose);
+        static void OnShutdown(StreamHandle handle, Exception exception) => handle.CloseHandle(OnClose);
 
         static void OnClose(ScheduleHandle handle) => handle.Dispose();
-
-        static void OnComplete(IStream stream) => stream.Handle.CloseHandle(OnClose);
 
         public void Dispose()
         {

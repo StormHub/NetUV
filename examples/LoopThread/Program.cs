@@ -52,11 +52,17 @@ namespace LoopThread
 
         static void OnConnection(Tcp client, Exception error)
         {
-            IStream stream = client.CreateStream();
-            stream.Subscribe(OnNext, OnError, OnCompleted);
+            if (error != null)
+            {
+                client.CloseHandle(OnClosed);
+            }
+            else
+            {
+                client.OnRead(OnAccept, OnError);
+            }
         }
 
-        static void OnNext(IStream stream, ReadableBuffer data)
+        static void OnAccept(StreamHandle stream, ReadableBuffer data)
         {
             string message = data.Count > 0 ? data.ReadString(data.Count, Encoding.UTF8) : null;
             data.Dispose();
@@ -88,11 +94,11 @@ namespace LoopThread
                 Console.WriteLine("Server sending echo back.");
                 byte[] array = Encoding.UTF8.GetBytes($"ECHO [{message}]");
                 WritableBuffer buffer = WritableBuffer.From(array);
-                stream.Write(buffer, OnWriteCompleted);
+                stream.QueueWriteStream(buffer, OnWriteCompleted);
             }
         }
 
-        static void OnWriteCompleted(IStream stream, Exception error)
+        static void OnWriteCompleted(StreamHandle stream, Exception error)
         {
             if (error == null)
             {
@@ -100,12 +106,10 @@ namespace LoopThread
             }
 
             Console.WriteLine($"Server write error {error}");
-            stream.Handle.CloseHandle(OnClosed);
+            stream.CloseHandle(OnClosed);
         }
 
-        static void OnError(IStream stream, Exception error) => Console.WriteLine($"Server read error {error}");
-
-        static void OnCompleted(IStream stream) => stream.Handle.CloseHandle(OnClosed);
+        static void OnError(StreamHandle stream, Exception error) => Console.WriteLine($"Server read error {error}");
 
         static void OnClosed(ScheduleHandle handle) => handle.Dispose();
 

@@ -7,7 +7,6 @@ namespace EchoClient
     using System.Net;
     using System.Runtime.InteropServices;
     using System.Text;
-    using NetUV.Core.Channels;
     using NetUV.Core.Buffers;
     using NetUV.Core.Handles;
     using NetUV.Core.Logging;
@@ -131,11 +130,10 @@ namespace EchoClient
             }
 
             Console.WriteLine($"{typeof(T).Name}:Echo client connected, request write message.");
-            IStream stream = client.CreateStream();
-            stream.Subscribe(OnNext, OnError, OnCompleted);
+            client.OnRead(OnAccept, OnError);
 
             WritableBuffer buffer = CreateMessage();
-            stream.Write(buffer, OnWriteCompleted);
+            client.QueueWriteStream(buffer, OnWriteCompleted);
         }
 
         static WritableBuffer CreateMessage()
@@ -145,7 +143,7 @@ namespace EchoClient
             return buffer;
         }
 
-        static void OnNext(IStream stream, ReadableBuffer data) 
+        static void OnAccept(StreamHandle stream, ReadableBuffer data) 
         {
             if (data.Count == 0)
             {
@@ -159,12 +157,10 @@ namespace EchoClient
             Console.WriteLine("Message received, sending QS to server");
             byte[] array = Encoding.UTF8.GetBytes("QS");
             WritableBuffer buffer = WritableBuffer.From(array);
-            stream.Write(buffer, OnWriteCompleted);
+            stream.QueueWriteStream(buffer, OnWriteCompleted);
         }
 
-        static void OnCompleted(IStream stream) => stream.Handle.CloseHandle(OnClosed);
-
-        static void OnWriteCompleted(IStream stream, Exception error) 
+        static void OnWriteCompleted(StreamHandle stream, Exception error) 
         {
             if (error == null)
             {
@@ -172,12 +168,12 @@ namespace EchoClient
             }
 
             Console.WriteLine($"Echo client write error {error}");
-            stream.Handle.CloseHandle(OnClosed);
+            stream.CloseHandle(OnClosed);
         }
 
         static void OnClosed(ScheduleHandle handle) => handle.Dispose();
 
-        static void OnError(IStream stream, Exception error)
+        static void OnError(StreamHandle stream, Exception error)
             => Console.WriteLine($"Echo client read error {error}");
     }
 }
