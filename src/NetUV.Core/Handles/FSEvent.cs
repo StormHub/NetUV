@@ -121,7 +121,15 @@ namespace NetUV.Core.Handles
 
         protected override void Close() => this.eventCallback = null;
 
-        public void CloseHandle(Action<FSEvent> callback = null) =>
-            base.CloseHandle(state => callback?.Invoke((FSEvent)state));
+        public void CloseHandle(Action<FSEvent> onClosed = null)
+        {
+            Action<ScheduleHandle> handler = null;
+            if (onClosed != null)
+            {
+                handler = state => onClosed((FSEvent)state);
+            }
+
+            base.CloseHandle(handler);
+        }
     }
 }

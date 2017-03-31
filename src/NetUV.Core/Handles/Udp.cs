@@ -361,11 +361,11 @@ namespace NetUV.Core.Handles
             var bufferRef = new BufferRef(buffer);
             this.bufferQueue.Enqueue(bufferRef);
 
-            // ReSharper disable PossibleNullReferenceException
             uv_buf_t[] bufs = bufferRef.GetBuffer();
+#if DEBUG
             Contract.Assert(bufs != null && bufs.Length > 0);
+#endif
             buf = bufs[0];
-            // ReSharper restore PossibleNullReferenceException
         }
 
         ByteBuffer GetBuffer()
@@ -394,8 +394,16 @@ namespace NetUV.Core.Handles
             this.bufferQueue.Dispose();
         }
 
-        public void CloseHandle(Action<Udp> callback = null) =>
-            base.CloseHandle(state => callback?.Invoke((Udp)state));
+        public void CloseHandle(Action<Udp> onClosed = null)
+        {
+            Action<ScheduleHandle> handler = null;
+            if (onClosed != null)
+            {
+                handler = state => onClosed((Udp)state);
+            }
+
+            base.CloseHandle(handler);
+        }
 
         sealed class DatagramReadCompletion : ReadCompletion, IDatagramReadCompletion
         {

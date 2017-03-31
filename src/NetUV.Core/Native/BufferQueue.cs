@@ -4,18 +4,18 @@
 namespace NetUV.Core.Native
 {
     using System;
-    using System.Collections.Concurrent;
     using System.Diagnostics.Contracts;
     using System.Threading;
+    using NetUV.Core.Common;
 
     sealed class BufferQueue : IDisposable
     {
-        readonly ConcurrentQueue<BufferRef> queue;
+        readonly SpscLinkedQueue<BufferRef> queue;
         bool disposed;
 
         internal BufferQueue()
         {
-            this.queue = new ConcurrentQueue<BufferRef>();
+            this.queue = new SpscLinkedQueue<BufferRef>();
             this.disposed = false;
         }
 
@@ -24,13 +24,14 @@ namespace NetUV.Core.Native
             Contract.Requires(bufferRef != null);
 
             this.CheckDisposed();
-            this.queue.Enqueue(bufferRef);
+            this.queue.Offer(bufferRef);
         }
 
         internal bool TryDequeue(out BufferRef bufferRef)
         {
             this.CheckDisposed();
-            return this.queue.TryDequeue(out bufferRef);
+            bufferRef = this.queue.Poll();
+            return bufferRef != null;
         }
 
         void CheckDisposed()
@@ -41,13 +42,7 @@ namespace NetUV.Core.Native
             }
         }
 
-        internal void Clear()
-        {
-            while (this.queue.TryDequeue(out BufferRef bufferRef))
-            {
-                bufferRef.Dispose();
-            }
-        }
+        internal void Clear() => this.queue.Clear();
 
         public void Dispose()
         {

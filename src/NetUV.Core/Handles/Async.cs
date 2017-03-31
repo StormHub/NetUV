@@ -56,7 +56,7 @@ namespace NetUV.Core.Handles
             }
         }
 
-        public void CloseHandle(Action<Async> callback = null) => 
-            base.CloseHandle(callback);
+        public void CloseHandle(Action<Async> onClosed = null) => 
+            base.CloseHandle(onClosed);
     }
 }

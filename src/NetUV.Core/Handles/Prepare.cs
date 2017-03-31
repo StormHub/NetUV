@@ -28,7 +28,7 @@ namespace NetUV.Core.Handles
 
         public void Stop() => this.StopHandle();
 
-        public void CloseHandle(Action<Prepare> callback = null) =>
-            base.CloseHandle(callback);
+        public void CloseHandle(Action<Prepare> onClosed = null) =>
+            base.CloseHandle(onClosed);
     }
 }

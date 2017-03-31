@@ -53,7 +53,7 @@ namespace NetUV.Core.Handles
             }
 
             this.RegisterReadAction(
-                (stream, completion) => readAction.Invoke((Tty)stream, completion));
+                (stream, completion) => readAction((Tty)stream, completion));
 
             this.ReadStart();
 
@@ -87,7 +87,15 @@ namespace NetUV.Core.Handles
 
         public static void ResetMode() => NativeMethods.TtyResetMode();
 
-        public void CloseHandle(Action<Tty> callback = null) =>
-            base.CloseHandle(state => callback?.Invoke((Tty)state));
+        public void CloseHandle(Action<Tty> onClosed = null)
+        {
+            Action<ScheduleHandle> handler = null;
+            if (onClosed != null)
+            {
+                handler = state => onClosed((Tty)state);
+            }
+
+            base.CloseHandle(handler);
+        }
     }
 }
