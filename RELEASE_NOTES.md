@@ -10,6 +10,10 @@ First public preview release
 - Fixed error handling for .NET Core on Linux platforms.
 - Added handle status check for Async handle.
 
-### 0.1.96.0 March 18 2016
+#### 0.1.96.0 March 18 2016
 - Migrated to .NET Core 1.0.1 release.
 - Target .Net Standard 1.3 to support all platforms.
+
+#### 0.1.100.0 April 1 2016
+- Added client consumer interface.
+- Performance improvements.
