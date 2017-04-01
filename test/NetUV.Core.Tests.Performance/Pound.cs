@@ -6,7 +6,6 @@ namespace NetUV.Core.Tests.Performance
     using System;
     using System.Text;
     using NetUV.Core.Buffers;
-    using NetUV.Core.Channels;
     using NetUV.Core.Handles;
     using NetUV.Core.Native;
 
@@ -110,17 +109,16 @@ namespace NetUV.Core.Tests.Performance
             }
             else
             {
-                IStream stream = client.CreateStream();
-                stream.Subscribe(this.OnNext, this.OnError, this.OnComplete);
-                stream.Write(this.buffer, this.OnWriteComplete);
+                client.OnRead(this.OnAccept, this.OnError, this.OnCompleted);
+                client.QueueWriteStream(this.buffer, this.OnWriteComplete);
             }
         }
 
-        void OnWriteComplete(IStream stream, Exception error)
+        void OnWriteComplete(StreamHandle stream, Exception error)
         {
             if (error != null)
             {
-                stream.Handle.CloseHandle(this.OnClosed);
+                stream.CloseHandle(this.OnClosed);
                 Console.WriteLine($"{this.handleType} conn pound : {this.clientCount} write error {error}");
             }
         }
@@ -142,6 +140,7 @@ namespace NetUV.Core.Tests.Performance
             {
                 context.Streams[context.Index] = null;
                 this.activeStreams--;
+
                 if (this.stopTime == 0)
                 {
                     this.stopTime = this.loop.NowInHighResolution;
@@ -154,13 +153,9 @@ namespace NetUV.Core.Tests.Performance
             }
         }
 
-        void OnNext(IStream stream, ReadableBuffer data)
-        {
-            data.Dispose();
-            stream.Handle.CloseHandle(this.OnClosed);
-        }
+        void OnAccept(StreamHandle stream, ReadableBuffer data) => stream.CloseHandle(this.OnClosed);
 
-        void OnError(IStream stream, Exception error)
+        void OnError(StreamHandle stream, Exception error)
         {
             var exception = error as OperationException;
             if (exception != null 
@@ -174,10 +169,10 @@ namespace NetUV.Core.Tests.Performance
                 Console.WriteLine($"{this.handleType} conn pound : {this.clientCount} read error {error}");
             }
 
-            stream.Handle.CloseHandle(this.OnClosed);
+            stream.CloseHandle(this.OnClosed);
         }
 
-        void OnComplete(IStream stream) => stream.Handle.CloseHandle(this.OnClosed);
+        void OnCompleted(StreamHandle stream) => stream.CloseHandle(this.OnClosed);
 
         public void Dispose()
         {

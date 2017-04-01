@@ -226,7 +226,7 @@ namespace NetUV.Core.Tests
 
         void OnConnectedAndShutdown(StreamHandle stream, Exception exception)
         {
-            stream.ShutdownStream(this.OnShutdown);
+            stream.Shutdown(this.OnShutdown);
             this.callbackCount++;
         }
 

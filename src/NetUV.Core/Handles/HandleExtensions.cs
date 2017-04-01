@@ -106,15 +106,15 @@ namespace NetUV.Core.Handles
 
         public static Tcp Bind(this Tcp tcp, 
             IPEndPoint localEndPoint,
-            Action<Tcp, IStreamReadCompletion> readAction, 
+            Action<Tcp, IStreamReadCompletion> onRead, 
             bool dualStack = false)
         {
             Contract.Requires(tcp != null);
             Contract.Requires(localEndPoint != null);
-            Contract.Requires(readAction != null);
+            Contract.Requires(onRead != null);
 
             tcp.Bind(localEndPoint, dualStack);
-            tcp.RegisterRead(readAction);
+            tcp.OnRead(onRead);
 
             return tcp;
         }
@@ -129,7 +129,7 @@ namespace NetUV.Core.Handles
             Contract.Requires(receiveAction != null);
 
             udp.Bind(localEndPoint, dualStack);
-            udp.RegisterReceiveAction(receiveAction);
+            udp.OnReceive(receiveAction);
             udp.ReceiveStart();
 
             return udp;
@@ -141,7 +141,7 @@ namespace NetUV.Core.Handles
             Contract.Requires(udp != null);
             Contract.Requires(receiveAction != null);
 
-            udp.RegisterReceiveAction(receiveAction);
+            udp.OnReceive(receiveAction);
             udp.ReceiveStart();
 
             return udp;

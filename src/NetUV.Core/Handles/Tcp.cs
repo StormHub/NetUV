@@ -6,7 +6,7 @@ namespace NetUV.Core.Handles
     using System;
     using System.Diagnostics.Contracts;
     using System.Net;
-    using NetUV.Core.Channels;
+    using NetUV.Core.Buffers;
     using NetUV.Core.Native;
 
     public sealed class Tcp : ServerStream
@@ -14,12 +14,6 @@ namespace NetUV.Core.Handles
         internal Tcp(LoopContext loop)
             : base(loop, uv_handle_type.UV_TCP)
         { }
-
-        public IStream<Tcp> TcpStream()
-        {
-            this.Validate();
-            return this.CreateStream<Tcp>();
-        }
 
         public int GetSendBufferSize()
         {
@@ -50,13 +44,13 @@ namespace NetUV.Core.Handles
         }
 
         public void Shutdown(Action<Tcp, Exception> completedAction = null) => 
-            this.ShutdownStream((state, error) => completedAction?.Invoke((Tcp)state, error));
+            base.Shutdown((state, error) => completedAction?.Invoke((Tcp)state, error));
 
-        public void QueueWrite(byte[] array, Action<Tcp, Exception> completedAction = null)
+        public void QueueWrite(byte[] array, Action<Tcp, Exception> completion = null)
         {
             Contract.Requires(array != null);
 
-            this.QueueWrite(array, 0, array.Length, completedAction);
+            this.QueueWrite(array, 0, array.Length, completion);
         }
 
         public void QueueWrite(byte[] array, int offset, int count, Action<Tcp, Exception> completion = null)
@@ -69,13 +63,27 @@ namespace NetUV.Core.Handles
                 (state, error) => completion?.Invoke((Tcp)state, error));
         }
 
-        public Tcp RegisterRead(Action<Tcp, IStreamReadCompletion> readAction)
+        public Tcp OnRead(
+            Action<Tcp, ReadableBuffer> onAccept,
+            Action<Tcp, Exception> onError,
+            Action<Tcp> onCompleted = null)
         {
-            Contract.Requires(readAction != null);
+            Contract.Requires(onAccept != null);
+            Contract.Requires(onError != null);
 
-            this.RegisterReadAction(
-                (stream, completion) => readAction((Tcp)stream, completion));
+            base.OnRead(
+                (stream, buffer) => onAccept((Tcp)stream, buffer),
+                (stream, error) => onError((Tcp)stream, error),
+                stream => onCompleted?.Invoke((Tcp)stream));
 
+            return this;
+        }
+
+        public Tcp OnRead(Action<Tcp, IStreamReadCompletion> onRead)
+        {
+            Contract.Requires(onRead != null);
+
+            base.OnRead((stream, completion) => onRead((Tcp)stream, completion));
             return this;
         }
 

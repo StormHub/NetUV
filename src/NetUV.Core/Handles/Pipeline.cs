@@ -23,8 +23,7 @@ namespace NetUV.Core.Handles
         readonly ByteBufferAllocator allocator;
         readonly ReceiveBufferSizeEstimate receiveBufferSizeEstimate;
         readonly BufferQueue bufferQueue;
-
-        Action<StreamHandle, IStreamReadCompletion> readAction;
+        IStreamConsumer<StreamHandle> streamConsumer;
 
         internal Pipeline(StreamHandle streamHandle) 
             : this(streamHandle, ByteBufferAllocator.Default)
@@ -39,44 +38,20 @@ namespace NetUV.Core.Handles
             this.allocator = allocator;
             this.receiveBufferSizeEstimate = new ReceiveBufferSizeEstimate();
             this.bufferQueue = new BufferQueue();
-
-            this.BufferedRead = false;
         }
 
-        internal bool BufferedRead { get; private set; }
-
-        internal IStream CreateStream()
+        internal void Consumer(IStreamConsumer<StreamHandle> consumer)
         {
-            this.BufferedRead = true;
-            return new Stream(this.streamHandle);
+            Contract.Requires(consumer != null);
+            this.streamConsumer = consumer;
         }
 
-        internal IStream<T> CreateStream<T>() 
-            where T : StreamHandle
+        internal WritableBuffer Allocate(int size)
         {
-            this.BufferedRead = true;
-            return new Stream<T>(this.streamHandle);
+            Contract.Requires(size > 0);
+
+            return ((IByteBufferAllocator)this.allocator).Buffer(size);
         }
-
-        internal Action<StreamHandle, IStreamReadCompletion> ReadAction
-        {
-            get
-            {
-                return this.readAction;
-            }
-            set
-            {
-                if (this.readAction != null)
-                {
-                    throw new InvalidOperationException(
-                        $"{nameof(Pipeline)} channel data handler has already been registered");
-                }
-
-                this.readAction = value;
-            }
-        }
-
-        internal IByteBufferAllocator Allocator => this.allocator;
 
         internal BufferRef AllocateReadBuffer()
         {
@@ -130,7 +105,7 @@ namespace NetUV.Core.Handles
             var completion = new StreamReadCompletion(ref buffer,  error, completed);
             try
             {
-                this.ReadAction?.Invoke(this.streamHandle, completion);
+                this.streamConsumer?.Consume(this.streamHandle, completion);
             }
             catch (Exception exception)
             {
@@ -138,10 +113,7 @@ namespace NetUV.Core.Handles
             }
             finally
             {
-                if (!this.BufferedRead)
-                {
-                    completion.Dispose();
-                }
+                completion.Dispose();
             }
         }
 
@@ -152,8 +124,6 @@ namespace NetUV.Core.Handles
             try
             {
                 WriteRequest request = Recycler.Take();
-                Contract.Assert(request != null);
-
                 request.Prepare(bufferRef, 
                     (writeRequest, exception) => completion?.Invoke(this.streamHandle, exception));
 
@@ -169,7 +139,7 @@ namespace NetUV.Core.Handles
         public void Dispose()
         {
             this.bufferQueue.Dispose();
-            this.readAction = null;
+            this.streamConsumer = null;
         }
 
         sealed class StreamReadCompletion : ReadCompletion, IStreamReadCompletion

@@ -60,21 +60,34 @@ namespace NetUV.Core.Handles
             return (((uv_stream_t *)this.InternalHandle)->write_queue_size).ToInt64();
         }
 
-        internal WritableBuffer Allocate(int size)
+        public WritableBuffer Allocate(int size)
         {
             Contract.Requires(size > 0);
 
-            return this.pipeline.Allocator.Buffer(size);
+            return this.pipeline.Allocate(size);
         }
 
-        internal void RegisterReadAction(Action<StreamHandle, IStreamReadCompletion> readAction)
+        public void OnRead(
+            Action<StreamHandle, ReadableBuffer> onAccept,
+            Action<StreamHandle, Exception> onError,
+            Action<StreamHandle> onCompleted = null)
         {
-            Contract.Requires(readAction != null);
+            Contract.Requires(onAccept != null);
+            Contract.Requires(onError != null);
 
-            this.pipeline.ReadAction = readAction;
+            var consumer = new StreamConsumer<StreamHandle>(onAccept, onError, onCompleted);
+            this.pipeline.Consumer(consumer);
         }
 
-        protected internal void ShutdownStream(Action<StreamHandle, Exception> completion = null)
+        public void OnRead(Action<StreamHandle, IStreamReadCompletion> onRead)
+        {
+            Contract.Requires(onRead != null);
+
+            var consumer = new ReadStreamConsumer<StreamHandle>(onRead);
+            this.pipeline.Consumer(consumer);
+        }
+
+        public void Shutdown(Action<StreamHandle, Exception> completion = null)
         {
             if (!this.IsValid)
             {
@@ -215,11 +228,6 @@ namespace NetUV.Core.Handles
 
         protected override void Close() => this.pipeline.Dispose();
 
-        public IStream CreateStream() => this.pipeline.CreateStream();
-
-        protected IStream<T> CreateStream<T>() 
-            where T : StreamHandle => this.pipeline.CreateStream<T>();
-
         void OnReadCallback(ByteBuffer byteBuffer, int status)
         {
             //
@@ -267,6 +275,7 @@ namespace NetUV.Core.Handles
 #if DEBUG
             Contract.Assert(bufs != null && bufs.Length > 0);
 #endif
+            // ReSharper disable once PossibleNullReferenceException
             buf = bufs[0];
         }
 

@@ -5,7 +5,7 @@ namespace NetUV.Core.Handles
 {
     using System;
     using System.Diagnostics.Contracts;
-    using NetUV.Core.Channels;
+    using NetUV.Core.Buffers;
     using NetUV.Core.Native;
 
     public sealed class Pipe : ServerStream
@@ -13,12 +13,6 @@ namespace NetUV.Core.Handles
         internal Pipe(LoopContext loop, bool ipc = false)
             : base(loop, uv_handle_type.UV_NAMED_PIPE, ipc)
         { }
-
-        public IStream<Pipe> PipeStream()
-        {
-            this.Validate();
-            return this.CreateStream<Pipe>();
-        }
 
         public int GetSendBufferSize()
         {
@@ -72,13 +66,27 @@ namespace NetUV.Core.Handles
             return this.ReceiveBufferSize(value);
         }
 
-        public Pipe RegisterRead(Action<Pipe, IStreamReadCompletion> readAction)
+        public Pipe OnRead(
+            Action<Pipe, ReadableBuffer> onAccept,
+            Action<Pipe, Exception> onError,
+            Action<Pipe> onCompleted = null)
         {
-            Contract.Requires(readAction != null);
+            Contract.Requires(onAccept != null);
+            Contract.Requires(onError != null);
 
-            this.RegisterReadAction(
-                (stream, completion) => readAction((Pipe)stream, completion));
+            base.OnRead(
+                (stream, buffer) => onAccept((Pipe)stream, buffer), 
+                (stream, error) => onError((Pipe)stream, error), 
+                stream => onCompleted?.Invoke((Pipe)stream));
 
+            return this;
+        }
+
+        public Pipe OnRead(Action<Pipe, IStreamReadCompletion> onRead)
+        {
+            Contract.Requires(onRead != null);
+
+            base.OnRead((stream, completion) => onRead((Pipe)stream, completion));
             return this;
         }
 
@@ -135,7 +143,7 @@ namespace NetUV.Core.Handles
         }
 
         public void Shutdown(Action<Pipe, Exception> completedAction = null) =>
-            this.ShutdownStream((state, error) => completedAction?.Invoke((Pipe)state, error));
+            base.Shutdown((state, error) => completedAction?.Invoke((Pipe)state, error));
 
         public void CloseHandle(Action<Pipe> onClosed = null)
         {

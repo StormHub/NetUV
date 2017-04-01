@@ -6,7 +6,6 @@ namespace NetUV.Core.Tests.Performance
     using System;
     using System.Net;
     using NetUV.Core.Buffers;
-    using NetUV.Core.Channels;
     using NetUV.Core.Handles;
 
     sealed class BlackholeServer : IDisposable
@@ -36,23 +35,26 @@ namespace NetUV.Core.Tests.Performance
                 return;
             }
 
-            tcp.TcpStream().Subscribe(OnNext, OnError, this.OnComplete);
+            tcp.OnRead(OnAccept, OnError, this.OnComplete);
         }
 
         public void Shutdown() => this.tcpServer.Shutdown(OnShutdown);
 
-        static void OnNext(IStream<Tcp> stream, ReadableBuffer data) => data.Dispose();
+        static void OnAccept(StreamHandle stream, ReadableBuffer data)
+        {
+            //NOP
+        }
 
-        static void OnError(IStream<Tcp> stream, Exception exception) => 
+        static void OnError(StreamHandle stream, Exception exception) => 
             Console.WriteLine($"{nameof(BlackholeServer)} read error {exception}");
 
-        void OnComplete(IStream<Tcp> stream)
+        void OnComplete(StreamHandle stream)
         {
-            stream.Handle.CloseHandle(OnClosed);
+            stream.CloseHandle(OnClosed);
             this.tcpServer.Shutdown(OnShutdown);
         }
 
-        static void OnClosed(Tcp handle) => handle.Dispose();
+        static void OnClosed(StreamHandle handle) => handle.Dispose();
 
         static void OnShutdown(Tcp handle, Exception exception) => handle.Dispose();
 

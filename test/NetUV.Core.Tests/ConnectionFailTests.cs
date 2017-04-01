@@ -11,7 +11,7 @@ namespace NetUV.Core.Tests
 
     public sealed class ConnectionFailTests : IDisposable
     {
-        const int Port = 9889;
+        const int Port = 9989;
 
         Loop loop;
         Tcp tcp;
