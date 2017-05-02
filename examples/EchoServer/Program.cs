@@ -104,11 +104,11 @@ namespace EchoServer
 
             IPEndPoint remoteEndPoint = completion.RemoteEndPoint;
             ReadableBuffer data = completion.Data;
-            if (data.Count == 0)
+            string message = data.Count > 0 ? data.ReadString(data.Count, Encoding.UTF8) : null;
+            if (string.IsNullOrEmpty(message))
             {
                 return;
             }
-            string message = data.ReadString(data.Count, Encoding.UTF8);
             Console.WriteLine($"Echo server received : {message} from {remoteEndPoint}");
 
             Console.WriteLine($"Echo server sending echo back to {remoteEndPoint}.");

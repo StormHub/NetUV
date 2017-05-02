@@ -317,6 +317,17 @@ namespace NetUV.Core.Handles
 
         void InvokeRead(ByteBuffer byteBuffer, int size, IPEndPoint remoteEndPoint, Exception error = null)
         {
+            if (size == 0)
+            {
+                // Filter out empty data received
+                //
+                // On windows the udp receive actually been call with empty data 
+                // for broadcast, on Linux, the receive is not called at all.
+                //
+                byteBuffer.Dispose();
+                return;
+            }
+
             ReadableBuffer buffer = byteBuffer?.ToReadableBuffer(size) ?? ReadableBuffer.Empty;
             var completion = new DatagramReadCompletion(ref buffer, error,remoteEndPoint);
             try

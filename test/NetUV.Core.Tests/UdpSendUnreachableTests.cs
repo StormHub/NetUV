@@ -7,7 +7,6 @@ namespace NetUV.Core.Tests
     using System.Net;
     using System.Text;
     using NetUV.Core.Handles;
-    using NetUV.Core.Native;
     using Xunit;
 
     public sealed class UdpSendUnreachableTests : IDisposable
@@ -58,19 +57,7 @@ namespace NetUV.Core.Tests
 
             Assert.Equal(1, this.timerCount);
             Assert.Equal(2, this.clientSendCount);
-
-            // On windows the receive actually been call with
-            // empty data, on Linux, the receive is not called
-            // at all.
-            if (Platform.IsWindows)
-            {
-                Assert.Equal(2, this.clientReceiveCount);
-            }
-            else
-            {
-                Assert.Equal(0, this.clientReceiveCount);
-            }
-
+            Assert.Equal(0, this.clientReceiveCount);
             Assert.Equal(2, this.closeCount);
         }
 

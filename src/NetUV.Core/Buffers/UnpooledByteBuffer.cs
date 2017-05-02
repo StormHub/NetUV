@@ -22,7 +22,7 @@ namespace NetUV.Core.Buffers
             Contract.Requires(offset >= 0 && count > 0);
             Contract.Requires((offset + count) <= array.Length);
 
-            return new ByteBuffer(new UnpooledArrayBuffer<byte>(Allocator, array, offset, array.Length));
+            return new ByteBuffer(new UnpooledArrayBuffer<byte>(Allocator, array, offset, count));
         }
     }
 }

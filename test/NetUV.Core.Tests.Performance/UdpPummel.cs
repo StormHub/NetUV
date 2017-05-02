@@ -147,11 +147,16 @@ namespace NetUV.Core.Tests.Performance
             }
 
             ReadableBuffer data = completion.Data;
+            if (data.Count == 0)
+            {
+                return;
+            }
+
             string message = data.ReadString(data.Count, Encoding.UTF8);
             if (message != ExpectedMessage)
             {
                 Console.WriteLine(
-                    $"Udp pummel {this.numberOfSenders}v{this.numberOfReceivers} failed, wrong message received.");
+                    $"Udp pummel {this.numberOfSenders}v{this.numberOfReceivers} failed, wrong message '{message}' received.");
             }
 
             this.receiveCount++;

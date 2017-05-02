@@ -54,14 +54,12 @@ namespace NetUV.Core.Buffers
             this.ArrayBuffer.Array.CopyBlock(destination, this.IndexOf(index), length);
         }
 
-        internal unsafe string ReadString(int index, int length, Encoding encoding)
+        internal string ReadString(int index, int length, Encoding encoding)
         {
             Contract.Requires(encoding != null);
 
             this.Validate(index, length);
-            void* source = Unsafe.AsPointer(ref this.ArrayBuffer.Array[this.IndexOf(index)]);
-
-            return encoding.GetString((byte*)source, length);
+            return encoding.GetString(this.ArrayBuffer.Array, this.IndexOf(index), length);
         }
 
         internal void WriteByte(int index, byte value)
@@ -104,17 +102,16 @@ namespace NetUV.Core.Buffers
 
         internal void Validate(int index)
         {
-            if (this.ArrayBuffer?.Array == null
-                || this.ArrayBuffer.Count == 0)
+            if (this.ArrayBuffer?.Array == null)
             {
                 throw new ObjectDisposedException($"{nameof(ByteBuffer)} has already been disposed.");
             }
 
             if (index < 0
-                || index >= this.ArrayBuffer.Count - this.ArrayBuffer.Offset)
+                || index >= this.ArrayBuffer.Capacity)
             {
                 throw new IndexOutOfRangeException(
-                    $"{nameof(index)}: {index} expected range >= 0 and < {this.ArrayBuffer.Count - this.ArrayBuffer.Offset}.");
+                    $"{nameof(index)}: {index} expected range (0, {this.ArrayBuffer.Capacity}).");
             }
         }
 
@@ -124,23 +121,17 @@ namespace NetUV.Core.Buffers
             {
                 throw new ObjectDisposedException($"{nameof(ByteBuffer)} has already been disposed.");
             }
-            if (this.ArrayBuffer.Array.Length == 0)
-            {
-                throw new InvalidOperationException($"{nameof(ByteBuffer)} is empty.");
-            }
 
-            if (length <= 0 
-                || length > this.ArrayBuffer.Count)
+            if (length < 0)
             {
-                throw new IndexOutOfRangeException(
-                    $"{nameof(length)}:{length} must be between zero and {this.ArrayBuffer.Count}");
+                throw new IndexOutOfRangeException($"length: {length} (expected: >= 0)");
             }
 
             if (index < 0
-                || index >= this.ArrayBuffer.Count - length)
+                || index > this.ArrayBuffer.Capacity - length)
             {
                 throw new IndexOutOfRangeException(
-                    $"{nameof(index)}:{index}, {nameof(length)}:{length} expected range >= 0 and < {this.ArrayBuffer.Count - length}.");
+                    $"{nameof(index)}:{index}, {nameof(length)}:{length} expected range (0, {this.ArrayBuffer.Capacity}).");
             }
         }
 
