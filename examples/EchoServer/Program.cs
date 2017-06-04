@@ -104,7 +104,7 @@ namespace EchoServer
 
             IPEndPoint remoteEndPoint = completion.RemoteEndPoint;
             ReadableBuffer data = completion.Data;
-            string message = data.Count > 0 ? data.ReadString(data.Count, Encoding.UTF8) : null;
+            string message = data.ReadString(Encoding.UTF8);
             if (string.IsNullOrEmpty(message))
             {
                 return;
@@ -153,7 +153,7 @@ namespace EchoServer
 
         static void OnAccept(StreamHandle stream, ReadableBuffer data) 
         {
-            string message = data.Count > 0 ? data.ReadString(data.Count, Encoding.UTF8) : null;
+            string message = data.ReadString(Encoding.UTF8);
             if (string.IsNullOrEmpty(message))
             {
                 return;

@@ -5,9 +5,7 @@ namespace NetUV.Core.Buffers
 {
     using System;
     using System.Collections.Generic;
-    using System.Collections.ObjectModel;
     using System.Diagnostics.Contracts;
-    using System.Runtime.CompilerServices;
     using System.Text;
     using System.Threading;
     using NetUV.Core.Common;
@@ -19,25 +17,19 @@ namespace NetUV.Core.Buffers
         Normal
     }
 
-    /// <summary>
-    /// Forked and adapted from https://github.com/Azure/DotNetty
-    /// </summary>
-    class PoolArena<T> : IPoolArenaMetric
+    // Forked from https://github.com/Azure/DotNetty
+    sealed class PoolArena<T> : IPoolArenaMetric
     {
         internal const int NumTinySubpagePools = 512 >> 4;
-
         internal readonly PooledArrayBufferAllocator<T> Parent;
 
         readonly int maxOrder;
-
+        readonly int maxChunkCount;
         internal readonly int PageSize;
         internal readonly int PageShifts;
         internal readonly int ChunkSize;
         internal readonly int SubpageOverflowMask;
         internal readonly int NumSmallSubpagePools;
-        internal readonly int DirectMemoryCacheAlignment;
-        internal readonly int DirectMemoryCacheAlignmentMask;
-
         readonly PoolSubpage<T>[] tinySubpagePools;
         readonly PoolSubpage<T>[] smallSubpagePools;
 
@@ -48,52 +40,55 @@ namespace NetUV.Core.Buffers
         readonly PoolChunkList<T> q075;
         readonly PoolChunkList<T> q100;
 
+        readonly List<IPoolChunkListMetric> chunkListMetrics;
+
+        int chunkCount;
+
         // Metrics for allocations and deallocations
+        long allocationsTiny;
+        long allocationsSmall;
+        long allocationsNormal;
         // We need to use the LongCounter here as this is not guarded via synchronized block.
         long allocationsHuge;
         long activeBytesHuge;
 
+        long deallocationsTiny;
+        long deallocationsSmall;
+        long deallocationsNormal;
         // We need to use the LongCounter here as this is not guarded via synchronized block.
         long deallocationsHuge;
 
         // Number of thread caches backed by this arena.
         int numThreadCaches;
 
-        internal PoolArena(
-            PooledArrayBufferAllocator<T> parent, 
-            int pageSize, 
-            int maxOrder, 
-            int pageShifts, 
-            int chunkSize, 
-            int cacheAlignment)
+        internal PoolArena(PooledArrayBufferAllocator<T> parent, int pageSize, int maxOrder, int pageShifts, int chunkSize, int maxChunkCount)
         {
             this.Parent = parent;
             this.PageSize = pageSize;
             this.maxOrder = maxOrder;
             this.PageShifts = pageShifts;
             this.ChunkSize = chunkSize;
-            this.DirectMemoryCacheAlignment = cacheAlignment;
-            this.DirectMemoryCacheAlignmentMask = cacheAlignment - 1;
+            this.maxChunkCount = maxChunkCount;
             this.SubpageOverflowMask = ~(pageSize - 1);
-            this.tinySubpagePools = NewSubpagePoolArray(NumTinySubpagePools);
+            this.tinySubpagePools = this.NewSubpagePoolArray(NumTinySubpagePools);
             for (int i = 0; i < this.tinySubpagePools.Length; i++)
             {
-                this.tinySubpagePools[i] = NewSubpagePoolHead(pageSize);
+                this.tinySubpagePools[i] = this.NewSubpagePoolHead(pageSize);
             }
 
             this.NumSmallSubpagePools = pageShifts - 9;
-            this.smallSubpagePools = NewSubpagePoolArray(this.NumSmallSubpagePools);
+            this.smallSubpagePools = this.NewSubpagePoolArray(this.NumSmallSubpagePools);
             for (int i = 0; i < this.smallSubpagePools.Length; i++)
             {
-                this.smallSubpagePools[i] = NewSubpagePoolHead(pageSize);
+                this.smallSubpagePools[i] = this.NewSubpagePoolHead(pageSize);
             }
 
-            this.q100 = new PoolChunkList<T>(this, null, 100, int.MaxValue, chunkSize);
-            this.q075 = new PoolChunkList<T>(this, this.q100, 75, 100, chunkSize);
-            this.q050 = new PoolChunkList<T>(this, this.q075, 50, 100, chunkSize);
-            this.q025 = new PoolChunkList<T>(this, this.q050, 25, 75, chunkSize);
-            this.q000 = new PoolChunkList<T>(this, this.q025, 1, 50, chunkSize);
-            this.qInit = new PoolChunkList<T>(this, this.q000, int.MinValue, 25, chunkSize);
+            this.q100 = new PoolChunkList<T>(null, 100, int.MaxValue, chunkSize);
+            this.q075 = new PoolChunkList<T>(this.q100, 75, 100, chunkSize);
+            this.q050 = new PoolChunkList<T>(this.q075, 50, 100, chunkSize);
+            this.q025 = new PoolChunkList<T>(this.q050, 25, 75, chunkSize);
+            this.q000 = new PoolChunkList<T>(this.q025, 1, 50, chunkSize);
+            this.qInit = new PoolChunkList<T>(this.q000, int.MinValue, 25, chunkSize);
 
             this.q100.PrevList(this.q075);
             this.q075.PrevList(this.q050);
@@ -102,19 +97,23 @@ namespace NetUV.Core.Buffers
             this.q000.PrevList(null);
             this.qInit.PrevList(this.qInit);
 
-            this.ChunkLists = new ReadOnlyCollection<IPoolChunkListMetric>(
-                new List<IPoolChunkListMetric>(6)
-                {
-                    this.qInit,
-                    this.q000,
-                    this.q025,
-                    this.q050,
-                    this.q075,
-                    this.q100
-                });
+            var metrics = new List<IPoolChunkListMetric>(6);
+            metrics.Add(this.qInit);
+            metrics.Add(this.q000);
+            metrics.Add(this.q025);
+            metrics.Add(this.q050);
+            metrics.Add(this.q075);
+            metrics.Add(this.q100);
+            this.chunkListMetrics = metrics;
         }
 
-        static PoolSubpage<T> NewSubpagePoolHead(int pageSize)
+        public int NumThreadCaches => Volatile.Read(ref this.numThreadCaches);
+
+        public void RegisterThreadCache() => Interlocked.Increment(ref this.numThreadCaches);
+
+        public void DeregisterThreadCache() => Interlocked.Decrement(ref this.numThreadCaches);
+
+        PoolSubpage<T> NewSubpagePoolHead(int pageSize)
         {
             var head = new PoolSubpage<T>(pageSize);
             head.Prev = head;
@@ -122,11 +121,11 @@ namespace NetUV.Core.Buffers
             return head;
         }
 
-        static PoolSubpage<T>[] NewSubpagePoolArray(int size) => new PoolSubpage<T>[size];
+        PoolSubpage<T>[] NewSubpagePoolArray(int size) => new PoolSubpage<T>[size];
 
         internal PooledArrayBuffer<T> Allocate(PoolThreadCache<T> cache, int reqCapacity, int maxCapacity)
         {
-            PooledArrayBuffer<T> buf = this.NewByteBuf(maxCapacity);
+            PooledArrayBuffer<T> buf = NewByteBuf(maxCapacity);
             this.Allocate(cache, buf, reqCapacity);
             return buf;
         }
@@ -150,12 +149,6 @@ namespace NetUV.Core.Buffers
 
         // normCapacity < 512
         internal static bool IsTiny(int normCapacity) => (normCapacity & 0xFFFFFE00) == 0;
-
-        public int NumThreadCaches => Volatile.Read(ref this.numThreadCaches);
-
-        public void RegisterThreadCache() => Interlocked.Increment(ref this.numThreadCaches);
-
-        public void DeregisterThreadCache() => Interlocked.Decrement(ref this.numThreadCaches);
 
         void Allocate(PoolThreadCache<T> cache, PooledArrayBuffer<T> buf, int reqCapacity)
         {
@@ -206,20 +199,18 @@ namespace NetUV.Core.Buffers
 
                         if (tiny)
                         {
-                            ++this.NumTinyAllocations;
+                            ++this.allocationsTiny;
                         }
                         else
                         {
-                            ++this.NumSmallAllocations;
+                            ++this.allocationsSmall;
                         }
                         return;
                     }
                 }
-
                 this.AllocateNormal(buf, reqCapacity, normCapacity);
                 return;
             }
-
             if (normCapacity <= this.ChunkSize)
             {
                 if (cache.AllocateNormal(this, buf, reqCapacity, normCapacity))
@@ -240,29 +231,36 @@ namespace NetUV.Core.Buffers
         {
             lock (this)
             {
-                if (this.q050.Allocate(buf, reqCapacity, normCapacity) 
-                    || this.q025.Allocate(buf, reqCapacity, normCapacity)
-                    || this.q000.Allocate(buf, reqCapacity, normCapacity) 
-                    || this.qInit.Allocate(buf, reqCapacity, normCapacity)
+                if (this.q050.Allocate(buf, reqCapacity, normCapacity) || this.q025.Allocate(buf, reqCapacity, normCapacity)
+                    || this.q000.Allocate(buf, reqCapacity, normCapacity) || this.qInit.Allocate(buf, reqCapacity, normCapacity)
                     || this.q075.Allocate(buf, reqCapacity, normCapacity))
                 {
-                    ++this.NumNormalAllocations;
+                    ++this.allocationsNormal;
                     return;
                 }
 
-                // Add a new chunk.
-                PoolChunk<T> c = this.NewChunk(this.PageSize, this.maxOrder, this.PageShifts, this.ChunkSize);
-                long handle = c.Allocate(normCapacity);
-                ++this.NumNormalAllocations;
-                Contract.Assert(handle > 0);
-                c.InitBuf(buf, handle, reqCapacity);
-                this.qInit.Add(c);
+                if (this.chunkCount < this.maxChunkCount)
+                {
+                    // Add a new chunk.
+                    PoolChunk<T> c = this.NewChunk(this.PageSize, this.maxOrder, this.PageShifts, this.ChunkSize);
+                    this.chunkCount++;
+                    long handle = c.Allocate(normCapacity);
+                    ++this.allocationsNormal;
+                    Contract.Assert(handle > 0);
+                    c.InitBuf(buf, handle, reqCapacity);
+                    this.qInit.Add(c);
+                    return;
+                }
             }
+
+            PoolChunk<T> chunk = this.NewUnpooledChunk(reqCapacity, false);
+            buf.InitUnpooled(chunk, reqCapacity);
+            Interlocked.Increment(ref this.allocationsNormal);
         }
 
         void AllocateHuge(PooledArrayBuffer<T> buf, int reqCapacity)
         {
-            PoolChunk<T> chunk = this.NewUnpooledChunk(reqCapacity);
+            PoolChunk<T> chunk = this.NewUnpooledChunk(reqCapacity, true);
             Interlocked.Add(ref this.activeBytesHuge, chunk.ChunkSize);
             buf.InitUnpooled(chunk, reqCapacity);
             Interlocked.Increment(ref this.allocationsHuge);
@@ -273,9 +271,19 @@ namespace NetUV.Core.Buffers
             if (chunk.Unpooled)
             {
                 int size = chunk.ChunkSize;
-                this.DestroyChunk(chunk);
-                Interlocked.Add(ref this.activeBytesHuge, -size);
-                Interlocked.Decrement(ref this.deallocationsHuge);
+                DestroyChunk(chunk);
+                switch (chunk.Origin)
+                {
+                    case PoolChunk<T>.PoolChunkOrigin.UnpooledNormal:
+                        Interlocked.Decrement(ref this.deallocationsNormal);
+                        break;
+                    case PoolChunk<T>.PoolChunkOrigin.UnpooledHuge:
+                        Interlocked.Add(ref this.activeBytesHuge, -size);
+                        Interlocked.Decrement(ref this.deallocationsHuge);
+                        break;
+                    default:
+                        throw new InvalidOperationException("Unsupported PoolChunk.Origin: " + chunk.Origin);
+                }
             }
             else
             {
@@ -307,13 +315,13 @@ namespace NetUV.Core.Buffers
                 switch (sizeClass)
                 {
                     case Buffers.SizeClass.Normal:
-                        ++this.NumNormalDeallocations;
+                        ++this.deallocationsNormal;
                         break;
                     case Buffers.SizeClass.Small:
-                        ++this.NumSmallDeallocations;
+                        ++this.deallocationsSmall;
                         break;
                     case Buffers.SizeClass.Tiny:
-                        ++this.NumTinyDeallocations;
+                        ++this.deallocationsTiny;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -323,7 +331,7 @@ namespace NetUV.Core.Buffers
             if (mustDestroyChunk)
             {
                 // destroyChunk not need to be called while holding the synchronized lock.
-                this.DestroyChunk(chunk);
+                DestroyChunk(chunk);
             }
         }
 
@@ -358,9 +366,7 @@ namespace NetUV.Core.Buffers
 
             if (reqCapacity >= this.ChunkSize)
             {
-                return this.DirectMemoryCacheAlignment == 0 
-                    ? reqCapacity 
-                    : this.AlignCapacity(reqCapacity);
+                return reqCapacity;
             }
 
             if (!IsTiny(reqCapacity))
@@ -385,11 +391,6 @@ namespace NetUV.Core.Buffers
                 return normalizedCapacity;
             }
 
-            if (this.DirectMemoryCacheAlignment > 0)
-            {
-                return this.AlignCapacity(reqCapacity);
-            }
-
             // Quantum-spaced
             if ((reqCapacity & 15) == 0)
             {
@@ -399,19 +400,11 @@ namespace NetUV.Core.Buffers
             return (reqCapacity & ~15) + 16;
         }
 
-        int AlignCapacity(int reqCapacity)
-        {
-            int delta = reqCapacity & this.DirectMemoryCacheAlignmentMask;
-            return delta == 0 
-                ? reqCapacity 
-                : reqCapacity + this.DirectMemoryCacheAlignment - delta;
-        }
-
         internal void Reallocate(PooledArrayBuffer<T> buf, int newCapacity, bool freeOldMemory)
         {
-            Contract.Requires(newCapacity >= 0 && newCapacity <= buf.Capacity);
+            Contract.Requires(newCapacity >= 0 && newCapacity <= buf.MaxCapacity);
 
-            int oldCapacity = buf.Capacity;
+            int oldCapacity = buf.Length;
             if (oldCapacity == newCapacity)
             {
                 return;
@@ -419,23 +412,38 @@ namespace NetUV.Core.Buffers
 
             PoolChunk<T> oldChunk = buf.Chunk;
             long oldHandle = buf.Handle;
-            T[] oldMemory = buf.Array;
+            T[] oldMemory = buf.Memory;
             int oldOffset = buf.Offset;
-            int oldMaxLength = buf.Length;
+            int oldMaxLength = buf.MaxLength;
+            int readerIndex = buf.ReaderIndex;
+            int writerIndex = buf.WriterIndex;
 
             this.Allocate(this.Parent.ThreadCache(), buf, newCapacity);
             if (newCapacity > oldCapacity)
             {
-                this.MemoryCopy(
+                MemoryCopy(
                     oldMemory, oldOffset,
-                    buf.Array, buf.Offset, oldCapacity);
+                    buf.Memory, buf.Offset, oldCapacity);
             }
             else if (newCapacity < oldCapacity)
             {
-                this.MemoryCopy(
-                    oldMemory, oldOffset,
-                    buf.Array, buf.Offset, newCapacity);
+                if (readerIndex < newCapacity)
+                {
+                    if (writerIndex > newCapacity)
+                    {
+                        writerIndex = newCapacity;
+                    }
+                    MemoryCopy(
+                        oldMemory, oldOffset + readerIndex,
+                        buf.Memory, buf.Offset + readerIndex, writerIndex - readerIndex);
+                }
+                else
+                {
+                    readerIndex = writerIndex = newCapacity;
+                }
             }
+
+            buf.SetIndex(readerIndex, writerIndex);
 
             if (freeOldMemory)
             {
@@ -447,18 +455,18 @@ namespace NetUV.Core.Buffers
 
         public int NumSmallSubpages => this.smallSubpagePools.Length;
 
-        public int NumChunkLists => this.ChunkLists.Count;
+        public int NumChunkLists => this.chunkListMetrics.Count;
 
-        public IReadOnlyCollection<IPoolSubpageMetric> TinySubpages => SubPageMetricList(this.tinySubpagePools);
+        public IReadOnlyList<IPoolSubpageMetric> TinySubpages => SubPageMetricList(this.tinySubpagePools);
 
-        public IReadOnlyCollection<IPoolSubpageMetric> SmallSubpages => SubPageMetricList(this.smallSubpagePools);
+        public IReadOnlyList<IPoolSubpageMetric> SmallSubpages => SubPageMetricList(this.smallSubpagePools);
 
-        public IReadOnlyCollection<IPoolChunkListMetric> ChunkLists { get; }
+        public IReadOnlyList<IPoolChunkListMetric> ChunkLists => this.chunkListMetrics;
 
-        static IReadOnlyCollection<IPoolSubpageMetric> SubPageMetricList(IReadOnlyList<PoolSubpage<T>> pages)
+        static List<IPoolSubpageMetric> SubPageMetricList(PoolSubpage<T>[] pages)
         {
             var metrics = new List<IPoolSubpageMetric>();
-            for (int i = 1; i < pages.Count; i++)
+            for (int i = 1; i < pages.Length; i++)
             {
                 PoolSubpage<T> head = pages[i];
                 if (head.Next == head)
@@ -476,27 +484,24 @@ namespace NetUV.Core.Buffers
                     }
                 }
             }
-
             return metrics;
         }
 
-        public long NumAllocations => 
-            this.NumTinyAllocations + this.NumSmallAllocations + this.NumNormalAllocations + this.NumHugeAllocations;
+        public long NumAllocations => this.allocationsTiny + this.allocationsSmall + this.allocationsNormal + this.NumHugeAllocations;
 
-        public long NumTinyAllocations { get; set; }
+        public long NumTinyAllocations => this.allocationsTiny;
 
-        public long NumSmallAllocations { get; set; }
+        public long NumSmallAllocations => this.allocationsSmall;
 
-        public long NumNormalAllocations { get; set; }
+        public long NumNormalAllocations => this.allocationsNormal;
 
-        public long NumDeallocations => 
-            this.NumTinyDeallocations + this.NumSmallDeallocations + this.NumNormalAllocations + this.NumHugeDeallocations;
+        public long NumDeallocations => this.deallocationsTiny + this.deallocationsSmall + this.deallocationsNormal + this.NumHugeDeallocations;
 
-        public long NumTinyDeallocations { get; set; }
+        public long NumTinyDeallocations => this.deallocationsTiny;
 
-        public long NumSmallDeallocations { get; set; }
+        public long NumSmallDeallocations => this.deallocationsSmall;
 
-        public long NumNormalDeallocations { get; set; }
+        public long NumNormalDeallocations => this.deallocationsNormal;
 
         public long NumHugeAllocations => Volatile.Read(ref this.allocationsHuge);
 
@@ -530,42 +535,37 @@ namespace NetUV.Core.Buffers
                 long val = Volatile.Read(ref this.activeBytesHuge);
                 lock (this)
                 {
-                    foreach (IPoolChunkListMetric chunkListMetric in this.ChunkLists)
+                    foreach (IPoolChunkListMetric listMetrics in this.chunkListMetrics)
                     {
-                        foreach (IPoolChunkMetric m in chunkListMetric)
+                        foreach (IPoolChunkMetric chunkMetric in listMetrics)
                         {
-                            val += m.ChunkSize;
+                            val += chunkMetric.ChunkSize;
                         }
                     }
                 }
-
                 return Math.Max(0, val);
             }
         }
 
-        protected PoolChunk<T> NewChunk(int newPageSize, int newMaxOrder, int newPageShifts, int newChunkSize) => 
-            new PoolChunk<T>(this, new T[newChunkSize], newPageSize, newMaxOrder, newPageShifts, newChunkSize, 0);
+        PoolChunk<T> NewChunk(int pageSize, int maximumOrder, int pageShifts, int chunkSize) => new PoolChunk<T>(this, new T[chunkSize], pageSize, maximumOrder, pageShifts, chunkSize);
 
-        protected PoolChunk<T> NewUnpooledChunk(int capacity) =>
-            new PoolChunk<T>(this, new T[capacity], capacity, 0);
+        PoolChunk<T> NewUnpooledChunk(int capacity, bool huge) => 
+            new PoolChunk<T>(this, new T[capacity], capacity, huge);
 
-        protected PooledArrayBuffer<T> NewByteBuf(int maxCapacity) =>
+        static PooledArrayBuffer<T> NewByteBuf(int maxCapacity) => 
             PooledArrayBuffer<T>.NewInstance(maxCapacity);
 
-        protected unsafe void MemoryCopy(T[] src, int srcOffset, T[] dst, int dstOffset, int length)
+        static void MemoryCopy(T[] src, int srcOffset, T[] dst, int dstOffset, int length)
         {
             if (length == 0)
             {
                 return;
             }
 
-            Unsafe.CopyBlock(
-                Unsafe.AsPointer(ref dst[dstOffset]),
-                Unsafe.AsPointer(ref src[srcOffset]),
-                (uint)(Unsafe.SizeOf<T>() * length));
+            Array.Copy(src, srcOffset, dst, dstOffset, length);
         }
 
-        protected internal void DestroyChunk(PoolChunk<T> chunk)
+        static void DestroyChunk(PoolChunk<T> chunk)
         {
             // Rely on GC.
         }

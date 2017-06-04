@@ -274,8 +274,8 @@ namespace NetUV.Core.Common
 
         protected long ConsumerIndexCache
         {
-            get { return Volatile.Read(ref this.headCache); }
-            set { Volatile.Write(ref this.headCache, value); }
+            get => Volatile.Read(ref this.headCache);
+            set => Volatile.Write(ref this.headCache, value);
         }
     }
 
@@ -303,8 +303,8 @@ namespace NetUV.Core.Common
 
         protected long ConsumerIndex
         {
-            get { return Volatile.Read(ref this.consumerIndex); }
-            set { Volatile.Write(ref this.consumerIndex, value); }
+            get => Volatile.Read(ref this.consumerIndex);
+            set => Volatile.Write(ref this.consumerIndex, value);
         }
     }
 

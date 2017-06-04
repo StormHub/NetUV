@@ -7,14 +7,9 @@ namespace NetUV.Core.Common
     using System.Diagnostics.Contracts;
     using System.Runtime.CompilerServices;
 
-    /// <summary>
-    /// Forked from https://github.com/Azure/DotNetty
-    /// Extension methods used for slicing byte arrays
-    /// </summary>
+    // Forked from https://github.com/Azure/DotNetty
     static class ArrayExtensions
     {
-        public static readonly byte[] Empty = new byte[0];
-
         public static T[] Slice<T>(this T[] array, int length)
         {
             Contract.Requires(array != null);
@@ -77,6 +72,25 @@ namespace NetUV.Core.Common
             {
                 array[i] = value;
             }
+        }
+
+        public static byte[] CombineBytes(this byte[][] arrays)
+        {
+            long newLength = 0;
+            foreach (byte[] array in arrays)
+            {
+                newLength += array.Length;
+            }
+
+            var mergedArray = new byte[newLength];
+            int offset = 0;
+            foreach (byte[] array in arrays)
+            {
+                Buffer.BlockCopy(array, 0, mergedArray, offset, array.Length);
+                offset += array.Length;
+            }
+
+            return mergedArray;
         }
 
         public static unsafe void CopyBlock<T>(this T[] source, T[] destination, int offset, int count)

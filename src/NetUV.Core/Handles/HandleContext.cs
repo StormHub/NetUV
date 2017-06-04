@@ -49,7 +49,10 @@ namespace NetUV.Core.Handles
             this.Handle = handle;
             this.handleType = handleType;
 
-            Log.InfoFormat("{0} {1} allocated.", handleType, handle);
+            if (Log.IsInfoEnabled)
+            {
+                Log.InfoFormat("{0} {1} allocated.", handleType, handle);
+            }
         }
 
         internal bool IsActive => this.IsValid 
@@ -85,7 +88,10 @@ namespace NetUV.Core.Handles
             }
 
             NativeMethods.CloseHandle(handle, CloseCallback);
-            Log.InfoFormat("{0} {1} closed, releasing resources pending.", this.handleType, handle);
+            if (Log.IsInfoEnabled)
+            {
+                Log.InfoFormat("{0} {1} closed, releasing resources pending.", this.handleType, handle);
+            }
         }
 
         internal static T GetTarget<T>(IntPtr handle)
@@ -125,14 +131,20 @@ namespace NetUV.Core.Handles
                     nativeHandle.Free();
 
                     ((uv_handle_t*)handle)->data = IntPtr.Zero;
-                    Log.TraceFormat("{0} {1} GCHandle released.", scheduleHandle?.HandleType, handle);
+                    if (Log.IsTraceEnabled)
+                    {
+                        Log.TraceFormat("{0} {1} GCHandle released.", scheduleHandle?.HandleType, handle);
+                    }
                 }
             }
 
             // Release memory
             Marshal.FreeHGlobal(handle);
             scheduleHandle?.OnHandleClosed();
-            Log.InfoFormat("{0} {1} memory and GCHandle released.", scheduleHandle?.HandleType, handle);
+            if (Log.IsTraceEnabled)
+            {
+                Log.InfoFormat("{0} {1} memory and GCHandle released.", scheduleHandle?.HandleType, handle);
+            }
         }
     }
 }

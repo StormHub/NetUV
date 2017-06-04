@@ -32,7 +32,11 @@ namespace NetUV.Core.Handles
 
         void OnWorkCallback()
         {
-            Log.TraceFormat("{0} {1} callback", this.HandleType, this.InternalHandle);
+            if (Log.IsTraceEnabled)
+            {
+                Log.TraceFormat("{0} {1} callback", this.HandleType, this.InternalHandle);
+            }
+
             try
             {
                 this.Callback?.Invoke(this);

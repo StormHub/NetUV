@@ -3,6 +3,7 @@
 
 namespace NetUV.Core.Buffers
 {
+    // Forked from https://github.com/Azure/DotNetty
     public interface IPoolChunkMetric
     {
         /// Return the percentage of the current usage of the chunk.

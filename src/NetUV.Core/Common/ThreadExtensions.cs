@@ -7,9 +7,7 @@ namespace NetUV.Core.Common
     using System.Diagnostics.Contracts;
     using System.Threading;
 
-    /// <summary>
-    /// Forked from https://github.com/Azure/DotNetty
-    /// </summary>
+    // Forked from https://github.com/Azure/DotNetty
     static class ThreadExtensions
     {
         public static bool Join(this Thread thread, TimeSpan timeout)

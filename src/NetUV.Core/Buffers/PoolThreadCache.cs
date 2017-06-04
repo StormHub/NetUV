@@ -5,19 +5,16 @@ namespace NetUV.Core.Buffers
 {
     using System;
     using System.Diagnostics.Contracts;
-    using System.Runtime.CompilerServices;
     using System.Threading;
     using NetUV.Core.Common;
     using NetUV.Core.Logging;
 
     /// <summary>
-    /// Forked and adapted from https://github.com/Azure/DotNetty
-    /// 
-    /// Acts a Thread cache for allocations. This implementation is moduled after 
-    /// http://people.freebsd.org/~jasone/jemalloc/bsdcan2006/jemalloc.pdf" 
-    /// 
-    /// jemalloc and the descripted technics of Scalable memory allocation using jemalloc
+    /// Acts a Thread cache for allocations. This implementation is moduled after
+    /// http://people.freebsd.org/~jasone/jemalloc/bsdcan2006/jemalloc.pdf
+    /// and the descripted technics of
     /// https://www.facebook.com/notes/facebook-engineering/scalable-memory-allocation-using-jemalloc/480222803919
+    /// Scalable memory allocation using jemalloc
     /// </summary>
     sealed class PoolThreadCache<T>
     {
@@ -55,7 +52,6 @@ namespace NetUV.Core.Buffers
                 // Create the caches for the heap allocations
                 this.tinySubPageHeapCaches = CreateSubPageCaches(
                     tinyCacheSize, PoolArena<T>.NumTinySubpagePools, SizeClass.Tiny);
-
                 this.smallSubPageHeapCaches = CreateSubPageCaches(
                     smallCacheSize, heapArena.NumSmallSubpagePools, SizeClass.Small);
 
@@ -87,7 +83,6 @@ namespace NetUV.Core.Buffers
                 var cache = new MemoryRegionCache[numCaches];
                 for (int i = 0; i < cache.Length; i++)
                 {
-                    // TODO: maybe use cacheSize / cache.length
                     cache[i] = new SubPageMemoryRegionCache(cacheSize, sizeClass);
                 }
                 return cache;
@@ -119,10 +114,8 @@ namespace NetUV.Core.Buffers
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int Log2(int val)
         {
-            // todo: revisit this vs IntegerExtensions.(Ceil/Floor)Log2
             int res = 0;
             while (val > 1)
             {
@@ -132,23 +125,14 @@ namespace NetUV.Core.Buffers
             return res;
         }
 
-        //
-        // Try to allocate a tiny buffer out of the cache. Returns {@code true} if successful {@code false} otherwise
-        //
         internal bool AllocateTiny(PoolArena<T> area, PooledArrayBuffer<T> buf, int reqCapacity, int normCapacity) => 
-            this.Allocate(this.CacheForTiny(normCapacity), buf, reqCapacity);
+            this.Allocate(this.CacheForTiny(area, normCapacity), buf, reqCapacity);
 
-        ///
-        // Try to allocate a small buffer out of the cache. Returns {@code true} if successful {@code false} otherwise
-        //
         internal bool AllocateSmall(PoolArena<T> area, PooledArrayBuffer<T> buf, int reqCapacity, int normCapacity) => 
-            this.Allocate(this.CacheForSmall(normCapacity), buf, reqCapacity);
+            this.Allocate(this.CacheForSmall(area, normCapacity), buf, reqCapacity);
 
-        ///
-        // Try to allocate a small buffer out of the cache. Returns {@code true} if successful {@code false} otherwise
-        //
         internal bool AllocateNormal(PoolArena<T> area, PooledArrayBuffer<T> buf, int reqCapacity, int normCapacity) => 
-            this.Allocate(this.CacheForNormal(normCapacity), buf, reqCapacity);
+            this.Allocate(this.CacheForNormal(area, normCapacity), buf, reqCapacity);
 
         bool Allocate(MemoryRegionCache cache, PooledArrayBuffer<T> buf, int reqCapacity)
         {
@@ -166,34 +150,35 @@ namespace NetUV.Core.Buffers
             return allocated;
         }
 
-        ///
-        // Add {@link PoolChunk} and {@code handle} to the cache if there is enough room.
-        // Returns {@code true} if it fit into the cache {@code false} otherwise.
-        //
         internal bool Add(PoolArena<T> area, PoolChunk<T> chunk, long handle, int normCapacity, SizeClass sizeClass)
         {
-            MemoryRegionCache c = this.Cache(normCapacity, sizeClass);
-            return c != null && c.Add(chunk, handle);
+            MemoryRegionCache c = this.Cache(area, normCapacity, sizeClass);
+            if (c == null)
+            {
+                return false;
+            }
+            return c.Add(chunk, handle);
         }
 
-        MemoryRegionCache Cache(int normCapacity, SizeClass sizeClass)
+        MemoryRegionCache Cache(PoolArena<T> area, int normCapacity, SizeClass sizeClass)
         {
             switch (sizeClass)
             {
                 case SizeClass.Normal:
-                    return this.CacheForNormal(normCapacity);
+                    return this.CacheForNormal(area, normCapacity);
                 case SizeClass.Small:
-                    return this.CacheForSmall(normCapacity);
+                    return this.CacheForSmall(area, normCapacity);
                 case SizeClass.Tiny:
-                    return this.CacheForTiny(normCapacity);
+                    return this.CacheForTiny(area, normCapacity);
                 default:
-                    throw new ArgumentOutOfRangeException($"Unknown class {sizeClass}");
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
-        //
-        // Should be called if the Thread that uses this cache is about to exist to release resources out of the cache
-        //
+        /**
+         *  Should be called if the Thread that uses this cache is about to exist to release resources out of the cache
+         */
+
         internal void Free()
         {
             ThreadDeathWatcher.Unwatch(this.thread, this.freeTask);
@@ -208,7 +193,7 @@ namespace NetUV.Core.Buffers
 
             if (numFreed > 0 && Log.IsDebugEnabled)
             {
-                Log.Debug($"Freed {numFreed} thread-local buffer(s) from thread: {this.thread.Name}");
+                Log.DebugFormat("Freed {0} thread-local buffer(s) from thread: {1}", numFreed, this.thread.Name);
             }
 
             this.HeapArena?.DeregisterThreadCache();
@@ -229,7 +214,14 @@ namespace NetUV.Core.Buffers
             return numFreed;
         }
 
-        static int Free(MemoryRegionCache cache) => cache?.Free() ?? 0;
+        static int Free(MemoryRegionCache cache)
+        {
+            if (cache == null)
+            {
+                return 0;
+            }
+            return cache.Free();
+        }
 
         internal void Trim()
         {
@@ -252,19 +244,19 @@ namespace NetUV.Core.Buffers
 
         static void Trim(MemoryRegionCache cache) => cache?.Trim();
 
-        MemoryRegionCache CacheForTiny(int normCapacity)
+        MemoryRegionCache CacheForTiny(PoolArena<T> area, int normCapacity)
         {
             int idx = PoolArena<T>.TinyIdx(normCapacity);
             return Cache(this.tinySubPageHeapCaches, idx);
-        } 
+        }
 
-        MemoryRegionCache CacheForSmall(int normCapacity)
+        MemoryRegionCache CacheForSmall(PoolArena<T> area, int normCapacity)
         {
             int idx = PoolArena<T>.SmallIdx(normCapacity);
             return Cache(this.smallSubPageHeapCaches, idx);
         }
 
-        MemoryRegionCache CacheForNormal(int normCapacity)
+        MemoryRegionCache CacheForNormal(PoolArena<T> area, int normCapacity)
         {
             int idx1 = Log2(normCapacity >> this.numShiftsNormalHeap);
             return Cache(this.normalHeapCaches, idx1);
@@ -279,9 +271,6 @@ namespace NetUV.Core.Buffers
             return cache[idx];
         }
 
-        ///
-        // Cache used for buffers which are backed by TINY or SMALL size.
-        //
         sealed class SubPageMemoryRegionCache : MemoryRegionCache
         {
             internal SubPageMemoryRegionCache(int size, SizeClass sizeClass)
@@ -289,13 +278,10 @@ namespace NetUV.Core.Buffers
             {
             }
 
-            protected override void InitBuf(PoolChunk<T> chunk, long handle, PooledArrayBuffer<T> buf, int reqCapacity) => 
-                chunk.InitBufWithSubpage(buf, handle, reqCapacity);
+            protected override void InitBuf(
+                PoolChunk<T> chunk, long handle, PooledArrayBuffer<T> buf, int reqCapacity) => chunk.InitBufWithSubpage(buf, handle, reqCapacity);
         }
 
-        //
-        // Cache used for buffers which are backed by NORMAL size.
-        //
         sealed class NormalMemoryRegionCache : MemoryRegionCache
         {
             internal NormalMemoryRegionCache(int size)
@@ -303,8 +289,8 @@ namespace NetUV.Core.Buffers
             {
             }
 
-            protected override void InitBuf(PoolChunk<T> chunk, long handle, PooledArrayBuffer<T> buf, int reqCapacity) => 
-                chunk.InitBuf(buf, handle, reqCapacity);
+            protected override void InitBuf(
+                PoolChunk<T> chunk, long handle, PooledArrayBuffer<T> buf, int reqCapacity) => chunk.InitBuf(buf, handle, reqCapacity);
         }
 
         abstract class MemoryRegionCache
@@ -321,15 +307,8 @@ namespace NetUV.Core.Buffers
                 this.sizeClass = sizeClass;
             }
 
-            // 
-            // Init the {@link PooledByteBuffer} using the provided chunk and handle with the capacity restrictions.
-            //
-            protected abstract void InitBuf(PoolChunk<T> chunk, long handle,
-                PooledArrayBuffer<T> buf, int reqCapacity);
+            protected abstract void InitBuf(PoolChunk<T> chunk, long handle, PooledArrayBuffer<T> buf, int reqCapacity);
 
-            //
-            // Add to cache if not already full.
-            //
             public bool Add(PoolChunk<T> chunk, long handle)
             {
                 Entry entry = NewEntry(chunk, handle);
@@ -343,13 +322,9 @@ namespace NetUV.Core.Buffers
                 return queued;
             }
 
-            //
-            // Allocate something out of the cache if possible and remove the entry from the cache.
-            //
             public bool Allocate(PooledArrayBuffer<T> buf, int reqCapacity)
             {
-                Entry entry;
-                if (!this.queue.TryDequeue(out entry))
+                if (!this.queue.TryDequeue(out Entry entry))
                 {
                     return false;
                 }
@@ -361,9 +336,6 @@ namespace NetUV.Core.Buffers
                 return true;
             }
 
-            //
-            // Clear out this cache and free up all previous cached {@link PoolChunk}s and {@code handle}s.
-            //
             public int Free() => this.Free(int.MaxValue);
 
             int Free(int max)
@@ -371,8 +343,7 @@ namespace NetUV.Core.Buffers
                 int numFreed = 0;
                 for (; numFreed < max; numFreed++)
                 {
-                    Entry entry;
-                    if (this.queue.TryDequeue(out entry))
+                    if (this.queue.TryDequeue(out Entry entry))
                     {
                         this.FreeEntry(entry);
                     }
@@ -385,9 +356,6 @@ namespace NetUV.Core.Buffers
                 return numFreed;
             }
 
-            //
-            // Free up cached {@link PoolChunk}s if not allocated frequently enough.
-            //
             public void Trim()
             {
                 int toFree = this.size - this.allocations;

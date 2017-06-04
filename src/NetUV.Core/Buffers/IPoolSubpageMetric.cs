@@ -3,6 +3,7 @@
 
 namespace NetUV.Core.Buffers
 {
+    // Forked from https://github.com/Azure/DotNetty
     public interface IPoolSubpageMetric
     {
         /// Return the number of maximal elements that can be allocated out of the sub-page.

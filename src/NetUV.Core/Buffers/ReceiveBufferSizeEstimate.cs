@@ -16,7 +16,7 @@ namespace NetUV.Core.Buffers
     /// number of readable bytes if the read operation was not able to fill a certain
     /// amount of the allocated buffer two times consecutively. Otherwise, it keeps
     /// returning the same prediction.
-    /// https://github.com/Azure/DotNetty
+    /// Forked from https://github.com/Azure/DotNetty
     /// </summary>
     sealed class ReceiveBufferSizeEstimate
     {
@@ -130,15 +130,17 @@ namespace NetUV.Core.Buffers
             this.ReceiveBufferSize = SizeTable[this.index];
         }
 
-        internal ByteBuffer Allocate(ByteBufferAllocator allocator)
+        internal IArrayBuffer<byte> Allocate(ByteBufferAllocator allocator)
         {
             Contract.Requires(allocator != null);
 
-            Log.DebugFormat("{0} allocate, estimated size = {1}", nameof(ReceiveBufferSizeEstimate), this.ReceiveBufferSize);
-            IArrayBuffer<byte> buffer= allocator.ArrayAllocator.Buffer(this.ReceiveBufferSize);
-            var byteBuffer = new ByteBuffer(buffer);
+            if (Log.IsDebugEnabled)
+            {
+                Log.DebugFormat("{0} allocate, estimated size = {1}", 
+                    nameof(ReceiveBufferSizeEstimate), this.ReceiveBufferSize);
+            }
 
-            return byteBuffer;
+            return allocator.Buffer(this.ReceiveBufferSize);
         }
 
         int ReceiveBufferSize { get; set; }

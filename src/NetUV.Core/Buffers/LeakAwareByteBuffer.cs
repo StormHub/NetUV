@@ -5,7 +5,8 @@ namespace NetUV.Core.Buffers
 {
     using NetUV.Core.Common;
 
-    class LeakAwareByteBuffer<T> : WrappedByteBuffer<T>
+    // Forked from https://github.com/Azure/DotNetty
+    sealed class LeakAwareByteBuffer<T> : WrappedArrayBuffer<T>
     {
         readonly IResourceLeak leak;
 

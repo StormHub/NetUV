@@ -3,7 +3,7 @@
 
 namespace NetUV.Core.Buffers
 {
-    sealed class UnpooledArrayBufferAllocator<T> : ArrayBufferAllocator<T>
+    sealed class UnpooledArrayBufferAllocator<T> : AbstractArrayBufferAllocator<T>
     {
         protected override IArrayBuffer<T> NewBuffer(int initialCapacity, int capacity) => 
             new UnpooledArrayBuffer<T>(this, initialCapacity, capacity);

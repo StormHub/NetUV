@@ -63,13 +63,10 @@ namespace NetUV.Core.Tests
         {
             this.receiveError = completion.Error;
             ReadableBuffer buffer = completion.Data;
-            if (buffer.Count > 0)
+            string message = buffer.ReadString(Encoding.UTF8);
+            if (message == "PING")
             {
-                string message = buffer.ReadString(buffer.Count, Encoding.UTF8);
-                if (message == "PING")
-                {
-                    this.clientReceiveCount++;
-                }
+                this.clientReceiveCount++;
             }
 
             /* we are done with the client handle, we can close it */

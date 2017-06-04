@@ -100,12 +100,7 @@ namespace EchoClient
 
             IPEndPoint remoteEndPoint = completion.RemoteEndPoint;
             ReadableBuffer data = completion.Data;
-            if (data.Count == 0)
-            {
-                return;
-            }
-
-            string message = data.ReadString(data.Count, Encoding.UTF8);
+            string message = data.ReadString(Encoding.UTF8);
             Console.WriteLine($"Echo client received : {message} from {remoteEndPoint}");
             udp.CloseHandle(OnClosed);
         }
@@ -150,7 +145,7 @@ namespace EchoClient
                 return;
             }
 
-            string message = data.ReadString(data.Count, Encoding.UTF8);
+            string message = data.ReadString(Encoding.UTF8);
             data.Dispose();
             Console.WriteLine($"Echo client received : {message}");
 

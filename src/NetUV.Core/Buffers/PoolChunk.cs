@@ -9,8 +9,6 @@ namespace NetUV.Core.Buffers
     using NetUV.Core.Common;
 
     /// <summary>
-    ///     Forked and adapted from https://github.com/Azure/DotNetty
-    /// 
     ///     Description of algorithm for PageRun/PoolSubpage allocation from PoolChunk
     ///     Notation: The following terms are important to understand the code
     ///     > page  - a page is the smallest unit of memory chunk that can be allocated
@@ -79,10 +77,17 @@ namespace NetUV.Core.Buffers
     /// </summary>
     sealed class PoolChunk<T> : IPoolChunkMetric
     {
+        internal enum PoolChunkOrigin
+        {
+            Pooled,
+            UnpooledHuge,
+            UnpooledNormal
+        }
+
         internal readonly PoolArena<T> Arena;
         internal readonly T[] Memory;
-        internal readonly bool Unpooled;
-        internal readonly int Offset;
+        internal readonly PoolChunkOrigin Origin;
+
         readonly sbyte[] memoryMap;
         readonly sbyte[] depthMap;
         readonly PoolSubpage<T>[] subpages;
@@ -91,32 +96,35 @@ namespace NetUV.Core.Buffers
         readonly int pageSize;
         readonly int pageShifts;
         readonly int maxOrder;
+        readonly int chunkSize;
         readonly int log2ChunkSize;
         readonly int maxSubpageAllocs;
         /** Used to mark memory as unusable */
         readonly sbyte unusable;
 
+        int freeBytes;
+
         internal PoolChunkList<T> Parent;
         internal PoolChunk<T> Prev;
         internal PoolChunk<T> Next;
 
-        internal PoolChunk(PoolArena<T> arena, T[] memory, int pageSize, int maxOrder, int pageShifts, int chunkSize, int offset)
+        internal PoolChunk(PoolArena<T> arena, T[] memory, int pageSize, int maxOrder, int pageShifts, int chunkSize)
         {
             Contract.Requires(maxOrder < 30, "maxOrder should be < 30, but is: " + maxOrder);
 
-            this.Unpooled = false;
+            this.Origin = PoolChunkOrigin.Pooled;
             this.Arena = arena;
             this.Memory = memory;
             this.pageSize = pageSize;
             this.pageShifts = pageShifts;
             this.maxOrder = maxOrder;
-            this.ChunkSize = chunkSize;
-            this.Offset = offset;
+            this.chunkSize = chunkSize;
             this.unusable = (sbyte)(maxOrder + 1);
             this.log2ChunkSize = IntegerExtensions.Log2(chunkSize);
             this.subpageOverflowMask = ~(pageSize - 1);
-            this.FreeBytes = chunkSize;
+            this.freeBytes = chunkSize;
 
+            Contract.Assert(maxOrder < 30, "maxOrder should be < 30, but is: " + maxOrder);
             this.maxSubpageAllocs = 1 << maxOrder;
 
             // Generate the memory map.
@@ -136,16 +144,16 @@ namespace NetUV.Core.Buffers
                 }
             }
 
-            this.subpages = NewSubpageArray(this.maxSubpageAllocs);
+            this.subpages = this.NewSubpageArray(this.maxSubpageAllocs);
         }
 
         /** Creates a special chunk that is not pooled. */
-        internal PoolChunk(PoolArena<T> arena, T[] memory, int size, int offset)
+
+        internal PoolChunk(PoolArena<T> arena, T[] memory, int size, bool huge)
         {
-            this.Unpooled = true;
+            this.Origin = huge ? PoolChunkOrigin.UnpooledHuge : PoolChunkOrigin.UnpooledNormal;
             this.Arena = arena;
             this.Memory = memory;
-            this.Offset = offset;
             this.memoryMap = null;
             this.depthMap = null;
             this.subpages = null;
@@ -154,24 +162,26 @@ namespace NetUV.Core.Buffers
             this.pageShifts = 0;
             this.maxOrder = 0;
             this.unusable = (sbyte)(this.maxOrder + 1);
-            this.ChunkSize = size;
-            this.log2ChunkSize = IntegerExtensions.Log2(this.ChunkSize);
+            this.chunkSize = size;
+            this.log2ChunkSize = IntegerExtensions.Log2(this.chunkSize);
             this.maxSubpageAllocs = 0;
         }
 
-        static PoolSubpage<T>[] NewSubpageArray(int size) => new PoolSubpage<T>[size];
+        PoolSubpage<T>[] NewSubpageArray(int size) => new PoolSubpage<T>[size];
+
+        internal bool Unpooled => this.Origin != PoolChunkOrigin.Pooled;
 
         public int Usage
         {
             get
             {
-                int freeByteCount = this.FreeBytes;
-                if (freeByteCount == 0)
+                int free = this.freeBytes;
+                if (free == 0)
                 {
                     return 100;
                 }
 
-                int freePercentage = (int)(freeByteCount * 100L / this.ChunkSize);
+                int freePercentage = (int)(free * 100L / this.chunkSize);
                 if (freePercentage == 0)
                 {
                     return 99;
@@ -201,6 +211,7 @@ namespace NetUV.Core.Buffers
          *
          * @param id id
          */
+
         void UpdateParentsAlloc(int id)
         {
             while (id > 1)
@@ -221,6 +232,7 @@ namespace NetUV.Core.Buffers
          *
          * @param id id
          */
+
         void UpdateParentsFree(int id)
         {
             int logChild = this.Depth(id) + 1;
@@ -287,6 +299,7 @@ namespace NetUV.Core.Buffers
          * @param normCapacity normalized capacity
          * @return index in memoryMap
          */
+
         long AllocateRun(int normCapacity)
         {
             int d = this.maxOrder - (IntegerExtensions.Log2(normCapacity) - this.pageShifts);
@@ -295,7 +308,7 @@ namespace NetUV.Core.Buffers
             {
                 return id;
             }
-            this.FreeBytes -= this.RunLength(id);
+            this.freeBytes -= this.RunLength(id);
             return id;
         }
 
@@ -309,38 +322,30 @@ namespace NetUV.Core.Buffers
 
         long AllocateSubpage(int normCapacity)
         {
-            // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
-            // This is need as we may add it back and so alter the linked-list structure.
-            PoolSubpage<T> head = this.Arena.FindSubpagePoolHead(normCapacity);
-
-            lock (head)
+            int d = this.maxOrder; // subpages are only be allocated from pages i.e., leaves
+            int id = this.AllocateNode(d);
+            if (id < 0)
             {
-                int d = this.maxOrder; // subpages are only be allocated from pages i.e., leaves
-                int id = this.AllocateNode(d);
-                if (id < 0)
-                {
-                    return id;
-                }
-
-                PoolSubpage<T>[] poolSubpages = this.subpages;
-                int size = this.pageSize;
-
-                this.FreeBytes -= size;
-
-                int subpageIdx = this.SubpageIdx(id);
-                PoolSubpage<T> subpage = poolSubpages[subpageIdx];
-                if (subpage == null)
-                {
-                    subpage = new PoolSubpage<T>(head, this, id, this.RunOffset(id), size, normCapacity);
-                    poolSubpages[subpageIdx] = subpage;
-                }
-                else
-                {
-                    subpage.Init(head, normCapacity);
-                }
-
-                return subpage.Allocate();
+                return id;
             }
+
+            PoolSubpage<T>[] subPages = this.subpages;
+            int size = this.pageSize;
+
+            this.freeBytes -= size;
+
+            int subpageIdx = this.SubpageIdx(id);
+            PoolSubpage<T> subpage = subPages[subpageIdx];
+            if (subpage == null)
+            {
+                subpage = new PoolSubpage<T>(this, id, this.RunOffset(id), size, normCapacity);
+                subPages[subpageIdx] = subpage;
+            }
+            else
+            {
+                subpage.Init(normCapacity);
+            }
+            return subpage.Allocate();
         }
 
         ///
@@ -348,6 +353,7 @@ namespace NetUV.Core.Buffers
         // When a subpage is freed from PoolSubpage, it might be added back to subpage pool of the owning PoolArena
         // If the subpage pool in PoolArena has at least one other PoolSubpage of given elemSize, we can
         // completely free the owning Page so it is available for subsequent allocations
+        // param handle handle to free
         // 
         internal void Free(long handle)
         {
@@ -362,18 +368,16 @@ namespace NetUV.Core.Buffers
 
                 // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
                 // This is need as we may add it back and so alter the linked-list structure.
-                // ReSharper disable once PossibleNullReferenceException
                 PoolSubpage<T> head = this.Arena.FindSubpagePoolHead(subpage.ElemSize);
                 lock (head)
                 {
-                    if (subpage.Free(head, bitmapIdx & 0x3FFFFFFF))
+                    if (subpage.Free(bitmapIdx & 0x3FFFFFFF))
                     {
                         return;
                     }
                 }
             }
-
-            this.FreeBytes += this.RunLength(memoryMapIdx);
+            this.freeBytes += this.RunLength(memoryMapIdx);
             this.SetValue(memoryMapIdx, this.Depth(memoryMapIdx));
             this.UpdateParentsFree(memoryMapIdx);
         }
@@ -385,11 +389,8 @@ namespace NetUV.Core.Buffers
             if (bitmapIdx == 0)
             {
                 sbyte val = this.Value(memoryMapIdx);
-                Contract.Assert(val == this.unusable);
-                buf.Init(this, handle, 
-                    this.RunOffset(memoryMapIdx) + this.Offset,
-                    reqCapacity,
-                    this.RunLength(memoryMapIdx),
+                Contract.Assert(val == this.unusable, val.ToString());
+                buf.Init(this, handle, this.RunOffset(memoryMapIdx), reqCapacity, this.RunLength(memoryMapIdx),
                     this.Arena.Parent.ThreadCache());
             }
             else
@@ -398,8 +399,7 @@ namespace NetUV.Core.Buffers
             }
         }
 
-        internal void InitBufWithSubpage(PooledArrayBuffer<T> buf, long handle, int reqCapacity) => 
-            this.InitBufWithSubpage(buf, handle, BitmapIdx(handle), reqCapacity);
+        internal void InitBufWithSubpage(PooledArrayBuffer<T> buf, long handle, int reqCapacity) => this.InitBufWithSubpage(buf, handle, BitmapIdx(handle), reqCapacity);
 
         void InitBufWithSubpage(PooledArrayBuffer<T> buf, long handle, int bitmapIdx, int reqCapacity)
         {
@@ -413,9 +413,7 @@ namespace NetUV.Core.Buffers
 
             buf.Init(
                 this, handle,
-                this.RunOffset(memoryMapIdx) + (bitmapIdx & 0x3FFFFFFF) * subpage.ElemSize + this.Offset,
-                reqCapacity,
-                subpage.ElemSize,
+                this.RunOffset(memoryMapIdx) + (bitmapIdx & 0x3FFFFFFF) * subpage.ElemSize, reqCapacity, subpage.ElemSize,
                 this.Arena.Parent.ThreadCache());
         }
 
@@ -441,23 +439,23 @@ namespace NetUV.Core.Buffers
 
         static int BitmapIdx(long handle) => (int)handle.RightUShift(IntegerExtensions.SizeInBits);
 
-        public int ChunkSize { get; }
+        public int ChunkSize => this.chunkSize;
 
-        public int FreeBytes { get; private set; }
+        public int FreeBytes => this.freeBytes;
 
-        internal void Destroy() => this.Arena.DestroyChunk(this);
-
-        public override string ToString() => 
-            new StringBuilder()
-            .Append("Chunk(")
-            .Append(RuntimeHelpers.GetHashCode(this).ToString("X"))
-            .Append(": ")
-            .Append(this.Usage)
-            .Append("%, ")
-            .Append(this.ChunkSize - this.FreeBytes)
-            .Append('/')
-            .Append(this.ChunkSize)
-            .Append(')')
-            .ToString();
+        public override string ToString()
+        {
+            return new StringBuilder()
+                .Append("Chunk(")
+                .Append(RuntimeHelpers.GetHashCode(this).ToString("X"))
+                .Append(": ")
+                .Append(this.Usage)
+                .Append("%, ")
+                .Append(this.chunkSize - this.freeBytes)
+                .Append('/')
+                .Append(this.chunkSize)
+                .Append(')')
+                .ToString();
+        }
     }
 }

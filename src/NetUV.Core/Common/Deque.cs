@@ -11,10 +11,10 @@ namespace NetUV.Core.Common
     using System.Reflection;
 
     /// <summary>
-    /// Forked from https://github.com/Azure/DotNetty
     /// A double-ended queue (deque), which provides O(1) indexed access, O(1) removals from the front and back, amortized
     /// O(1) insertions to the front and back, and O(N) insertions and removals anywhere else (with the operations getting
     /// slower as the index approaches the middle).
+    /// Forked from https://github.com/Azure/DotNetty
     /// </summary>
     sealed class Deque<T> : IList<T>, IList
     {
@@ -214,7 +214,7 @@ namespace NetUV.Core.Common
 
         object IList.this[int index]
         {
-            get { return this[index]; }
+            get => this[index];
 
             set
             {
@@ -327,7 +327,7 @@ namespace NetUV.Core.Common
 
         public int Capacity
         {
-            get { return this.buffer.Length; }
+            get => this.buffer.Length;
 
             set
             {

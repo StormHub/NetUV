@@ -10,9 +10,7 @@ namespace NetUV.Core.Common
     using System.Threading;
     using NetUV.Core.Logging;
 
-    /// <summary>
-    /// Forked from https://github.com/Azure/DotNetty
-    /// </summary>
+    // Forked from https://github.com/Azure/DotNetty
     static class ThreadDeathWatcher
     {
         static readonly ILog Log = LogFactory.ForContext(typeof(ThreadDeathWatcher));

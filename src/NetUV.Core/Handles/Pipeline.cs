@@ -15,6 +15,7 @@ namespace NetUV.Core.Handles
     sealed class Pipeline : IDisposable
     {
         const int DefaultPoolSize = 1024;
+
         static readonly ILog Log = LogFactory.ForContext<Pipeline>();
         static readonly ThreadLocalPool<WriteRequest> Recycler = 
             new ThreadLocalPool<WriteRequest>(handle => new WriteRequest(handle), DefaultPoolSize);
@@ -25,9 +26,10 @@ namespace NetUV.Core.Handles
         readonly BufferQueue bufferQueue;
         IStreamConsumer<StreamHandle> streamConsumer;
 
-        internal Pipeline(StreamHandle streamHandle) 
-            : this(streamHandle, ByteBufferAllocator.Default)
-        { }
+        internal Pipeline(StreamHandle streamHandle)
+            : this(streamHandle, ByteBufferAllocator.Pooled)
+        {
+        }
 
         internal Pipeline(StreamHandle streamHandle, ByteBufferAllocator allocator)
         {
@@ -50,23 +52,26 @@ namespace NetUV.Core.Handles
         {
             Contract.Requires(size > 0);
 
-            return ((IByteBufferAllocator)this.allocator).Buffer(size);
+            return new WritableBuffer(this.allocator.Buffer(size));
         }
 
         internal BufferRef AllocateReadBuffer()
         {
-            ByteBuffer buffer = this.receiveBufferSizeEstimate.Allocate(this.allocator);
-            Log.TraceFormat("{0} receive buffer allocated size = {1}", nameof(Pipeline), buffer.Count);
+            IArrayBuffer<byte> buffer = this.receiveBufferSizeEstimate.Allocate(this.allocator);
+            if (Log.IsTraceEnabled)
+            {
+                Log.TraceFormat("{0} receive buffer allocated size = {1}", nameof(Pipeline), buffer.Capacity);
+            }
 
-            var bufferRef = new BufferRef(buffer);
+            var bufferRef = new BufferRef(buffer, buffer.WriterIndex, buffer.WritableCount);
             this.bufferQueue.Enqueue(bufferRef);
 
             return bufferRef;
         }
 
-        internal ByteBuffer GetBuffer(ref uv_buf_t buf)
+        internal IArrayBuffer<byte> GetBuffer(ref uv_buf_t buf)
         {
-            ByteBuffer byteBuffer = null;
+            IArrayBuffer<byte> byteBuffer = null;
 
             if (this.bufferQueue.TryDequeue(out BufferRef bufferRef))
             {
@@ -77,31 +82,32 @@ namespace NetUV.Core.Handles
             return byteBuffer;
         }
 
-        internal void OnReadCompleted(Exception exception = null)
+        internal void OnReadCompleted(IArrayBuffer<byte> byteBuffer, Exception error = null)
         {
             this.bufferQueue.Clear();
-            this.InvokeRead(null, 0, exception, true);
+            this.InvokeRead(byteBuffer, 0, error, true);
         } 
 
-        internal void OnReadCompleted(ByteBuffer byteBuffer, int size)
+        internal void OnReadCompleted(IArrayBuffer<byte> byteBuffer, int size)
         {
             Contract.Requires(byteBuffer != null);
             Contract.Requires(size >= 0);
 
             this.receiveBufferSizeEstimate.Record(size);
-            if (size == 0)
-            {
-                byteBuffer.Dispose();
-            }
-            else
-            {
-                this.InvokeRead(byteBuffer, size);
-            }
+            this.InvokeRead(byteBuffer, size);
         }
 
-        void InvokeRead(ByteBuffer byteBuffer, int size, Exception error = null, bool completed = false)
+        void InvokeRead(IArrayBuffer<byte> byteBuffer, int size, Exception error = null, bool completed = false)
         {
-            ReadableBuffer buffer = byteBuffer?.ToReadableBuffer(size) ?? ReadableBuffer.Empty;
+            if (size == 0)
+            {
+                byteBuffer?.Release();
+            }
+
+            ReadableBuffer buffer = byteBuffer != null && size > 0 
+                ? new ReadableBuffer(byteBuffer, size) 
+                : ReadableBuffer.Empty;
+
             var completion = new StreamReadCompletion(ref buffer,  error, completed);
             try
             {

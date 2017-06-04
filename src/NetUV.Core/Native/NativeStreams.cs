@@ -14,6 +14,7 @@ namespace NetUV.Core.Native
     [StructLayout(LayoutKind.Sequential)]
     struct uv_buf_t
     {
+        static readonly bool isWindows = Platform.IsWindows;
         /*
            Windows 
            public int length;
@@ -33,7 +34,7 @@ namespace NetUV.Core.Native
         {
             Contract.Requires(length >= 0);
 
-            if (Platform.IsWindows)
+            if (isWindows)
             {
                 this.first = (IntPtr)length;
                 this.second = memory;

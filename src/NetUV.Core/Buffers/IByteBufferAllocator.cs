@@ -3,12 +3,12 @@
 
 namespace NetUV.Core.Buffers
 {
-    public interface IByteBufferAllocator
+    interface IByteBufferAllocator
     {
-        WritableBuffer Buffer();
+        IArrayBuffer<byte> Buffer();
 
-        WritableBuffer Buffer(int initialCapacity);
+        IArrayBuffer<byte> Buffer(int initialCapacity);
 
-        WritableBuffer Buffer(int initialCapacity, int maxCapacity);
+        IArrayBuffer<byte> Buffer(int initialCapacity, int maxCapacity);
     }
 }

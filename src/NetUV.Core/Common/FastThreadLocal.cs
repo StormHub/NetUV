@@ -6,9 +6,7 @@ namespace NetUV.Core.Common
     using System.Collections.Generic;
     using System.Runtime.CompilerServices;
 
-    /// <summary>
-    /// Forked from https://github.com/Azure/DotNetty
-    /// </summary>
+    // Forked from https://github.com/Azure/DotNetty
     abstract class FastThreadLocal
     {
         static readonly int VariablesToRemoveIndex = InternalThreadLocalMap.NextVariableIndex();
@@ -106,8 +104,8 @@ namespace NetUV.Core.Common
         /// </summary>
         public T Value
         {
-            get { return this.Get(InternalThreadLocalMap.Get()); }
-            set { this.Set(InternalThreadLocalMap.Get(), value); }
+            get => this.Get(InternalThreadLocalMap.Get());
+            set => this.Set(InternalThreadLocalMap.Get(), value);
         }
 
         /// <summary>

@@ -6,175 +6,218 @@ namespace NetUV.Core.Buffers
     using System;
     using System.Diagnostics.Contracts;
     using System.Text;
-    using NetUV.Core.Common;
 
     public struct ReadableBuffer : IDisposable
     {
-        internal static readonly ReadableBuffer Empty = new ReadableBuffer(ByteBufferAllocator.EmptyByteBuffer, 0);
+        internal static ReadableBuffer Empty = new ReadableBuffer(Unpooled.Empty, 0);
+        readonly bool isLittleEndian;
 
-        ByteBuffer byteBuffer;
-
-        internal ReadableBuffer(ByteBuffer byteBuffer, int count)
+        internal ReadableBuffer(IArrayBuffer<byte> buffer, int count) 
+            : this(buffer, count, BitConverter.IsLittleEndian)
         {
-            Contract.Requires(byteBuffer != null);
-
-            this.byteBuffer = byteBuffer;
-            this.Index = 0;
-            this.Count = count;
         }
 
-        public int Index { get; private set; }
-
-        public int Count { get; private set; }
-
-        internal ReadableBuffer Retain()
+        internal ReadableBuffer(IArrayBuffer<byte> buffer, int count, bool isLittleEndian)
         {
-            this.byteBuffer?.Retain();
-            return this;
+            Contract.Requires(buffer != null);
+            Contract.Requires(count >= 0);
+
+            this.ArrayBuffer = buffer;
+            this.ArrayBuffer.SetWriterIndex(count);
+            this.isLittleEndian = isLittleEndian;
+        }
+
+        internal IArrayBuffer<byte> ArrayBuffer { get; private set; }
+
+        public int Count => this.ArrayBuffer.ReadableCount;
+
+        public string ReadString(Encoding encoding)
+        {
+            Contract.Requires(encoding != null);
+
+            IArrayBuffer<byte> buffer = this.ArrayBuffer;
+            if (buffer == null)
+            {
+                throw new ObjectDisposedException(
+                    $"{nameof(ReadableBuffer)} has already been disposed.");
+            }
+            if (buffer.ReadableCount == 0)
+            {
+                return string.Empty;
+            }
+
+            string result = encoding.GetString(buffer.Array, buffer.ReaderIndex, buffer.ReadableCount);
+            buffer.Skip(buffer.ReadableCount);
+
+            return result;
         }
 
         public string ReadString(int length, Encoding encoding)
         {
+            Contract.Requires(length > 0);
             Contract.Requires(encoding != null);
 
-            int readIndex = this.Index;
-            this.Validate(readIndex, length);
-            this.Index += length;
+            IArrayBuffer<byte> buffer = this.ArrayBuffer;
+            if (buffer == null)
+            {
+                throw new ObjectDisposedException(
+                    $"{nameof(ReadableBuffer)} has already been disposed.");
+            }
+            if (!buffer.IsReadable(length))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(ReadableBuffer)} expecting : {length} < {buffer.ReadableCount}");
+            }
 
-            return this.byteBuffer.ReadString(readIndex, length, encoding);
+            string result = encoding.GetString(buffer.Array, buffer.ReaderIndex, length);
+            buffer.SetReaderIndex(buffer.ReaderIndex + length);
+
+            return result;
         }
 
         public bool ReadBoolean()
         {
-            this.Validate(this.Index, sizeof(bool));
-            return this.ReadRawByte() != 0;
+            IArrayBuffer<byte> buffer = this.ArrayBuffer;
+            if (buffer == null)
+            {
+                throw new ObjectDisposedException(
+                    $"{nameof(ReadableBuffer)} has already been disposed.");
+            }
+
+            bool value = buffer.GetBoolean();
+            buffer.Skip(1);
+            return value;
         }
+
+        public byte ReadByte()
+        {
+            IArrayBuffer<byte> buffer = this.ArrayBuffer;
+            if (buffer == null)
+            {
+                throw new ObjectDisposedException(
+                    $"{nameof(ReadableBuffer)} has already been disposed.");
+            }
+
+            byte value = buffer.Get(buffer.ReaderIndex);
+            buffer.Skip(1);
+            return value;
+        }
+
+        public sbyte ReadSByte() => (sbyte)this.ReadByte();
+
+        public ushort ReadUInt16()
+        {
+            IArrayBuffer<byte> buffer = this.ArrayBuffer;
+            if (buffer == null)
+            {
+                throw new ObjectDisposedException(
+                    $"{nameof(ReadableBuffer)} has already been disposed.");
+            }
+
+            ushort value = buffer.GetUInt16(this.isLittleEndian);
+            buffer.Skip(sizeof(ushort));
+            return value;
+        }
+
+        public short ReadInt16() => (short)this.ReadUInt16();
 
         public void ReadBytes(byte[] destination, int length)
         {
             Contract.Requires(destination != null);
             Contract.Requires(length > 0);
 
-            int readIndex = this.Index;
-            this.Validate(readIndex, length);
-            this.Index += length;
-
-            this.byteBuffer.ReadBytes(destination, readIndex, length);
-        }
-
-        public byte ReadByte()
-        {
-            this.Validate(this.Index, sizeof(byte));
-            return this.ReadRawByte();
-        } 
-
-        public sbyte ReadSByte() => (sbyte)this.ReadByte();
-
-        byte ReadRawByte() => this.byteBuffer.ReadByte(this.Index++);
-
-        public ushort ReadUInt16() 
-        {
-            this.Validate(this.Index, sizeof(short));
-            if (BitConverter.IsLittleEndian)
+            IArrayBuffer<byte> buffer = this.ArrayBuffer;
+            if (buffer == null)
             {
-                return (ushort)(this.ReadRawByte() 
-                    | this.ReadRawByte() << 8);
+                throw new ObjectDisposedException(
+                    $"{nameof(ReadableBuffer)} has already been disposed.");
+            }
+            if (!buffer.IsReadable(length))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(ReadableBuffer)} expecting : {length} < {buffer.ReadableCount}");
             }
 
-            return  (ushort)(this.ReadRawByte() << 8 
-                | this.ReadRawByte() & 0xFF);
+            buffer.Read(destination, length);
+            buffer.SetReaderIndex(buffer.ReaderIndex + length);
         }
-
-        public short ReadInt16() => (short)this.ReadUInt16();
 
         public int ReadInt32()
         {
-            this.Validate(this.Index, sizeof(uint));
-
-            if (BitConverter.IsLittleEndian)
+            IArrayBuffer<byte> buffer = this.ArrayBuffer;
+            if (buffer == null)
             {
-                return (this.ReadRawByte() 
-                    | this.ReadRawByte() << 8 
-                    | this.ReadRawByte() << 16 
-                    | this.ReadRawByte() << 24);
+                throw new ObjectDisposedException(
+                    $"{nameof(ReadableBuffer)} has already been disposed.");
             }
 
-            return (this.ReadRawByte() & 0xFF) << 24 
-                | (this.ReadRawByte() & 0xFF) << 16 
-                | (this.ReadRawByte() & 0xFF) << 8 
-                | this.ReadRawByte() & 0xFF;
+            int value = buffer.GetInt32(this.isLittleEndian);
+            buffer.Skip(sizeof(int));
+            return value;
         }
 
         public uint ReadUInt32() => (uint)this.ReadInt32();
 
         public long ReadInt64()
         {
-            this.Validate(this.Index, sizeof(long));
-
-            if (BitConverter.IsLittleEndian)
+            IArrayBuffer<byte> buffer = this.ArrayBuffer;
+            if (buffer == null)
             {
-                // ReSharper disable once RedundantCast
-                return ((long)this.ReadRawByte() 
-                    | (long)this.ReadRawByte() << 8 
-                    | (long)this.ReadRawByte() << 16 
-                    | (long)this.ReadRawByte() << 24 
-                    | (long)this.ReadRawByte() << 32 
-                    | (long)this.ReadRawByte() << 40 
-                    | (long)this.ReadRawByte() << 48 
-                    | (long)this.ReadRawByte() << 56);
+                throw new ObjectDisposedException(
+                    $"{nameof(ReadableBuffer)} has already been disposed.");
             }
 
-            return ((long)this.ReadRawByte() & 0xFF) << 56 
-                | ((long)this.ReadRawByte() & 0xFF) << 48 
-                | ((long)this.ReadRawByte() & 0xFF) << 40 
-                | ((long)this.ReadRawByte() & 0xFF) << 32 
-                | ((long)this.ReadRawByte() & 0xFF) << 24 
-                | ((long)this.ReadRawByte() & 0xFF) << 16 
-                | ((long)this.ReadRawByte() & 0xFF) << 8 
-                | (long)this.ReadRawByte() & 0xFF;
+            long value = buffer.GetInt64(this.isLittleEndian);
+            buffer.Skip(sizeof(long));
+            return value;
         }
 
         public ulong ReadUInt64() => (ulong)this.ReadInt64();
 
         public float ReadFloat()
         {
-            const int Size = sizeof(float);
-
-            this.Validate(this.Index, Size);
-            var bytes = new byte[Size];
-            this.byteBuffer.ReadBytes(bytes, this.Index, Size);
-            this.Index += Size;
-
-            if (BitConverter.IsLittleEndian)
+            IArrayBuffer<byte> buffer = this.ArrayBuffer;
+            if (buffer == null)
             {
-                bytes.Reverse();
+                throw new ObjectDisposedException(
+                    $"{nameof(ReadableBuffer)} has already been disposed.");
             }
 
-            return BitConverter.ToSingle(bytes, 0);
+            float value = buffer.GetFloat(this.isLittleEndian);
+            buffer.Skip(sizeof(float));
+            return value;
         }
 
         public double ReadDouble()
         {
-            long value = this.ReadInt64();
-            return BitConverter.Int64BitsToDouble(value);
-        }
-
-        void Validate(int readIndex, int length)
-        {
-            if (this.byteBuffer == null)
+            IArrayBuffer<byte> buffer = this.ArrayBuffer;
+            if (buffer == null)
             {
-                throw new ObjectDisposedException($"{nameof(ReadableBuffer)} has already been disposed.");
+                throw new ObjectDisposedException(
+                    $"{nameof(ReadableBuffer)} has already been disposed.");
             }
-           
-            this.byteBuffer.Validate(readIndex, length);
+
+            double value = buffer.GetDouble(this.isLittleEndian);
+            buffer.Skip(sizeof(double));
+            return value;
+
         }
 
         public void Dispose()
         {
-            this.byteBuffer?.Dispose();
-            this.byteBuffer = null;
-            this.Count = 0;
-            this.Index = 0;
+            if (this.ArrayBuffer == null)
+            {
+                return;
+            }
+
+            // It is possible for the consumers to release
+            // the buffer
+            if (this.ArrayBuffer.ReferenceCount > 0)
+            {
+                this.ArrayBuffer.Release();
+            }
+
+            this.ArrayBuffer = null;
         }
     }
 }

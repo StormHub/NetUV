@@ -9,10 +9,10 @@ namespace NetUV.Core.Common
     using System.Threading;
 
     /// <summary>
-    /// Forked from https://github.com/Azure/DotNetty
     /// The internal data structure that stores the thread-local variables for Netty and all {@link FastThreadLocal}s.
     /// Note that this class is for internal use only and is subject to change at any time.  Use {@link FastThreadLocal}
     /// unless you know what you are doing.
+    /// Forked from https://github.com/Azure/DotNetty
     /// </summary>
     sealed class InternalThreadLocalMap
     {
@@ -133,14 +133,14 @@ namespace NetUV.Core.Common
 
         public int FutureListenerStackDepth
         {
-            get { return this.futureListenerStackDepth; }
-            set { this.futureListenerStackDepth = value; }
+            get => this.futureListenerStackDepth;
+            set => this.futureListenerStackDepth = value;
         }
 
         public int LocalChannelReaderStackDepth
         {
-            get { return this.localChannelReaderStackDepth; }
-            set { this.localChannelReaderStackDepth = value; }
+            get => this.localChannelReaderStackDepth;
+            set => this.localChannelReaderStackDepth = value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

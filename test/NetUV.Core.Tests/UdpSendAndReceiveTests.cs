@@ -59,7 +59,7 @@ namespace NetUV.Core.Tests
         void OnClientReceive(Udp udp, IDatagramReadCompletion completion)
         {
             ReadableBuffer buffer = completion.Data;
-            string message = buffer.Count > 0 ? buffer.ReadString(buffer.Count, Encoding.UTF8) : null;
+            string message = buffer.ReadString(Encoding.UTF8);
             if (message == "PONG")
             {
                 this.clientReceiveCount++;
@@ -81,7 +81,7 @@ namespace NetUV.Core.Tests
         void OnServerReceive(Udp udp, IDatagramReadCompletion completion)
         {
             ReadableBuffer buffer = completion.Data;
-            string message = buffer.Count > 0 ? buffer.ReadString(buffer.Count, Encoding.UTF8) : null;
+            string message = buffer.ReadString(Encoding.UTF8);
             if (message == "PING")
             {
                 this.serverReceiveCount++;

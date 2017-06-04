@@ -38,10 +38,7 @@ namespace NetUV.Core.Handles
         public bool IsValid
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            {
-                return this.handle.IsValid;
-            }
+            get => this.handle.IsValid;
         } 
 
         public object UserToken { get; set; }
@@ -49,10 +46,7 @@ namespace NetUV.Core.Handles
         internal IntPtr InternalHandle
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            {
-                return this.handle.Handle;
-            }
+            get => this.handle.Handle;
         } 
 
         internal uv_handle_type HandleType { get; }

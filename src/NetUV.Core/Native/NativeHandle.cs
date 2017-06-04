@@ -25,10 +25,7 @@ namespace NetUV.Core.Native
         internal bool IsValid
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            {
-                return this.Handle != IntPtr.Zero;
-            }
+            get => this.Handle != IntPtr.Zero;
         } 
 
         protected internal void Validate()
@@ -53,8 +50,10 @@ namespace NetUV.Core.Native
                 {
                     return;
                 }
-
-                Log.DebugFormat("Disposing {0} (Finalizer {1})", this.Handle, !disposing);
+                if (Log.IsDebugEnabled)
+                {
+                    Log.DebugFormat("Disposing {0} (Finalizer {1})", this.Handle, !disposing);
+                }
                 this.CloseHandle();
             }
             catch (Exception exception) 

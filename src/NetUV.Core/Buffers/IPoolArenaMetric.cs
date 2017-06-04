@@ -5,6 +5,7 @@ namespace NetUV.Core.Buffers
 {
     using System.Collections.Generic;
 
+    // Forked from https://github.com/Azure/DotNetty
     public interface IPoolArenaMetric
     {
         /// Returns the number of thread caches backed by this arena.
@@ -20,13 +21,13 @@ namespace NetUV.Core.Buffers
         int NumChunkLists { get; }
 
         /// Returns an unmodifiable {@link List} which holds {@link PoolSubpageMetric}s for tiny sub-pages.
-        IReadOnlyCollection<IPoolSubpageMetric> TinySubpages { get; }
+        IReadOnlyList<IPoolSubpageMetric> TinySubpages { get; }
 
         /// Returns an unmodifiable {@link List} which holds {@link PoolSubpageMetric}s for small sub-pages.
-        IReadOnlyCollection<IPoolSubpageMetric> SmallSubpages { get; }
+        IReadOnlyList<IPoolSubpageMetric> SmallSubpages { get; }
 
         /// Returns an unmodifiable {@link List} which holds {@link PoolChunkListMetric}s.
-        IReadOnlyCollection<IPoolChunkListMetric> ChunkLists { get; }
+        IReadOnlyList<IPoolChunkListMetric> ChunkLists { get; }
 
         /// Return the number of allocations done via the arena. This includes all sizes.
         long NumAllocations { get; }

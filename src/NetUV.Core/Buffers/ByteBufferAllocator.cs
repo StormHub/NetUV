@@ -7,56 +7,35 @@ namespace NetUV.Core.Buffers
 
     sealed class ByteBufferAllocator : IByteBufferAllocator
     {
-        internal static readonly ByteBufferAllocator Default;
-        internal static readonly ByteBuffer EmptyByteBuffer;
+        internal static readonly ByteBufferAllocator Pooled;
+        
+        readonly IArrayBufferAllocator<byte> allocator;
 
         static ByteBufferAllocator()
         {
-            Default = new ByteBufferAllocator();
-            EmptyByteBuffer = new ByteBuffer(Default.ArrayAllocator.EmptyBuffer);
+            Pooled = new ByteBufferAllocator(new PooledArrayBufferAllocator<byte>());
         }
 
-        internal ByteBufferAllocator() 
-            : this(new PooledArrayBufferAllocator<byte>())
-        { }
-
-        internal ByteBufferAllocator(IArrayBufferAllocator<byte> arrayAllocator)
+        ByteBufferAllocator(IArrayBufferAllocator<byte> arrayBufferAllocator)
         {
-            Contract.Requires(arrayAllocator != null);
+            Contract.Requires(arrayBufferAllocator != null);
 
-            this.ArrayAllocator = arrayAllocator;
+            this.allocator = arrayBufferAllocator;
         }
 
-        internal IArrayBufferAllocator<byte> ArrayAllocator { get; }
-
-        internal ByteBuffer Buffer()
+        public IArrayBuffer<byte> Buffer()
         {
-            IArrayBuffer<byte> buffer = this.ArrayAllocator.Buffer();
-            var byteBuffer = new ByteBuffer(buffer);
-            return byteBuffer;
+            return this.allocator.Buffer();
         }
 
-        internal ByteBuffer Buffer(int initialCapacity)
+        public IArrayBuffer<byte> Buffer(int initialCapacity)
         {
-            IArrayBuffer<byte> buffer = this.ArrayAllocator.Buffer(initialCapacity);
-            var byteBuffer = new ByteBuffer(buffer);
-            return byteBuffer;
+            return this.allocator.Buffer(initialCapacity);
         }
 
-        internal ByteBuffer Buffer(int initialCapacity, int maxCapacity)
+        public IArrayBuffer<byte> Buffer(int initialCapacity, int maxCapacity)
         {
-            IArrayBuffer<byte> buffer = this.ArrayAllocator.Buffer(initialCapacity, maxCapacity);
-            var byteBuffer = new ByteBuffer(buffer);
-            return byteBuffer;
+            return this.allocator.Buffer(initialCapacity, maxCapacity);
         }
-
-        WritableBuffer IByteBufferAllocator.Buffer() => 
-            new WritableBuffer(this.Buffer());
-
-        WritableBuffer IByteBufferAllocator.Buffer(int initialCapacity) => 
-            new WritableBuffer(this.Buffer(initialCapacity));
-
-        WritableBuffer IByteBufferAllocator.Buffer(int initialCapacity, int maxCapacity) => 
-            new WritableBuffer(this.Buffer(initialCapacity, maxCapacity));
     }
 }

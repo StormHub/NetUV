@@ -29,8 +29,10 @@ namespace NetUV.Core.Requests
 
             this.Handle = handle;
             this.requestType = requestType;
-
-            Log.DebugFormat("{0} {1} allocated.", requestType, handle);
+            if (Log.IsDebugEnabled)
+            {
+                Log.DebugFormat("{0} {1} allocated.", requestType, handle);
+            }
         }
 
         internal RequestContext(
@@ -59,8 +61,10 @@ namespace NetUV.Core.Requests
 
             this.Handle = handle;
             this.requestType = requestType;
-
-            Log.DebugFormat("{0} {1} allocated.", requestType, handle);
+            if (Log.IsDebugEnabled)
+            {
+                Log.DebugFormat("{0} {1} allocated.", requestType, handle);
+            }
         }
 
         internal static T GetTarget<T>(IntPtr handle)
@@ -98,8 +102,10 @@ namespace NetUV.Core.Requests
                 {
                     nativeHandle.Free();
                     ((uv_req_t*)handle)->data = IntPtr.Zero;
-
-                    Log.DebugFormat("{0} {1} GCHandle released.", this.requestType, handle);
+                    if (Log.IsDebugEnabled)
+                    {
+                        Log.DebugFormat("{0} {1} GCHandle released.", this.requestType, handle);
+                    }
                 }
             }
 
@@ -107,7 +113,10 @@ namespace NetUV.Core.Requests
             Marshal.FreeHGlobal(handle);
             this.Handle = IntPtr.Zero;
 
-            Log.DebugFormat("{0} {1} memory released.", this.requestType, handle);
+            if (Log.IsDebugEnabled)
+            {
+                Log.DebugFormat("{0} {1} memory released.", this.requestType, handle);
+            }
         }
     }
 }

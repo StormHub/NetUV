@@ -104,9 +104,7 @@ namespace NetUV.Core.Tests
             this.receiveError = completion.Error;
 
             ReadableBuffer buffer = completion.Data;
-            string message = buffer.Count > 0 
-                ? buffer.ReadString(buffer.Count, Encoding.UTF8) 
-                : null;
+            string message = buffer.ReadString(Encoding.UTF8);
             if (message == "PING")
             {
                 this.clientReceiveCount++;

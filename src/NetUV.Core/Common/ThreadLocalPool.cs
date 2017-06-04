@@ -8,9 +8,7 @@ namespace NetUV.Core.Common
     using System.Runtime.CompilerServices;
     using System.Threading;
 
-    /// <summary>
-    /// Forked from https://github.com/Azure/DotNetty
-    /// </summary>
+    // Forked from https://github.com/Azure/DotNetty
     public class ThreadLocalPool
     {
         public sealed class Handle
@@ -65,8 +63,8 @@ namespace NetUV.Core.Common
 
                 internal int WriteIndex
                 {
-                    get { return Volatile.Read(ref this.writeIndex); }
-                    set { Volatile.Write(ref this.writeIndex, value); }
+                    get => Volatile.Read(ref this.writeIndex);
+                    set => Volatile.Write(ref this.writeIndex, value);
                 }
 
                 internal Link()
@@ -204,8 +202,8 @@ namespace NetUV.Core.Common
 
             internal WeakOrderQueue HeadQueue
             {
-                get { return Volatile.Read(ref this.headQueue); }
-                set { Volatile.Write(ref this.headQueue, value); }
+                get => Volatile.Read(ref this.headQueue);
+                set => Volatile.Write(ref this.headQueue, value);
             }
 
             internal int Size { get; set; }

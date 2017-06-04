@@ -10,35 +10,26 @@ namespace NetUV.Core.Native
 
     sealed class BufferRef : IDisposable
     {
-        readonly int count;
-        readonly bool retain;
+        readonly int index;
+        readonly int length;
 
-        ByteBuffer buffer;
+        IArrayBuffer<byte> buffer;
         GCHandle array;
         GCHandle handle;
 
-        internal BufferRef(ref WritableBuffer writableBuffer)
-        {
-            Contract.Requires(writableBuffer.InternalBuffer != null);
-
-            this.buffer = writableBuffer.InternalBuffer;
-            this.retain = true;
-            this.count = writableBuffer.Index;
-        }
-
-        internal BufferRef(ByteBuffer buffer, bool retain = true)
+        internal BufferRef(IArrayBuffer<byte> buffer, int index, int length)
         {
             Contract.Requires(buffer != null);
-            Contract.Requires(buffer.ArrayBuffer != null);
+            Contract.Requires(index > 0 && length > 0);
 
             this.buffer = buffer;
-            this.count = buffer.Count;
-            this.retain = retain;
+            this.index = index;
+            this.length = length;
         }
 
         internal uv_buf_t[] GetBuffer()
         {
-            if (this.buffer?.ArrayBuffer == null)
+            if (this.buffer == null)
             {
                 throw new ObjectDisposedException(
                     $"{nameof(BufferRef)} has already been disposed.");
@@ -51,24 +42,21 @@ namespace NetUV.Core.Native
                     $"{nameof(BufferRef)} has already been initialized and not released yet.");
             }
 
-            IArrayBuffer<byte> arrayBuffer = this.buffer.ArrayBuffer;
-            Contract.Assert(arrayBuffer.Array != null);
-
-            this.array = GCHandle.Alloc(arrayBuffer.Array, GCHandleType.Pinned);
+            IArrayBuffer<byte> arrayBufer = this.buffer;
+            this.array = GCHandle.Alloc(arrayBufer.Array, GCHandleType.Pinned);
             IntPtr arrayHandle = this.array.AddrOfPinnedObject();
 
-            var bufs = new[] { new uv_buf_t(arrayHandle + arrayBuffer.Offset, this.count) };
+            var bufs = new[] { new uv_buf_t(arrayHandle + this.index, this.length) };
             this.handle = GCHandle.Alloc(bufs, GCHandleType.Pinned);
 
             return bufs;
         }
 
-        internal ByteBuffer GetByteBuffer()
+        internal IArrayBuffer<byte> GetByteBuffer()
         {
             if (this.buffer == null)
             {
-                throw new ObjectDisposedException(
-                    $"{nameof(BufferRef)} has already been disposed.");
+                throw new ObjectDisposedException($"{nameof(BufferRef)} has already been disposed.");
             }
 
             this.Release();
@@ -91,12 +79,6 @@ namespace NetUV.Core.Native
         public void Dispose()
         {
             this.Release();
-
-            if (!this.retain)
-            {
-                this.buffer.Dispose();
-            }
-
             this.buffer = null;
         }
     }

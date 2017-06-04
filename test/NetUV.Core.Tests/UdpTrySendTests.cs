@@ -66,7 +66,7 @@ namespace NetUV.Core.Tests
             this.receiveError = completion.Error;
 
             ReadableBuffer data = completion.Data;
-            string message = data.Count > 0 ? data.ReadString(data.Count, Encoding.UTF8) : null;
+            string message = data.ReadString(Encoding.UTF8);
             if (message == "EXIT")
             {
                 this.serverReceiveCount++;

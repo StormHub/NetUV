@@ -130,18 +130,18 @@ namespace NetUV.Core.Handles
             base.CloseHandle(handler);
         }
 
-        public void QueueWriteStream(
-            WritableBuffer writableBuffer, 
+        public void QueueWriteStream(WritableBuffer writableBuffer, 
             Action<StreamHandle, Exception> completion)
         {
             Contract.Requires(completion != null);
 
-            if (writableBuffer.Index == 0)
+            IArrayBuffer<byte> buffer = writableBuffer.ArrayBuffer;
+            if (buffer == null || !buffer.IsReadable())
             {
                 return;
             }
 
-            var bufferRef = new BufferRef(ref writableBuffer);
+            var bufferRef = new BufferRef(buffer, buffer.ReaderIndex, buffer.ReadableCount);
             this.pipeline.QueueWrite(bufferRef, completion);
         }
 
@@ -152,8 +152,8 @@ namespace NetUV.Core.Handles
             Contract.Requires(offset >= 0 && count > 0);
             Contract.Requires((offset + count) <= array.Length);
 
-            ByteBuffer byteBuffer = UnpooledByteBuffer.From(array, offset, count);
-            var bufferRef = new BufferRef(byteBuffer, false);
+            IArrayBuffer<byte> buffer = Unpooled.WrappedBuffer(array, offset, count);
+            var bufferRef = new BufferRef(buffer, buffer.ReaderIndex, count);
             this.pipeline.QueueWrite(bufferRef, completion);
         }
 
@@ -211,7 +211,10 @@ namespace NetUV.Core.Handles
         {
             this.Validate();
             NativeMethods.StreamReadStart(this.InternalHandle);
-            Log.TraceFormat("{0} {1} Read started.", this.HandleType, this.InternalHandle);
+            if (Log.IsTraceEnabled)
+            {
+                Log.TraceFormat("{0} {1} Read started.", this.HandleType, this.InternalHandle);
+            }
         }
 
         internal void ReadStop()
@@ -223,12 +226,15 @@ namespace NetUV.Core.Handles
 
             // This function is idempotent and may be safely called on a stopped stream.
             NativeMethods.StreamReadStop(this.InternalHandle);
-            Log.TraceFormat("{0} {1} Read stopped.", this.HandleType, this.InternalHandle);
+            if (Log.IsTraceEnabled)
+            {
+                Log.TraceFormat("{0} {1} Read stopped.", this.HandleType, this.InternalHandle);
+            }
         }
 
         protected override void Close() => this.pipeline.Dispose();
 
-        void OnReadCallback(ByteBuffer byteBuffer, int status)
+        void OnReadCallback(IArrayBuffer<byte> byteBuffer, int status)
         {
             //
             //  nread is > 0 if there is data available or < 0 on error.
@@ -241,8 +247,12 @@ namespace NetUV.Core.Handles
             if (status >= 0) 
             {
                 Contract.Assert(byteBuffer != null);
-                // ReSharper disable once PossibleNullReferenceException
-                Log.DebugFormat("{0} {1} read, buffer length = {2} status = {3}.", this.HandleType, this.InternalHandle, byteBuffer.Count, status);
+
+                if (Log.IsDebugEnabled)
+                {
+                    Log.DebugFormat("{0} {1} read, buffer length = {2} status = {3}.", this.HandleType, this.InternalHandle, byteBuffer?.Capacity, status);
+                }
+
                 this.pipeline.OnReadCompleted(byteBuffer, status);
                 return;
             }
@@ -253,18 +263,19 @@ namespace NetUV.Core.Handles
                 exception = NativeMethods.CreateError((uv_err_code)status);
                 Log.Error($"{this.HandleType} {this.InternalHandle} read error, status = {status}", exception);
             }
+            if (Log.IsDebugEnabled)
+            {
+                Log.DebugFormat("{0} {1} read completed.", this.HandleType, this.InternalHandle);
+            }
 
-            Log.DebugFormat("{0} {1} read completed.", this.HandleType, this.InternalHandle);
-            byteBuffer?.Dispose();
-
-            this.pipeline.OnReadCompleted(exception);
+            this.pipeline.OnReadCompleted(byteBuffer, exception);
             this.ReadStop();
         }
 
         static void OnReadCallback(IntPtr handle, IntPtr nread, ref uv_buf_t buf)
         {
             var stream = HandleContext.GetTarget<StreamHandle>(handle);
-            ByteBuffer byteBuffer = stream.pipeline.GetBuffer(ref buf);
+            IArrayBuffer<byte> byteBuffer = stream.pipeline.GetBuffer(ref buf);
             stream.OnReadCallback(byteBuffer, (int)nread.ToInt64());
         }
 

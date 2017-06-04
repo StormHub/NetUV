@@ -70,12 +70,7 @@ namespace NetUV.Core.Tests
             }
 
             ReadableBuffer buffer = completion.Data;
-            if (buffer.Count == 0)
-            {
-                return;
-            }
-
-            string message = buffer.ReadString(buffer.Count, Encoding.UTF8);
+            string message = buffer.ReadString(Encoding.UTF8);
             if (message == "PING" 
                 || message == "PANG")
             {

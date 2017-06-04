@@ -10,12 +10,8 @@ namespace NetUV.Core.Buffers
     using System.Linq;
     using System.Text;
 
-    /// <summary>
-    /// Forked and adapted from https://github.com/Azure/DotNetty
-    /// </summary>
     sealed class PoolChunkList<T> : IPoolChunkListMetric
     {
-        readonly PoolArena<T> arena;
         readonly PoolChunkList<T> nextList;
         readonly int minUsage;
         readonly int maxUsage;
@@ -26,11 +22,10 @@ namespace NetUV.Core.Buffers
         // This is only update once when create the linked like list of PoolChunkList in PoolArena constructor.
         PoolChunkList<T> prevList;
 
-        public PoolChunkList(PoolArena<T> arena, PoolChunkList<T> nextList, int minUsage, int maxUsage, int chunkSize)
+        public PoolChunkList(PoolChunkList<T> nextList, int minUsage, int maxUsage, int chunkSize)
         {
             Contract.Assert(minUsage <= maxUsage);
 
-            this.arena = arena;
             this.nextList = nextList;
             this.minUsage = minUsage;
             this.maxUsage = maxUsage;
@@ -57,10 +52,10 @@ namespace NetUV.Core.Buffers
             return (int)(chunkSize * (100L - minUsage) / 100L);
         }
 
-        internal void PrevList(PoolChunkList<T> chunkList)
+        internal void PrevList(PoolChunkList<T> previousList)
         {
             Contract.Requires(this.prevList == null);
-            this.prevList = chunkList;
+            this.prevList = previousList;
         }
 
         internal bool Allocate(PooledArrayBuffer<T> buf, int reqCapacity, int normCapacity)
@@ -193,15 +188,11 @@ namespace NetUV.Core.Buffers
 
         static int MinUsage0(int value) => Math.Max(1, value);
 
-        public IEnumerator<IPoolChunkMetric> GetEnumerator()
-        {
-            lock (this.arena)
-            {
-                return this.head == null
-                ? Enumerable.Empty<IPoolChunkMetric>().GetEnumerator()
-                : this.GetEnumeratorInternal();
-            }
-        }
+        public IEnumerator<IPoolChunkMetric> GetEnumerator() => 
+            this.head == null 
+            ? Enumerable.Empty<IPoolChunkMetric>().GetEnumerator() 
+            : this.GetEnumeratorInternal();
+
         IEnumerator IEnumerable.GetEnumerator() => this.GetEnumerator();
 
         IEnumerator<IPoolChunkMetric> GetEnumeratorInternal()
@@ -233,17 +224,6 @@ namespace NetUV.Core.Buffers
             }
 
             return buf.ToString();
-        }
-
-        internal void Destroy(PoolArena<T> poolArena)
-        {
-            PoolChunk<T> chunk = this.head;
-            while (chunk != null)
-            {
-                poolArena.DestroyChunk(chunk);
-                chunk = chunk.Next;
-            }
-            this.head = null;
         }
     }
 }

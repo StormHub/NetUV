@@ -82,12 +82,12 @@ namespace NetUV.Core.Tests.Performance
 
         void OnAccept(StreamHandle stream, ReadableBuffer data)
         {
-            if (data.Count == 0)
+            string message = data.ReadString(Encoding.UTF8);
+            if (string.IsNullOrEmpty(message))
             {
                 return;
             }
 
-            string message = data.ReadString(data.Count, Encoding.UTF8);
             foreach (char token in message)
             {
                 if (token == SplitToken)
@@ -99,7 +99,7 @@ namespace NetUV.Core.Tests.Performance
                     if (token != PingMessage[this.state])
                     {
                         Console.WriteLine($"Tcp ping pong : failed, wrong message token received {token}.");
-                        stream.Dispose();
+                        stream.CloseHandle(OnClose);
                         return;
                     }
 

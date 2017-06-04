@@ -56,7 +56,7 @@ namespace NetUV.Core.Tests.Performance
             }
 
             ReadableBuffer data = completion.Data;
-            string message = data.Count > 0 ? data.ReadString(data.Count, Encoding.UTF8) : null;
+            string message = data.ReadString(Encoding.UTF8);
             data.Dispose();
 
             IPEndPoint remoteEndPoint = completion.RemoteEndPoint;
@@ -95,7 +95,7 @@ namespace NetUV.Core.Tests.Performance
 
         void OnAccept(StreamHandle stream, ReadableBuffer data)
         {
-            string message = data.Count > 0 ? data.ReadString(data.Count, Encoding.UTF8) : null;
+            string message = data.ReadString(Encoding.UTF8);
             if (string.IsNullOrEmpty(message))
             {
                 return;
@@ -114,7 +114,6 @@ namespace NetUV.Core.Tests.Performance
                 else
                 {
                     this.CloseServer();
-
                 }
             }
             else

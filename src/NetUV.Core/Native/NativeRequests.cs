@@ -106,6 +106,8 @@ namespace NetUV.Core.Native
     [StructLayout(LayoutKind.Sequential)]
     struct addrinfo
     {
+        static readonly bool isWindows = Platform.IsWindows;
+
         public readonly int ai_flags;
         public readonly int ai_family;   // AF_INET or AF_INET6
         public readonly int ai_socktype; // SOCK_DGRAM or SOCK_STREAM
@@ -127,7 +129,7 @@ namespace NetUV.Core.Native
 
         internal string GetCanonName()
         {
-            IntPtr value = Platform.IsWindows ? this.field1 : this.field2;
+            IntPtr value = isWindows ? this.field1 : this.field2;
             return value != IntPtr.Zero 
                 ? Marshal.PtrToStringUni(value) 
                 : null;
@@ -142,7 +144,7 @@ namespace NetUV.Core.Native
                 return null;
             }
 
-            IntPtr value = Platform.IsWindows ? this.field2 : this.field1;
+            IntPtr value = isWindows ? this.field2 : this.field1;
             if (value == IntPtr.Zero)
             {
                 return null;
@@ -153,7 +155,7 @@ namespace NetUV.Core.Native
             return endPoint?.Address;
         }
 
-        public IntPtr Addr => Platform.IsWindows ? this.field2 : this.field1;
+        public IntPtr Addr => isWindows ? this.field2 : this.field1;
 
         public readonly IntPtr ai_next; // addrinfo
     }
@@ -261,7 +263,6 @@ namespace NetUV.Core.Native
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static int GetSize(uv_req_type requestType) => RequestSizeTable[(int)requestType - 1];
-
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         static extern int uv_getnameinfo(IntPtr loopHandle, IntPtr handle, uv_getnameinfo_cb cb, ref sockaddr addr, int flags);

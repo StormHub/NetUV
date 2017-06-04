@@ -3,9 +3,7 @@
 
 namespace NetUV.Core.Common
 {
-    /// <summary>
-    /// Forked from https://github.com/Azure/DotNetty
-    /// </summary>
+    // Forked from https://github.com/Azure/DotNetty
     static class IntegerExtensions
     {
         static readonly int[] MultiplyDeBruijnBitPosition =

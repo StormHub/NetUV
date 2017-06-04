@@ -100,6 +100,7 @@ namespace NetUV.Core.Native
             this.field3 = 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal unsafe IPEndPoint GetIPEndPoint()
         {
             // The bytes are represented in network byte order.
@@ -173,6 +174,7 @@ namespace NetUV.Core.Native
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         bool IsIPv4MappedToIPv6()
         {
             // If the IPAddress is an IPv4 mapped to IPv6, return the IPv4 representation instead.

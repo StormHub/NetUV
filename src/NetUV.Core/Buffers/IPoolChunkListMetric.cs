@@ -5,6 +5,7 @@ namespace NetUV.Core.Buffers
 {
     using System.Collections.Generic;
 
+    // Forked from https://github.com/Azure/DotNetty
     public interface IPoolChunkListMetric : IEnumerable<IPoolChunkMetric>
     {
         /// Return the minum usage of the chunk list before which chunks are promoted to the previous list.

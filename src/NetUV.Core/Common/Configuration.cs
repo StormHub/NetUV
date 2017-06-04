@@ -29,6 +29,34 @@ namespace NetUV.Core.Common
 
         internal static IConfigurationRoot Current { get; }
 
+
+        public static string TryGetValue(string name, string defaultValue)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                return defaultValue;
+            }
+
+            string value = Current[name];
+            return value ?? defaultValue;
+        }
+
+        public static int TryGetValue(string name, int defaultValue)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                return defaultValue;
+            }
+
+            string currentValue = Current[name];
+            if (!string.IsNullOrEmpty(currentValue))
+            {
+                return defaultValue;
+            }
+
+            return int.TryParse(currentValue, out int value) ? value : defaultValue;
+        }
+
         public static bool TryGetValue(string name, out int value)
         {
             value = 0;
@@ -40,6 +68,22 @@ namespace NetUV.Core.Common
             string currentValue = Current[name];
             return !string.IsNullOrEmpty(currentValue) 
                 && int.TryParse(currentValue, out value);
+        }
+
+        public static bool TryGetValue(string name, bool defaultValue)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                return defaultValue;
+            }
+
+            string currentValue = Current[name];
+            if (!string.IsNullOrEmpty(currentValue))
+            {
+                return defaultValue;
+            }
+
+            return bool.TryParse(currentValue, out bool value) ? value : defaultValue;
         }
 
         public static bool TryGetValue(string name, out bool value)

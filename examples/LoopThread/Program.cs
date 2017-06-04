@@ -64,7 +64,7 @@ namespace LoopThread
 
         static void OnAccept(StreamHandle stream, ReadableBuffer data)
         {
-            string message = data.Count > 0 ? data.ReadString(data.Count, Encoding.UTF8) : null;
+            string message = data.ReadString(Encoding.UTF8);
             data.Dispose();
             if (string.IsNullOrEmpty(message))
             {
