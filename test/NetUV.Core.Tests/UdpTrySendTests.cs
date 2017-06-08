@@ -56,9 +56,9 @@ namespace NetUV.Core.Tests
 
             this.loop.RunDefault();
 
+            Assert.Null(this.receiveError);
             Assert.Equal(2, this.closeCount);
             Assert.Equal(1, this.serverReceiveCount);
-            Assert.Null(this.receiveError);
         }
 
         void OnServerReceive(Udp udp, IDatagramReadCompletion completion)

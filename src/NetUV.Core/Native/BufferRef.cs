@@ -23,7 +23,7 @@ namespace NetUV.Core.Native
             Contract.Requires(index > 0 && length > 0);
 
             this.buffer = buffer;
-            this.index = index;
+            this.index = buffer.ArrayOffset + index;
             this.length = length;
         }
 

@@ -53,7 +53,10 @@ namespace NetUV.Core.Handles
 
         void OnFSPollCallback(int status, ref uv_stat_t prev, ref uv_stat_t curr)
         {
-            Log.TraceFormat("{0} {1} callback", this.HandleType, this.InternalHandle);
+            if (Log.IsTraceEnabled)
+            {
+                Log.TraceFormat("{0} {1} callback", this.HandleType, this.InternalHandle);
+            }
             try
             {
                 FileStatus previous = null;

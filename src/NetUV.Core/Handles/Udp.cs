@@ -143,8 +143,10 @@ namespace NetUV.Core.Handles
             Action<Udp, Exception> completion = null)
         {
             Contract.Requires(remoteEndPoint != null);
+
             IArrayBuffer<byte> buffer = writableBuffer.ArrayBuffer;
-            if (buffer == null || !buffer.IsReadable())
+            if (buffer == null 
+                || !buffer.IsReadable())
             {
                 return;
             }
@@ -157,6 +159,7 @@ namespace NetUV.Core.Handles
             IPEndPoint remoteEndPoint, 
             Action<Udp, Exception> completion)
         {
+            Contract.Requires(remoteEndPoint != null);
             Contract.Requires(bufferRef != null);
 
             try
@@ -230,7 +233,6 @@ namespace NetUV.Core.Handles
         void SetMembership(IPAddress multicastAddress, IPAddress interfaceAddress, uv_membership membership)
         {
             this.Validate();
-
             NativeMethods.UdpSetMembership(this.InternalHandle,
                 multicastAddress,
                 interfaceAddress,
@@ -328,10 +330,9 @@ namespace NetUV.Core.Handles
 
         void InvokeRead(IArrayBuffer<byte> byteBuffer, int size, IPEndPoint remoteEndPoint, Exception error = null)
         {
-            if ((size == 0 || byteBuffer == null) 
-                && error == null)
+            if (size == 0 && error == null)
             {
-                // Filter out empty data received
+                // Filter out empty data received if not an error
                 //
                 // On windows the udp receive actually been call with empty data 
                 // for broadcast, on Linux, the receive is not called at all.
@@ -341,7 +342,7 @@ namespace NetUV.Core.Handles
             }
 
             ReadableBuffer buffer = size > 0 ? new ReadableBuffer(byteBuffer, size) : ReadableBuffer.Empty;
-            var completion = new DatagramReadCompletion(ref buffer, error,remoteEndPoint);
+            var completion = new DatagramReadCompletion(ref buffer, error, remoteEndPoint);
             try
             {
                 this.readAction?.Invoke(this, completion);

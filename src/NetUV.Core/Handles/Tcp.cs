@@ -15,31 +15,22 @@ namespace NetUV.Core.Handles
             : base(loop, uv_handle_type.UV_TCP)
         { }
 
-        public int GetSendBufferSize()
-        {
-            this.Validate();
-            return this.SendBufferSize(0);
-        }
+        public int GetSendBufferSize() => this.SendBufferSize(0);
 
         public int SetSendBufferSize(int value)
         {
             Contract.Requires(value > 0);
 
-            this.Validate();
             return this.SendBufferSize(value);
         }
 
-        public int GetReceiveBufferSize()
-        {
-            this.Validate();
-            return this.ReceiveBufferSize(0);
-        }
+        public int GetReceiveBufferSize() => this.ReceiveBufferSize(0);
+        
 
         public int SetReceiveBufferSize(int value)
         {
             Contract.Requires(value > 0);
 
-            this.Validate();
             return this.ReceiveBufferSize(value);
         }
 

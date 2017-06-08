@@ -29,7 +29,10 @@ namespace NetUV.Core.Handles
 
         void OnSignalCallback(int signum)
         {
-            Log.TraceFormat("{0} {1} callback", this.HandleType, this.InternalHandle);
+            if (Log.IsTraceEnabled)
+            {
+                Log.TraceFormat("{0} {1} callback", this.HandleType, this.InternalHandle);
+            }
             try
             {
                 this.signalCallback?.Invoke(this, signum);

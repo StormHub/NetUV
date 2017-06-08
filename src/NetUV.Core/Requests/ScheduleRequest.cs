@@ -25,8 +25,8 @@ namespace NetUV.Core.Requests
 
         internal uv_req_type RequestType { get; }
 
-        protected bool Cancel() => this.IsValid 
-            && NativeMethods.Cancel(this.InternalHandle);
+        protected bool Cancel() => 
+            this.IsValid && NativeMethods.Cancel(this.InternalHandle);
 
         protected abstract void Close();
 

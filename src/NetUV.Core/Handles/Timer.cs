@@ -23,7 +23,6 @@ namespace NetUV.Core.Handles
             Contract.Requires(repeat >= 0);
 
             this.Validate();
-
             this.Callback = state => callback((Timer)state);
             NativeMethods.Start(this.InternalHandle, timeout, repeat);
 

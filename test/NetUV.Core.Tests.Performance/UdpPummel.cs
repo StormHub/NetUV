@@ -30,7 +30,7 @@ namespace NetUV.Core.Tests.Performance
 
         /* not used in timed mode */
         int packetCounter;
-        WritableBuffer buffer;
+        readonly byte[] content;
 
         int sendCount;
         int receiveCount;
@@ -46,7 +46,7 @@ namespace NetUV.Core.Tests.Performance
             this.senders = new Dictionary<Udp, IPEndPoint>();
             this.receivers = new Udp[this.numberOfReceivers];
             this.packetCounter = PacketCount;
-            this.buffer = WritableBuffer.From(Encoding.UTF8.GetBytes(ExpectedMessage));
+            this.content = Encoding.UTF8.GetBytes(ExpectedMessage);
 
             this.loop = new Loop();
         }
@@ -82,7 +82,7 @@ namespace NetUV.Core.Tests.Performance
                 var endPoint = new IPEndPoint(IPAddress.Loopback, Port + i);
                 Udp udp = this.loop.CreateUdp();
                 this.senders.Add(udp, endPoint);
-                udp.QueueSend(this.buffer, endPoint, this.OnSendCompleted);
+                udp.QueueSend(this.content, endPoint, this.OnSendCompleted);
             }
 
             long duration = this.loop.NowInHighResolution;
@@ -121,7 +121,7 @@ namespace NetUV.Core.Tests.Performance
                 || this.packetCounter > 0)
             {
                 IPEndPoint endPoint = this.senders[udp];
-                udp.QueueSend(this.buffer, endPoint, this.OnSendCompleted);
+                udp.QueueSend(this.content, endPoint, this.OnSendCompleted);
                 this.sendCount++;
             }
 
@@ -183,8 +183,6 @@ namespace NetUV.Core.Tests.Performance
 
         public void Dispose()
         {
-            this.buffer.Dispose();
-
             if (this.senders != null)
             {
                 foreach (Udp handle in this.senders.Keys)

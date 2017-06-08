@@ -136,7 +136,8 @@ namespace NetUV.Core.Handles
             Contract.Requires(completion != null);
 
             IArrayBuffer<byte> buffer = writableBuffer.ArrayBuffer;
-            if (buffer == null || !buffer.IsReadable())
+            if (buffer == null 
+                || !buffer.IsReadable())
             {
                 return;
             }
@@ -145,7 +146,14 @@ namespace NetUV.Core.Handles
             this.pipeline.QueueWrite(bufferRef, completion);
         }
 
-        protected internal void QueueWriteStream(byte[] array, int offset, int count, 
+        public void QueueWriteStream(byte[] array, Action<StreamHandle, Exception> completion)
+        {
+            Contract.Requires(array != null && array.Length > 0);
+
+            this.QueueWriteStream(array, 0, array.Length, completion);
+        }
+
+        public void QueueWriteStream(byte[] array, int offset, int count, 
             Action<StreamHandle, Exception> completion)
         {
             Contract.Requires(array != null && array.Length > 0);

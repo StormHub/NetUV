@@ -18,6 +18,7 @@ namespace NetUV.Core.Buffers
             : this(allocator, initialArray, 0, initialArray.Length, maxCapacity)
         {
         }
+
         public UnpooledArrayBuffer(IArrayBufferAllocator<T> allocator, T[] initialArray, 
             int readerIndex, int writerIndex, int maxCapacity)
             : base(maxCapacity)

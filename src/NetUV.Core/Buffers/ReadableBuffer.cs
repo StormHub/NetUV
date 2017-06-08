@@ -31,9 +31,10 @@ namespace NetUV.Core.Buffers
 
         public int Count => this.ArrayBuffer.ReadableCount;
 
-        public string ReadString(Encoding encoding)
+        public string ReadString(Encoding encoding, byte[] separator)
         {
             Contract.Requires(encoding != null);
+            Contract.Requires(separator != null && separator.Length > 0);
 
             IArrayBuffer<byte> buffer = this.ArrayBuffer;
             if (buffer == null)
@@ -45,9 +46,31 @@ namespace NetUV.Core.Buffers
             {
                 return string.Empty;
             }
+            string result = buffer.GetString(separator, encoding, out int count);
+            buffer.Skip(count);
 
-            string result = encoding.GetString(buffer.Array, buffer.ReaderIndex, buffer.ReadableCount);
-            buffer.Skip(buffer.ReadableCount);
+            return result;
+        }
+
+        public string ReadString(Encoding encoding)
+        {
+            Contract.Requires(encoding != null);
+
+            IArrayBuffer<byte> buffer = this.ArrayBuffer;
+            if (buffer == null)
+            {
+                throw new ObjectDisposedException(
+                    $"{nameof(ReadableBuffer)} has already been disposed.");
+            }
+
+            int length = buffer.ReadableCount;
+            if (length == 0)
+            {
+                return string.Empty;
+            }
+
+            string result = buffer.GetString(length, encoding);
+            buffer.Skip(length);
 
             return result;
         }
@@ -63,14 +86,9 @@ namespace NetUV.Core.Buffers
                 throw new ObjectDisposedException(
                     $"{nameof(ReadableBuffer)} has already been disposed.");
             }
-            if (!buffer.IsReadable(length))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(ReadableBuffer)} expecting : {length} < {buffer.ReadableCount}");
-            }
 
-            string result = encoding.GetString(buffer.Array, buffer.ReaderIndex, length);
-            buffer.SetReaderIndex(buffer.ReaderIndex + length);
+            string result = buffer.GetString(length, encoding);
+            buffer.Skip(length);
 
             return result;
         }
@@ -200,7 +218,6 @@ namespace NetUV.Core.Buffers
             double value = buffer.GetDouble(this.isLittleEndian);
             buffer.Skip(sizeof(double));
             return value;
-
         }
 
         public void Dispose()

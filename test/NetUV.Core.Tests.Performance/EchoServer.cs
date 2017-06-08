@@ -118,8 +118,7 @@ namespace NetUV.Core.Tests.Performance
             }
             else
             {
-                WritableBuffer buffer = WritableBuffer.From(Encoding.UTF8.GetBytes(message));
-                stream.QueueWriteStream(buffer, OnWriteCompleted);
+                stream.QueueWriteStream(Encoding.UTF8.GetBytes(message), OnWriteCompleted);
             }
         }
 

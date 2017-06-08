@@ -5,6 +5,7 @@ namespace NetUV.Core.Buffers
 {
     using System;
     using System.Diagnostics.Contracts;
+    using System.Text;
 
     static class ByteBufferExtensions
     {
@@ -328,7 +329,8 @@ namespace NetUV.Core.Buffers
             Contract.Requires(buffer != null);
 
             buffer.CheckIndex(start, sizeof(float));
-            buffer.SetInt32(start, ByteBufferUtil.SingleToInt32Bits(value), 
+            buffer.SetInt32(start, 
+                ByteBufferUtil.SingleToInt32Bits(value), 
                 BitConverter.IsLittleEndian == isLittleEndian);
         }
 
@@ -359,8 +361,160 @@ namespace NetUV.Core.Buffers
         {
             Contract.Requires(buffer != null);
 
-            buffer.SetInt64(start, BitConverter.DoubleToInt64Bits(value),
+            buffer.SetInt64(start, 
+                BitConverter.DoubleToInt64Bits(value),
                 BitConverter.IsLittleEndian == isLittleEndian);
+        }
+
+        public static string GetString(this IArrayBuffer<byte> buffer, Encoding encoding)
+        {
+            Contract.Requires(buffer != null);
+            Contract.Requires(encoding != null);
+
+            if (buffer.ReadableCount == 0)
+            {
+                return string.Empty;
+            }
+
+            int index = buffer.ArrayOffset + buffer.ReaderIndex;
+            return encoding.GetString(buffer.Array, index, buffer.ReadableCount);
+        }
+
+        public static string GetString(this IArrayBuffer<byte> buffer, int length, Encoding encoding)
+        {
+            Contract.Requires(buffer != null);
+            Contract.Requires(encoding != null);
+            Contract.Requires(length >= 0);
+
+            if (length == 0)
+            {
+                return string.Empty;
+            }
+
+            int index = buffer.ReaderIndex;
+            buffer.CheckIndex(index, length);
+            index += buffer.ArrayOffset;
+            return encoding.GetString(buffer.Array, index, length);
+        }
+
+        public static string GetString(this IArrayBuffer<byte> buffer, int start, int length, Encoding encoding)
+        {
+            Contract.Requires(buffer != null);
+            Contract.Requires(encoding != null);
+            Contract.Requires(length >= 0);
+
+            if (length == 0)
+            {
+                return string.Empty;
+            }
+
+            buffer.CheckIndex(start, length);
+            int index = buffer.ArrayOffset + start;
+            return encoding.GetString(buffer.Array, index, length);
+        }
+
+        public static string GetString(this IArrayBuffer<byte> buffer, byte[] separator, Encoding encoding, out int count)
+        {
+            Contract.Requires(buffer != null);
+            Contract.Requires(encoding != null);
+            Contract.Requires(separator != null && separator.Length > 0);
+
+            if (buffer.ReadableCount == 0)
+            {
+                count = 0;
+                return string.Empty;
+            }
+
+            return buffer.GetString(buffer.ReaderIndex, separator, encoding, out count);
+        }
+
+        public static string GetString(this IArrayBuffer<byte> buffer, int start, byte[] separator, Encoding encoding, out int count)
+        {
+            Contract.Requires(buffer != null);
+            Contract.Requires(encoding != null);
+            Contract.Requires(separator != null && separator.Length > 0);
+
+            buffer.CheckIndex(start);
+            int index = buffer.ArrayOffset + start;
+
+            if (buffer.ReadableCount < separator.Length)
+            {
+                count = buffer.ReadableCount;
+                return encoding.GetString(buffer.Array, index, count);
+            }
+
+            int frameLength = IndexOf(buffer, separator);
+            if (frameLength == 0) // Leading separator
+            {
+                frameLength = separator.Length;
+            }
+            else if (frameLength < 0) // Not found
+            {
+                frameLength = buffer.ReadableCount;
+            }
+
+            count = frameLength;
+            return encoding.GetString(buffer.Array, index, count);
+        }
+
+        static int IndexOf(IArrayBuffer<byte> haystack, byte[] separator)
+        {
+            for (int i = haystack.ReaderIndex; i < haystack.WriterIndex; i++)
+            {
+                int haystackIndex = i;
+                int needleIndex;
+                for (needleIndex = 0; needleIndex < separator.Length; needleIndex++)
+                {
+                    if (haystack.Get(haystackIndex) != separator[needleIndex])
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        haystackIndex++;
+                        if (haystackIndex == haystack.WriterIndex && needleIndex != separator.Length - 1)
+                        {
+                            return -1;
+                        }
+                    }
+                }
+
+                if (needleIndex == separator.Length)
+                {
+                    // Found the needle from the haystack!
+                    return i - haystack.ReaderIndex;
+                }
+            }
+
+            return -1;
+        }
+
+        public static int SetString(this IArrayBuffer<byte> buffer, string value, Encoding encoding)
+        {
+            Contract.Requires(buffer != null);
+            Contract.Requires(encoding != null);
+
+            return !string.IsNullOrEmpty(value) 
+                ? buffer.SetString(buffer.WriterIndex, value, encoding) 
+                : 0;
+        }
+
+        public static int SetString(this IArrayBuffer<byte> buffer, int start, string value, Encoding encoding)
+        {
+            Contract.Requires(buffer != null);
+            Contract.Requires(encoding != null);
+
+            if (string.IsNullOrEmpty(value))
+            {
+                return 0;
+            }
+
+            byte[] data = encoding.GetBytes(value);
+            buffer.CheckIndex(start, data.Length);
+
+            int index = buffer.ArrayOffset + start;
+            buffer.Set(index, data);
+            return data.Length;
         }
     }
 }

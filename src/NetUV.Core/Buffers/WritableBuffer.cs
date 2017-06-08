@@ -146,14 +146,8 @@ namespace NetUV.Core.Buffers
                     $"{nameof(WritableBuffer)} has already been disposed.");
             }
 
-            byte[] bytes = encoding.GetBytes(value);
-            if (!buffer.IsWritable(bytes.Length))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(WritableBuffer)} expecting : {bytes.Length} >= {buffer.WritableCount} .");
-            }
-
-            this.ArrayBuffer.Write(bytes);
+            int count = buffer.SetString(value, encoding);
+            buffer.SetWriterIndex(buffer.WriterIndex + count);
         }
 
         public void Dispose()

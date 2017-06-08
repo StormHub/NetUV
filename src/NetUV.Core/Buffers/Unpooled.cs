@@ -35,9 +35,9 @@ namespace NetUV.Core.Buffers
         {
             Contract.Requires(array != null);
 
-            return array.Length == 0 
-                ? Empty
-                : new UnpooledArrayBuffer<byte>(Allocator, array, array.Length);
+            return array.Length > 0 
+                ? new UnpooledArrayBuffer<byte>(Allocator, array, array.Length)
+                : Empty;
         }
 
         public static IArrayBuffer<byte> WrappedBuffer(IArrayBuffer<byte> buffer)

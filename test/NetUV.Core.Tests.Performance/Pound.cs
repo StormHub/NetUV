@@ -16,10 +16,10 @@ namespace NetUV.Core.Tests.Performance
 
         readonly HandleType handleType;
         readonly int clientCount;
+        readonly byte[] content;
 
         EchoServer server;
         Loop loop;
-        WritableBuffer buffer;
 
         long start;
 
@@ -46,6 +46,7 @@ namespace NetUV.Core.Tests.Performance
         {
             this.handleType = handleType;
             this.clientCount = clientCount;
+            this.content = Encoding.UTF8.GetBytes(Message);
         }
 
         public void Run()
@@ -55,8 +56,6 @@ namespace NetUV.Core.Tests.Performance
 
             this.server = new EchoServer(this.handleType);
             this.loop = this.server.Loop;
-
-            this.buffer = WritableBuffer.From(Encoding.UTF8.GetBytes(Message));
 
             this.loop.UpdateTime();
             this.start = this.loop.Now;
@@ -110,7 +109,7 @@ namespace NetUV.Core.Tests.Performance
             else
             {
                 client.OnRead(this.OnAccept, this.OnError, this.OnCompleted);
-                client.QueueWriteStream(this.buffer, this.OnWriteComplete);
+                client.QueueWriteStream(this.content, this.OnWriteComplete);
             }
         }
 

@@ -28,8 +28,7 @@ namespace NetUV.Core.Handles
 
         internal Pipeline(StreamHandle streamHandle)
             : this(streamHandle, ByteBufferAllocator.Pooled)
-        {
-        }
+        { }
 
         internal Pipeline(StreamHandle streamHandle, ByteBufferAllocator allocator)
         {

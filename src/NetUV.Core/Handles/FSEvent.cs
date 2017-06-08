@@ -92,7 +92,10 @@ namespace NetUV.Core.Handles
 
         void OnFSEventCallback(string fileName, int events, int status)
         {
-            Log.TraceFormat("{0} {1} callback", this.HandleType, this.InternalHandle);
+            if (Log.IsTraceEnabled)
+            {
+                Log.TraceFormat("{0} {1} callback", this.HandleType, this.InternalHandle);
+            }
             try
             {
                 OperationException error = null;

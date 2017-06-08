@@ -14,7 +14,8 @@ namespace NetUV.Core.Tests.Performance
         const char SplitToken = '\n';
         const int DurationInMilliseconds = 5000;
 
-        WritableBuffer dataBuffer;
+        readonly byte[] content;
+
         EchoServer server;
         Loop loop;
 
@@ -24,8 +25,7 @@ namespace NetUV.Core.Tests.Performance
 
         public TcpPingPong()
         {
-            byte[] content = Encoding.UTF8.GetBytes(PingMessage + SplitToken);
-            this.dataBuffer = WritableBuffer.From(content);
+            this.content = Encoding.UTF8.GetBytes(PingMessage + SplitToken);
         }
 
         public void Run()
@@ -65,7 +65,7 @@ namespace NetUV.Core.Tests.Performance
                 tcp.OnRead(this.OnAccept, OnError);
 
                 // Sending the first ping
-                tcp.QueueWriteStream(this.dataBuffer, OnWriteCompleted);
+                tcp.QueueWrite(this.content, OnWriteCompleted);
             }
         }
 
@@ -118,7 +118,7 @@ namespace NetUV.Core.Tests.Performance
                     }
                     else
                     {
-                        stream.QueueWriteStream(this.dataBuffer, OnWriteCompleted);
+                        stream.QueueWriteStream(this.content, OnWriteCompleted);
                     }
                 }
             }
@@ -131,7 +131,6 @@ namespace NetUV.Core.Tests.Performance
 
         public void Dispose()
         {
-            this.dataBuffer.Dispose();
             this.server = null;
             this.loop = null;
         }

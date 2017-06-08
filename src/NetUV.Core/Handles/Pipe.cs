@@ -22,7 +22,6 @@ namespace NetUV.Core.Handles
                     $"{this.HandleType} send buffer size setting not supported on Windows");
             }
 
-            this.Validate();
             return this.SendBufferSize(0);
         }
 
@@ -36,7 +35,6 @@ namespace NetUV.Core.Handles
                     $"{this.HandleType} send buffer size setting not supported on Windows");
             }
 
-            this.Validate();
             return this.SendBufferSize(value);
         }
 
@@ -48,7 +46,6 @@ namespace NetUV.Core.Handles
                     $"{this.HandleType} send buffer size setting not supported on Windows");
             }
 
-            this.Validate();
             return this.ReceiveBufferSize(0);
         }
 
@@ -62,7 +59,6 @@ namespace NetUV.Core.Handles
                     $"{this.HandleType} send buffer size setting not supported on Windows");
             }
 
-            this.Validate();
             return this.ReceiveBufferSize(value);
         }
 

@@ -18,10 +18,10 @@ namespace NetUV.Core.Tests.Performance
         readonly bool showIntervalStatistics;
         readonly HandleType handleType;
         readonly int targetConnections;
+        readonly byte[] content;
 
         Loop loop;
         StreamHandle server;
-        WritableBuffer dataBuffer;
 
         StreamHandle[] writeHandles;
 
@@ -47,9 +47,7 @@ namespace NetUV.Core.Tests.Performance
             this.targetConnections = clientCount;
             this.showIntervalStatistics = showIntervalStatistics;
 
-            var data = new byte[WriteBufferSize];
-            this.dataBuffer = WritableBuffer.From(data);
-
+            this.content = new byte[WriteBufferSize];
             this.writeHandles = new StreamHandle[MaximumWriteHandles];
         }
 
@@ -137,7 +135,7 @@ namespace NetUV.Core.Tests.Performance
                 {
                     if (this.writeHandles[i].IsActive)
                     {
-                        this.writeHandles[i].QueueWriteStream(this.dataBuffer, this.OnWriteCompleted);
+                        this.writeHandles[i].QueueWriteStream(this.content, this.OnWriteCompleted);
                     }
                 }
             }
@@ -201,7 +199,7 @@ namespace NetUV.Core.Tests.Performance
             if (this.statsLeft > 0 
                 && handle.IsActive)
             {
-                handle.QueueWriteStream(this.dataBuffer, this.OnWriteCompleted);
+                handle.QueueWriteStream(this.content, this.OnWriteCompleted);
             }
         }
 
@@ -249,7 +247,6 @@ namespace NetUV.Core.Tests.Performance
 
         public void Dispose()
         {
-            this.dataBuffer.Dispose();
             this.writeHandles = null;
 
             this.loop?.Dispose();

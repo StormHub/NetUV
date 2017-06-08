@@ -54,8 +54,8 @@ namespace NetUV.Core.Requests
             Contract.Requires(!string.IsNullOrEmpty(node) 
                 || !string.IsNullOrEmpty(service));
             Contract.Requires(callback != null);
-            this.handle.Validate();
 
+            this.handle.Validate();
             this.requestCallback = callback;
 
             IntPtr internalHandle = this.InternalHandle;

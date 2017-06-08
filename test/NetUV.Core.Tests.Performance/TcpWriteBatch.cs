@@ -13,7 +13,7 @@ namespace NetUV.Core.Tests.Performance
         const string Content = "Hello, world.";
         const long NumberOfRequests = (1000 * 1000);
 
-        WritableBuffer dataBuffer;
+        readonly byte[] content;
         BlackholeServer server;
         Loop loop;
 
@@ -23,8 +23,7 @@ namespace NetUV.Core.Tests.Performance
 
         public TcpWriteBatch()
         {
-            byte[] bytes = Encoding.UTF8.GetBytes(Content);
-            this.dataBuffer = WritableBuffer.From(bytes);
+            this.content = Encoding.UTF8.GetBytes(Content);
             this.writeCount = 0;
         }
 
@@ -66,7 +65,7 @@ namespace NetUV.Core.Tests.Performance
             tcp.OnRead(OnAccept, OnError);
             for (int i = 0; i < NumberOfRequests; i++)
             {
-                tcp.QueueWriteStream(this.dataBuffer, this.OnWriteComplete);
+                tcp.QueueWriteStream(this.content, this.OnWriteComplete);
             }
 
             this.batchWriteCommit = this.loop.NowInHighResolution;
@@ -107,7 +106,6 @@ namespace NetUV.Core.Tests.Performance
 
         public void Dispose()
         {
-            this.dataBuffer.Dispose();
             this.server = null;
             this.loop = null;
         }

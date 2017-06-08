@@ -61,7 +61,10 @@ namespace NetUV.Core.Handles
 
         void OnPollCallback(int status, int events)
         {
-            Log.TraceFormat("{0} {1} callback", this.HandleType, this.InternalHandle);
+            if (Log.IsTraceEnabled)
+            {
+                Log.TraceFormat("{0} {1} callback", this.HandleType, this.InternalHandle);
+            }
             try
             {
                 OperationException error = null;

@@ -483,7 +483,8 @@ namespace NetUV.Core.Native
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static int GetSize(uv_handle_type handleType) => HandleSizeTable[(int)handleType - 1];
+        internal static int GetSize(uv_handle_type handleType) => 
+            HandleSizeTable[unchecked((int)handleType - 1)];
 
         #endregion Common
 
@@ -518,8 +519,7 @@ namespace NetUV.Core.Native
             Contract.Requires(remoteEndPoint != null);
             Contract.Requires(bufs != null && bufs.Length > 0);
 
-            sockaddr addr;
-            GetSocketAddress(remoteEndPoint, out addr);
+            GetSocketAddress(remoteEndPoint, out sockaddr addr);
 
             int result = uv_udp_send(
                 requestHandle, 
@@ -538,8 +538,7 @@ namespace NetUV.Core.Native
             Contract.Requires(handle != IntPtr.Zero);
             Contract.Requires(remoteEndPoint != null);
 
-            sockaddr addr;
-            GetSocketAddress(remoteEndPoint, out addr);
+            GetSocketAddress(remoteEndPoint, out sockaddr addr);
 
             var bufs = new[] { buf };
             int result = uv_udp_try_send(handle, bufs, bufs.Length, ref addr);
@@ -582,8 +581,7 @@ namespace NetUV.Core.Native
             Contract.Requires(handle != IntPtr.Zero);
             Contract.Requires(endPoint != null);
 
-            sockaddr addr;
-            GetSocketAddress(endPoint, out addr);
+            GetSocketAddress(endPoint, out sockaddr addr);
 
             uint flag = 0;
             if (reuseAddress)

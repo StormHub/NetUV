@@ -4,6 +4,7 @@
 namespace NetUV.Core.Handles
 {
     using System;
+    using System.Diagnostics;
     using System.Diagnostics.Contracts;
     using System.Runtime.CompilerServices;
     using NetUV.Core.Logging;
@@ -24,9 +25,8 @@ namespace NetUV.Core.Handles
             Contract.Requires(loop != null);
 
             HandleContext initialHandle = NativeMethods.Initialize(loop.Handle, handleType, this, args);
-#if DEBUG
-            Contract.Assert(initialHandle != null);
-#endif
+            Debug.Assert(initialHandle != null);
+
             this.handle = initialHandle;
             this.HandleType = handleType;
         }

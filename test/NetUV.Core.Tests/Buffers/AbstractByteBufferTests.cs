@@ -6,7 +6,9 @@ using NetUV.Core.Buffers;
 namespace NetUV.Core.Tests.Buffers
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
+    using System.Text;
     using NetUV.Core.Common;
     using Xunit;
 
@@ -184,6 +186,183 @@ namespace NetUV.Core.Tests.Buffers
 
             this.buffer.SetDouble(value, !BitConverter.IsLittleEndian);
             Assert.Equal(value, this.buffer.GetDouble(!BitConverter.IsLittleEndian), 2);
+        }
+
+        static IEnumerable<object[]> GetEncodingCases()
+        {
+            yield return new object[] { Encoding.ASCII };
+            yield return new object[] { Encoding.UTF8 };
+        }
+
+        [Theory]
+        [MemberData(nameof(GetEncodingCases))]
+        public void StringEmpty(Encoding encoding)
+        {
+            this.buffer = this.allocator.Buffer(0);
+
+            Assert.Equal(string.Empty, this.buffer.GetString(encoding));
+            Assert.Equal(string.Empty, this.buffer.GetString(0, encoding));
+            Assert.Equal(string.Empty, this.buffer.GetString(0, 0, encoding));
+
+            byte[] separator = Encoding.ASCII.GetBytes("\r\n");
+            Assert.Equal(string.Empty, this.buffer.GetString(separator, encoding, out int count));
+            Assert.Equal(0, count);
+
+            this.buffer.SetString(null, encoding);
+            Assert.Equal(0, this.buffer.ReadableCount);
+            this.buffer.SetString(string.Empty, encoding);
+            Assert.Equal(0, this.buffer.ReadableCount);
+
+            this.buffer.SetString(0, string.Empty, encoding);
+            Assert.Equal(0, this.buffer.ReadableCount);
+        }
+
+        static IEnumerable<object[]> GetStringCases()
+        {
+            yield return new object[]
+            {
+                "Hello World!", Encoding.ASCII
+            };
+            yield return new object[]
+            {
+                "你 好 hello 世 界 World", Encoding.UTF8
+            };
+        }
+
+        [Theory]
+        [MemberData(nameof(GetStringCases))]
+        public void String(string message, Encoding encoding)
+        {
+            byte[] expectedBytes = encoding.GetBytes(message);
+            this.buffer = this.allocator.Buffer(expectedBytes.Length);
+
+            int count = this.buffer.SetString(message, encoding);
+            Assert.Equal(expectedBytes.Length, count);
+
+            // ReadableCount = 0
+            Assert.Equal(string.Empty, this.buffer.GetString(encoding));
+            this.buffer.SetWriterIndex(count);
+
+            var actualBytes = new byte[expectedBytes.Length];
+            this.buffer.Get(0, actualBytes);
+            Assert.True(expectedBytes.SequenceEqual(actualBytes));
+
+            Assert.Equal(message, this.buffer.GetString(encoding));
+            Assert.Equal(message, this.buffer.GetString(count, encoding));
+            Assert.Equal(message, this.buffer.GetString(0, count, encoding));
+        }
+
+        static IEnumerable<object[]> GetStringSeparatorCases()
+        {
+            string message = "\r \nHello\n\rWorld\n \r";
+            yield return new object[]
+            {
+                message,
+                Encoding.ASCII.GetBytes(message),
+                Encoding.ASCII,
+                message,
+                Encoding.ASCII.GetByteCount(message)
+            };
+
+            string separator = "\r\n";
+            yield return new object[]
+            {
+                separator,
+                Encoding.ASCII.GetBytes(separator),
+                Encoding.ASCII,
+                separator,
+                Encoding.ASCII.GetByteCount(separator)
+            };
+
+            yield return new object[]
+            {
+                message,
+                Encoding.ASCII.GetBytes(separator),
+                Encoding.ASCII,
+                message,
+                Encoding.ASCII.GetByteCount(message)
+            };
+
+            yield return new object[]
+            {
+                separator,
+                Encoding.ASCII.GetBytes(message),
+                Encoding.ASCII,
+                separator,
+                Encoding.ASCII.GetByteCount(separator)
+            };
+
+            message = "\n\rHello\r\n\r\nWorld";
+            yield return new object[]
+            {
+                message,
+                Encoding.ASCII.GetBytes(separator),
+                Encoding.ASCII,
+                "\n\rHello",
+                Encoding.ASCII.GetByteCount("\n\rHello")
+            };
+
+            message = "h\re\nllo\r你好\r\n世界";
+            yield return new object[]
+            {
+                message,
+                Encoding.UTF8.GetBytes(message),
+                Encoding.UTF8,
+                message,
+                Encoding.UTF8.GetByteCount(message)
+            };
+
+            yield return new object[]
+            {
+                separator,
+                Encoding.UTF8.GetBytes(separator),
+                Encoding.UTF8,
+                separator,
+                Encoding.UTF8.GetByteCount(separator)
+            };
+
+            yield return new object[]
+            {
+                message,
+                Encoding.UTF8.GetBytes(separator),
+                Encoding.UTF8,
+                "h\re\nllo\r你好",
+                Encoding.UTF8.GetByteCount("h\re\nllo\r你好")
+            };
+
+            separator = "好\r";
+            yield return new object[]
+            {
+                message,
+                Encoding.UTF8.GetBytes(separator),
+                Encoding.UTF8,
+                "h\re\nllo\r你",
+                Encoding.UTF8.GetByteCount("h\re\nllo\r你")
+            };
+        }
+
+        [Theory]
+        [MemberData(nameof(GetStringSeparatorCases))]
+        public void StringSeparator(string message, byte[] separator, Encoding encoding, 
+            string expected, int expectedCount)
+        {
+            byte[] expectedBytes = encoding.GetBytes(message);
+            this.buffer = this.allocator.Buffer(expectedBytes.Length);
+
+            int count = this.buffer.SetString(message, encoding);
+            Assert.Equal(expectedBytes.Length, count);
+
+            // ReadableCount = 0
+            Assert.Equal(string.Empty, this.buffer.GetString(encoding));
+            this.buffer.SetWriterIndex(count);
+
+            string actual = this.buffer.GetString(separator, encoding, out count);
+            Assert.Equal(expected, actual);
+            Assert.Equal(expectedCount, count);
+
+            actual = this.buffer.GetString(0, separator, encoding, out count);
+            Assert.Equal(expected, actual);
+            Assert.Equal(expectedCount, count);
         }
 
         public void Dispose()
