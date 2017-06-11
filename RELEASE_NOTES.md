@@ -21,3 +21,8 @@ First public preview release
 #### 0.1.105 May 3 2017
 - Empty UDP packages are correctly filtered out.
 - Fixed a byte buffer read validation error.
+
+#### 0.1.112 June 11 2017
+- Made stream handle write public.
+- Added read string by delimiter to writable buffer.
+- Removed some redundant validations to improve performance. 
