@@ -23,10 +23,17 @@ namespace NetUV.Core.Tests.Performance
             LoopbackEndPoint = new IPEndPoint(IPAddress.Loopback, Port);
 
             LocalPipeName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                ? "\\\\?\\pipe\\test"
+                ? @"\\.\pipe\test"
                 : "/tmp/uv-test-sock";
 
             AnyEndPoint = new IPEndPoint(IPAddress.Any, Port);
+        }
+
+        internal static string GetPipeName(string name)
+        {
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? $@"\\.\pipe\{name}"
+                : $"/tmp/{name}";
         }
 
         internal static string Format(int value) => value.ToString("#,##0");

@@ -141,6 +141,26 @@ namespace NetUV.Core.Handles
             }
         }
 
+        internal void QueueWrite(BufferRef bufferRef, StreamHandle sendHandle, Action<StreamHandle, Exception> completion)
+        {
+            Contract.Requires(bufferRef != null);
+            Contract.Requires(sendHandle != null);
+
+            try
+            {
+                WriteRequest request = Recycler.Take();
+                request.Prepare(bufferRef,
+                    (writeRequest, exception) => completion?.Invoke(this.streamHandle, exception));
+
+                this.streamHandle.WriteStream(request, sendHandle);
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"{nameof(Pipeline)} {this.streamHandle.HandleType} faulted.", exception);
+                throw;
+            }
+        }
+
         public void Dispose()
         {
             this.bufferQueue.Dispose();

@@ -8,7 +8,6 @@ namespace NetUV.Core.Native
 {
     using System;
     using System.Diagnostics.Contracts;
-    using System.Runtime.CompilerServices;
     using System.Runtime.InteropServices;
 
     #region uv_err_t
@@ -177,7 +176,6 @@ namespace NetUV.Core.Native
 
         #region Error
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
         internal static OperationException CreateError(uv_err_code error)
         {
             string name = GetErrorName(error);

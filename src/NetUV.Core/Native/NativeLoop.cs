@@ -27,7 +27,7 @@ namespace NetUV.Core.Native
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate void uv_walk_cb(IntPtr handle, IntPtr arg);
+    delegate void uv_walk_cb(IntPtr handle, IntPtr arg);
 
     static partial class NativeMethods
     {

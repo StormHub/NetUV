@@ -8,7 +8,7 @@ echo $CONFIGURATION
 
 dotnet restore
 
-dotnet build -c $CONFIGURATION -f netstandard1.3 ./src/NetUV.Core/NetUV.Core.csproj
+dotnet build -c $CONFIGURATION -f netstandard1.6 ./src/NetUV.Core/NetUV.Core.csproj
 
 dotnet test -c $CONFIGURATION -f netcoreapp1.1 ./test/NetUV.Core.Tests/NetUV.Core.Tests.csproj
 

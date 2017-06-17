@@ -78,7 +78,7 @@ namespace NetUV.Core.Handles
             return this;
         }
 
-        internal Tcp Bind(IPEndPoint endPoint, bool dualStack = false)
+        public Tcp Bind(IPEndPoint endPoint, bool dualStack = false)
         {
             Contract.Requires(endPoint != null);
 
@@ -128,7 +128,18 @@ namespace NetUV.Core.Handles
         {
             IntPtr loopHandle = ((uv_stream_t*)this.InternalHandle)->loop;
             var loop = HandleContext.GetTarget<LoopContext>(loopHandle);
-            return new Tcp(loop);
+
+            var client = new Tcp(loop);
+            NativeMethods.StreamAccept(this.InternalHandle, client.InternalHandle);
+            client.ReadStart();
+
+            if (Log.IsDebugEnabled)
+            {
+                Log.DebugFormat("{0} {1} client {2} accepted", 
+                    this.HandleType, this.InternalHandle, client.InternalHandle);
+            }
+
+            return client;
         }
 
         public Tcp Listen(Action<Tcp, Exception> onConnection, int backlog = DefaultBacklog)

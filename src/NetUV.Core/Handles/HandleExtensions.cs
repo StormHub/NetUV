@@ -28,16 +28,16 @@ namespace NetUV.Core.Handles
 
         public static Pipe ConnectTo(this Pipe pipe, 
             string remoteName, 
-            Action<Pipe, Exception> connectionHandler)
+            Action<Pipe, Exception> connectedAction)
         {
             Contract.Requires(pipe != null);
             Contract.Requires(!string.IsNullOrEmpty(remoteName));
-            Contract.Requires(connectionHandler != null);
+            Contract.Requires(connectedAction != null);
 
             PipeConnect request = null;
             try
             {
-                request = new PipeConnect(pipe, remoteName, connectionHandler);
+                request = new PipeConnect(pipe, remoteName, connectedAction);
             }
             catch (Exception)
             {
@@ -67,33 +67,33 @@ namespace NetUV.Core.Handles
         public static Tcp ConnectTo(this Tcp tcp,
             IPEndPoint localEndPoint, 
             IPEndPoint remoteEndPoint,
-            Action<Tcp, Exception> connectedHandler,
+            Action<Tcp, Exception> connectedAction,
             bool dualStack = false)
         {
             Contract.Requires(tcp != null);
             Contract.Requires(localEndPoint != null);
             Contract.Requires(remoteEndPoint != null);
-            Contract.Requires(connectedHandler != null);
+            Contract.Requires(connectedAction != null);
 
             tcp.Bind(localEndPoint, dualStack);
-            tcp.ConnectTo(remoteEndPoint, connectedHandler);
+            tcp.ConnectTo(remoteEndPoint, connectedAction);
 
             return tcp;
         }
 
         public static Tcp ConnectTo(this Tcp tcp,
             IPEndPoint remoteEndPoint,
-            Action<Tcp, Exception> connectedHandler,
+            Action<Tcp, Exception> connectedAction,
             bool dualStack = false)
         {
             Contract.Requires(tcp != null);
             Contract.Requires(remoteEndPoint != null);
-            Contract.Requires(connectedHandler != null);
+            Contract.Requires(connectedAction != null);
 
             TcpConnect request = null;
             try
             {
-                request = new TcpConnect(tcp, remoteEndPoint, connectedHandler);
+                request = new TcpConnect(tcp, remoteEndPoint, connectedAction);
             }
             catch (Exception)
             {

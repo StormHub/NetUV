@@ -23,7 +23,7 @@ namespace NetUV.Core.Handles
 
         protected internal abstract StreamHandle NewStream();
 
-        protected internal void StreamListen(Action<StreamHandle, Exception> onConnection, int backlog = DefaultBacklog)
+        public void StreamListen(Action<StreamHandle, Exception> onConnection, int backlog = DefaultBacklog)
         {
             Contract.Requires(this.connectionHandler != null);
             Contract.Requires(backlog > 0);
@@ -33,7 +33,10 @@ namespace NetUV.Core.Handles
             try
             {
                 NativeMethods.StreamListen(this.InternalHandle, backlog);
-                Log.DebugFormat("Stream {0} {1} listening, backlog = {2}", this.HandleType, this.InternalHandle, backlog);
+                if (Log.IsDebugEnabled)
+                {
+                    Log.DebugFormat("Stream {0} {1} listening, backlog = {2}", this.HandleType, this.InternalHandle, backlog);
+                }
             }
             catch
             {
@@ -67,15 +70,6 @@ namespace NetUV.Core.Handles
                 else
                 {
                     client = server.NewStream();
-                    if (client == null)
-                    {
-                        throw new InvalidOperationException(
-                            $"{server.HandleType} {server.InternalHandle} failed to create new client stream.");
-                    }
-
-                    NativeMethods.StreamAccept(server.InternalHandle, client.InternalHandle);
-                    client.ReadStart();
-                    Log.DebugFormat("{0} {1} client {2} accepted", server.HandleType, handle, client.InternalHandle);
                 }
 
                 server.connectionHandler(client, error);

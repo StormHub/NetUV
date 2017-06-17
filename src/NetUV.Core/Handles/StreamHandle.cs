@@ -146,6 +146,23 @@ namespace NetUV.Core.Handles
             this.pipeline.QueueWrite(bufferRef, completion);
         }
 
+        public void QueueWriteStream(WritableBuffer writableBuffer, StreamHandle sendHandle,
+            Action<StreamHandle, Exception> completion)
+        {
+            Contract.Requires(completion != null);
+            Contract.Requires(sendHandle != null);
+
+            IArrayBuffer<byte> buffer = writableBuffer.ArrayBuffer;
+            if (buffer == null
+                || !buffer.IsReadable())
+            {
+                return;
+            }
+
+            var bufferRef = new BufferRef(buffer, buffer.ReaderIndex, buffer.ReadableCount);
+            this.pipeline.QueueWrite(bufferRef, sendHandle, completion);
+        }
+
         public void QueueWriteStream(byte[] array, Action<StreamHandle, Exception> completion)
         {
             Contract.Requires(array != null && array.Length > 0);
@@ -163,6 +180,27 @@ namespace NetUV.Core.Handles
             IArrayBuffer<byte> buffer = Unpooled.WrappedBuffer(array, offset, count);
             var bufferRef = new BufferRef(buffer, buffer.ReaderIndex, count);
             this.pipeline.QueueWrite(bufferRef, completion);
+        }
+
+        public void QueueWriteStream(byte[] array, StreamHandle sendHandle, 
+            Action<StreamHandle, Exception> completion)
+        {
+            Contract.Requires(array != null && array.Length > 0);
+
+            this.QueueWriteStream(array, 0, array.Length, sendHandle, completion);
+        }
+
+        public void QueueWriteStream(byte[] array, int offset, int count, 
+            StreamHandle sendHandle,
+            Action<StreamHandle, Exception> completion)
+        {
+            Contract.Requires(array != null && array.Length > 0);
+            Contract.Requires(offset >= 0 && count > 0);
+            Contract.Requires((offset + count) <= array.Length);
+
+            IArrayBuffer<byte> buffer = Unpooled.WrappedBuffer(array, offset, count);
+            var bufferRef = new BufferRef(buffer, buffer.ReaderIndex, count);
+            this.pipeline.QueueWrite(bufferRef, sendHandle, completion);
         }
 
         internal void WriteStream(WriteRequest request)
@@ -185,6 +223,30 @@ namespace NetUV.Core.Handles
                 throw;
             }
         }
+
+        internal void WriteStream(WriteRequest request, StreamHandle sendHandle)
+        {
+            Contract.Requires(request != null);
+            Contract.Requires(sendHandle != null);
+
+            this.Validate();
+            try
+            {
+                uv_buf_t[] bufs = request.Bufs;
+
+                NativeMethods.WriteStream(
+                    request.InternalHandle,
+                    this.InternalHandle,
+                    ref bufs, 
+                    sendHandle.InternalHandle);
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"{this.HandleType} Failed to write data {request}.", exception);
+                throw;
+            }
+        }
+
 
         public void TryWrite(byte[] array)
         {

@@ -126,6 +126,20 @@ namespace NetUV.Core.Native
             }
         }
 
+        internal static void WriteStream(IntPtr requestHandle, IntPtr streamHandle, ref uv_buf_t[] bufs, IntPtr sendHandle)
+        {
+            Contract.Requires(requestHandle != IntPtr.Zero);
+            Contract.Requires(streamHandle != IntPtr.Zero);
+            Contract.Requires(sendHandle != IntPtr.Zero);
+            Contract.Requires(bufs != null && bufs.Length > 0);
+
+            int result = uv_write2(requestHandle, streamHandle, bufs, bufs.Length, sendHandle, WriteBufferRequest.WriteCallback);
+            if (result < 0)
+            {
+                throw CreateError((uv_err_code)result);
+            }
+        }
+
         internal static void StreamListen(IntPtr handle, int backlog)
         {
             Contract.Requires(handle != IntPtr.Zero);
@@ -245,6 +259,9 @@ namespace NetUV.Core.Native
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         static extern int uv_write(IntPtr req, IntPtr handle, uv_buf_t[] bufs, int nbufs, uv_watcher_cb cb);
+
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+        static extern int uv_write2(IntPtr req, IntPtr handle, uv_buf_t[] bufs, int nbufs, IntPtr sendHandle, uv_watcher_cb cb);
 
         #endregion
     }

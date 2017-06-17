@@ -10,9 +10,13 @@ namespace NetUV.Core.Handles
 
     public sealed class Pipe : ServerStream
     {
+        bool ipc;
+
         internal Pipe(LoopContext loop, bool ipc = false)
             : base(loop, uv_handle_type.UV_NAMED_PIPE, ipc)
-        { }
+        {
+            this.ipc = ipc;
+        }
 
         public int GetSendBufferSize()
         {
@@ -86,7 +90,7 @@ namespace NetUV.Core.Handles
             return this;
         }
 
-        internal Pipe Bind(string name)
+        public Pipe Bind(string name)
         {
             Contract.Requires(!string.IsNullOrEmpty(name));
 
@@ -122,19 +126,80 @@ namespace NetUV.Core.Handles
             return NativeMethods.PipePendingCount(this.InternalHandle);
         }
 
+        public unsafe StreamHandle CreatePendingType()
+        {
+            this.Validate();
+
+            StreamHandle handle = null;
+
+            int count = this.PendingCount();
+            if (count > 0)
+            {
+                IntPtr loopHandle = ((uv_stream_t*)this.InternalHandle)->loop;
+                var loop = HandleContext.GetTarget<LoopContext>(loopHandle);
+                uv_handle_type handleType = NativeMethods.PipePendingType(this.InternalHandle);
+
+                if (handleType == uv_handle_type.UV_TCP)
+                {
+                    handle = new Tcp(loop);
+                }
+                else if (handleType == uv_handle_type.UV_NAMED_PIPE)
+                {
+                    handle = new Pipe(loop);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"{handleType} not supported or IPC over Pipe is disabled.");
+                }
+
+                NativeMethods.StreamAccept(this.InternalHandle, handle.InternalHandle);
+            }
+
+            return handle;
+        }
+
         protected internal override unsafe StreamHandle NewStream()
         {
             IntPtr loopHandle = ((uv_stream_t*)this.InternalHandle)->loop;
             var loop = HandleContext.GetTarget<LoopContext>(loopHandle);
-            return new Pipe(loop);
+            uv_handle_type type = ((uv_stream_t*)this.InternalHandle)->type;
+
+            StreamHandle client;
+            if (type == uv_handle_type.UV_NAMED_PIPE)
+            {
+                client = new Pipe(loop, this.ipc);
+            }
+            else if (type == uv_handle_type.UV_TCP)
+            {
+                client = new Tcp(loop);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Pipe IPC handle {type} not supported");
+            }
+
+            NativeMethods.StreamAccept(this.InternalHandle, client.InternalHandle);
+            if (!this.ipc)
+            {
+                client.ReadStart();
+            }
+
+            if (Log.IsDebugEnabled)
+            {
+                Log.DebugFormat("{0} {1} client {2} accepted. (IPC : {3})", this.HandleType, this.InternalHandle, client.InternalHandle, this.ipc);
+            }
+
+            return client;
         }
 
-        public Pipe Listen(Action<Pipe, Exception> onConnection, int backlog = DefaultBacklog)
+        public Pipe Listen(Action<Pipe, Exception> onConnection, int backlog = DefaultBacklog, bool useIpc = false)
         {
             Contract.Requires(onConnection != null);
             Contract.Requires(backlog > 0);
-            
+
+            this.ipc = useIpc;
             this.StreamListen((handle, exception) => onConnection((Pipe)handle, exception), backlog);
+
             return this;
         }
 

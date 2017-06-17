@@ -15,6 +15,7 @@ namespace NetUV.Core.Channels
         readonly ConcurrentQueue<Activator> queue;
         readonly Thread thread;
         Loop loop;
+        Async asyncHandle;
         long loopState;
 
         class Activator
@@ -62,7 +63,11 @@ namespace NetUV.Core.Channels
             this.thread = new Thread(this.RunLoop);
         }
 
-        public void ScheduleStop() => Interlocked.CompareExchange(ref this.loopState, 1, 0);
+        public void ScheduleStop()
+        {
+            Interlocked.CompareExchange(ref this.loopState, 1, 0);
+            this.asyncHandle.Send();
+        } 
 
         public Task Schedule(Action<Loop, object> action, object state)
         {
@@ -86,6 +91,7 @@ namespace NetUV.Core.Channels
 
             var activator = new Activator(action);
             this.queue.Enqueue(activator);
+            this.asyncHandle.Send();
 
             return activator.Completion;
         }
@@ -110,11 +116,9 @@ namespace NetUV.Core.Channels
             try
             {
                 this.loop = new Loop();
-                this.loop
-                    .CreateIdle()
-                    .Start(this.OnIdle);
-
+                this.asyncHandle = this.loop.CreateAsync(this.OnAsync);
                 this.loop.RunDefault();
+
                 completion.TrySetResult(true);
             }
             catch (Exception exception)
@@ -123,25 +127,24 @@ namespace NetUV.Core.Channels
             }
         }
 
-        void OnIdle(Idle handle)
+        void OnAsync(Async handle)
         {
-            if (this.loopState > 0)
+            while (true)
             {
-                handle.CloseHandle(this.OnClosed);
-                return;
-            }
+                if (this.loopState > 0)
+                {
+                    this.asyncHandle.RemoveReference();
+                    this.loop.Dispose();
+                    break;
+                }
 
-            if (this.queue.TryDequeue(out Activator activator))
-            {
+                if (!this.queue.TryDequeue(out Activator activator))
+                {
+                    break;
+                }
+
                 activator.Execute(this.loop);
             }
-        }
-
-        void OnClosed(Idle handle)
-        {
-            handle.Dispose();
-            this.loop?.Dispose();
-            this.loop = null;
         }
 
         public void Dispose()
