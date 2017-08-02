@@ -26,3 +26,8 @@ First public preview release
 - Made stream handle write public.
 - Added read string by delimiter to writable buffer.
 - Removed some redundant validations to improve performance. 
+
+#### 0.1.120 August 2 2017
+- Upgraded to Libuv 1.10.0
+- Target net standard 1.6
+- Added IPC pipe functions for passing handles to different loops.
