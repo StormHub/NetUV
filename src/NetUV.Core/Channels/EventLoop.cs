@@ -12,11 +12,19 @@ namespace NetUV.Core.Channels
 
     public sealed class EventLoop : IDisposable
     {
-        readonly ConcurrentQueue<Activator> queue;
+        readonly TaskCompletionSource<bool> loopCompletionSource;
         readonly Thread thread;
-        Loop loop;
-        Async asyncHandle;
-        long loopState;
+        readonly Loop loop;
+        readonly Async asyncHandle;
+        readonly ConcurrentQueue<Activator> queue;
+
+        const int NotStartedState = 1;
+        const int StartedState = 2;
+        const int ShuttingDownState = 3;
+        const int ShutdownState = 4;
+        const int TerminatedState = 5;
+
+        volatile int executionState = NotStartedState;
 
         class Activator
         {
@@ -58,35 +66,89 @@ namespace NetUV.Core.Channels
 
         public EventLoop()
         {
+            this.loopCompletionSource = new TaskCompletionSource<bool>();
             this.queue = new ConcurrentQueue<Activator>();
-            this.loopState = 0;
-            this.thread = new Thread(this.RunLoop);
+            this.loop = new Loop();
+            this.asyncHandle = this.loop.CreateAsync(this.OnAsync);
+            this.thread = new Thread(RunLoop);
+            this.thread.Start(this);
         }
+
+        bool IsShuttingDown => this.executionState >= ShuttingDownState;
+
+        public bool IsShutdown => this.executionState >= ShutdownState;
+
+        public bool IsTerminated => this.executionState == TerminatedState;
 
         public void ScheduleStop()
         {
-            Interlocked.CompareExchange(ref this.loopState, 1, 0);
-            this.asyncHandle.Send();
-        } 
+            if (this.IsShuttingDown)
+            {
+                return;
+            }
+
+            bool wakeup;
+            while (true)
+            {
+                if (this.IsShuttingDown)
+                {
+                    return;
+                }
+
+                int newState;
+                wakeup = true;
+                int oldState = this.executionState;
+                if (Thread.CurrentThread == this.thread)
+                {
+                    newState = ShuttingDownState;
+                }
+                else
+                {
+                    switch (oldState)
+                    {
+                        case NotStartedState:
+                        case StartedState:
+                            newState = ShuttingDownState;
+                            break;
+                        default:
+                            newState = oldState;
+                            wakeup = false;
+                            break;
+                    }
+                }
+#pragma warning disable 420
+                if (Interlocked.CompareExchange(ref this.executionState, newState, oldState) == oldState)
+#pragma warning restore 420
+                {
+                    break;
+                }
+            }
+
+            if (wakeup)
+            {
+                this.asyncHandle.Send();
+            }
+        }
 
         public Task Schedule(Action<Loop, object> action, object state)
         {
-            if (Interlocked.Read(ref this.loopState) > 0)
+            if (this.executionState != StartedState)
             {
-                throw new ObjectDisposedException($"{nameof(EventLoop)}");
+                throw new InvalidOperationException($"{nameof(EventLoop)} is not in started state.");
             }
 
             var activator = new Activator(action, state);
             this.queue.Enqueue(activator);
+            this.asyncHandle.Send();
 
             return activator.Completion;
         }
 
         public Task Schedule(Action<Loop> action)
         {
-            if (Interlocked.Read(ref this.loopState) > 0)
+            if (this.executionState != StartedState)
             {
-                throw new ObjectDisposedException($"{nameof(EventLoop)}");
+                throw new InvalidOperationException($"{nameof(EventLoop)} is not in started state.");
             }
 
             var activator = new Activator(action);
@@ -96,42 +158,31 @@ namespace NetUV.Core.Channels
             return activator.Completion;
         }
 
-        public Task RunAsync()
-        {
-            if (this.thread.ThreadState != ThreadState.Unstarted)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(EventLoop)} invalid thread state {this.thread.ThreadState}.");
-            }
+        public Task LoopCompletion => this.loopCompletionSource.Task;
 
-            var completion = new TaskCompletionSource<bool>();
-            this.thread.Start(completion);
-            return completion.Task;
-        }
-
-        void RunLoop(object state)
+        static void RunLoop(object state)
         {
-            var completion = (TaskCompletionSource<bool>)state;
+            var eventLoop = (EventLoop)state;
 
             try
             {
-                this.loop = new Loop();
-                this.asyncHandle = this.loop.CreateAsync(this.OnAsync);
-                this.loop.RunDefault();
-
-                completion.TrySetResult(true);
+                eventLoop.executionState = StartedState;
+                eventLoop.loop.RunDefault();
+                eventLoop.loopCompletionSource.TrySetResult(true);
             }
             catch (Exception exception)
             {
-                completion.TrySetException(exception);
+                eventLoop.loopCompletionSource.TrySetException(exception);
             }
+
+            eventLoop.executionState = TerminatedState;
         }
 
         void OnAsync(Async handle)
         {
             while (true)
             {
-                if (this.loopState > 0)
+                if (this.IsShuttingDown)
                 {
                     this.asyncHandle.RemoveReference();
                     this.loop.Dispose();
@@ -154,8 +205,7 @@ namespace NetUV.Core.Channels
 #pragma warning restore 168
             { }
 
-            this.loop?.Dispose();
-            this.loop = null;
+            this.loop.Dispose();
         } 
     }
 }
