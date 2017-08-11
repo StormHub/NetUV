@@ -61,6 +61,8 @@ namespace NetUV.Core.Channels
             this.queue = new ConcurrentQueue<Activator>();
             this.loopState = 0;
             this.thread = new Thread(this.RunLoop);
+            this.loop = new Loop();
+            this.asyncHandle = this.loop.CreateAsync(this.OnAsync);
         }
 
         public void ScheduleStop()
@@ -115,8 +117,6 @@ namespace NetUV.Core.Channels
 
             try
             {
-                this.loop = new Loop();
-                this.asyncHandle = this.loop.CreateAsync(this.OnAsync);
                 this.loop.RunDefault();
 
                 completion.TrySetResult(true);
