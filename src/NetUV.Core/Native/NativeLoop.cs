@@ -64,15 +64,14 @@ namespace NetUV.Core.Native
                 return true;
             }
 
-            int busyErrorCode = Platform.IsWindows 
-                ? (int)uv_err_code.UV_EBUSY 
-                : -16; // Linux EBUSY
-            if (result == busyErrorCode)
+            OperationException error = CreateError((uv_err_code)result);
+            // Only retry if loop close return busy
+            if (error.Name == "EBUSY")
             {
                 return false;
             }
 
-            throw CreateError((uv_err_code)result);
+            throw error;
         }
 
         internal static void WalkLoop(IntPtr handle, uv_walk_cb callback)

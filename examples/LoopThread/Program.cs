@@ -6,7 +6,6 @@ namespace LoopThread
     using System;
     using System.Net;
     using System.Text;
-    using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using NetUV.Core.Buffers;
     using NetUV.Core.Channels;
@@ -26,7 +25,6 @@ namespace LoopThread
             try
             {
                 eventLoop = new EventLoop();
-                Task task = Task.Run(async () => await RunLoopAsync());
 
                 eventLoop.Schedule(loop => loop
                     .CreateTcp()
@@ -34,7 +32,7 @@ namespace LoopThread
                     .Listen(EndPoint, OnConnection));
 
                 Console.WriteLine("Waiting for loop to complete.");
-                task.Wait();
+                eventLoop.LoopCompletion.Wait();
                 Console.WriteLine("Loop completed.");
             }
             catch (Exception exception)
@@ -112,15 +110,5 @@ namespace LoopThread
         static void OnError(StreamHandle stream, Exception error) => Console.WriteLine($"Server read error {error}");
 
         static void OnClosed(ScheduleHandle handle) => handle.Dispose();
-
-        static async Task RunLoopAsync()
-        {
-            Console.WriteLine("Starting event loop.");
-
-            await eventLoop.RunAsync();
-
-            Console.WriteLine("Event loop completed");
-            eventLoop.Dispose();
-        }
     }
 }
