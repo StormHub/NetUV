@@ -157,7 +157,7 @@ namespace NetUV.Core.Buffers
             }
 
             buffer.Read(destination, length);
-            buffer.SetReaderIndex(buffer.ReaderIndex + length);
+            //buffer.SetReaderIndex(buffer.ReaderIndex + length);
         }
 
         public int ReadInt32()
