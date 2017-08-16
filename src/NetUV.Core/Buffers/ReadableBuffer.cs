@@ -142,7 +142,7 @@ namespace NetUV.Core.Buffers
         public void ReadBytes(byte[] destination, int length)
         {
             Contract.Requires(destination != null);
-            Contract.Requires(length > 0);
+            Contract.Requires(length > 0 && destination.Length >= length);
 
             IArrayBuffer<byte> buffer = this.ArrayBuffer;
             if (buffer == null)
@@ -156,7 +156,7 @@ namespace NetUV.Core.Buffers
                     $"{nameof(ReadableBuffer)} expecting : {length} < {buffer.ReadableCount}");
             }
 
-            buffer.Read(destination, length);
+            buffer.Get(buffer.ReaderIndex, destination, 0, length);
             buffer.SetReaderIndex(buffer.ReaderIndex + length);
         }
 
