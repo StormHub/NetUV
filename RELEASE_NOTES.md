@@ -31,3 +31,7 @@ First public preview release
 - Upgraded to Libuv 1.10.0
 - Target net standard 1.6
 - Added IPC pipe functions for passing handles to different loops.
+
+#### 0.1.125 August 17 2017
+- Fixed EventLoop start up
+- Fixed ReadableBuffer read bytes issue.
