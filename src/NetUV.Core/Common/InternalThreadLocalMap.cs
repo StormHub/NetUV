@@ -8,12 +8,6 @@ namespace NetUV.Core.Common
     using System.Text;
     using System.Threading;
 
-    /// <summary>
-    /// The internal data structure that stores the thread-local variables for Netty and all {@link FastThreadLocal}s.
-    /// Note that this class is for internal use only and is subject to change at any time.  Use {@link FastThreadLocal}
-    /// unless you know what you are doing.
-    /// Forked from https://github.com/Azure/DotNetty
-    /// </summary>
     sealed class InternalThreadLocalMap
     {
         public static readonly object Unset = new object();
@@ -67,7 +61,6 @@ namespace NetUV.Core.Common
         // With CompressedOops enabled, an instance of this class should occupy at least 128 bytes.
         // ReSharper disable InconsistentNaming
         public long rp1, rp2, rp3, rp4, rp5, rp6, rp7, rp8, rp9;
-        // ReSharper restore InconsistentNaming
 
         InternalThreadLocalMap()
         {
@@ -150,9 +143,6 @@ namespace NetUV.Core.Common
             return index < lookup.Length ? lookup[index] : Unset;
         }
 
-        /**
-         * @return {@code true} if and only if a new thread-local variable has been created
-         */
         public bool SetIndexedVariable(int index, object value)
         {
             object[] lookup = this.indexedVariables;

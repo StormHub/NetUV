@@ -19,10 +19,9 @@
     <PublicSign Condition=" '$(OS)' != 'Windows_NT' ">true</PublicSign>
     <PackageTags>libuv;asyncio;network;socket;protocol</PackageTags>
     <PackageProjectUrl>https://github.com/StormHub/NetUV</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/NetUV/LICENSE.txt</PackageLicenseUrl>
+    <PackageLicenseUrl>https://github.com/StormHub/NetUV/blob/master/LICENSE.txt</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/StormHub/NetUV</RepositoryUrl>
-    <NetStandardImplicitPackageVersion>1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -38,5 +37,5 @@
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="System.Diagnostics.StackTrace" Version="4.3.0" />
   </ItemGroup>
-
+  
 </Project>

@@ -131,8 +131,7 @@ namespace NetUV.Core.Common
             {
                 for (;;)
                 {
-                    Entry e;
-                    if (!PendingEntries.TryDequeue(out e))
+                    if (!PendingEntries.TryDequeue(out Entry e))
                     {
                         break;
                     }

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Johnny Z. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+// ReSharper disable InconsistentNaming
 namespace NetUV.Core.Common
 {
     using System;
@@ -8,13 +9,12 @@ namespace NetUV.Core.Common
     using System.Runtime.CompilerServices;
     using System.Threading;
 
-    // Forked from https://github.com/Azure/DotNetty
     public class ThreadLocalPool
     {
         public sealed class Handle
         {
-            internal int LastRecycledId;
-            internal int RecycleId;
+            internal int lastRecycledId;
+            internal int recycleId;
 
             public object Value;
             internal Stack Stack;
@@ -56,8 +56,8 @@ namespace NetUV.Core.Common
             {
                 int writeIndex;
 
-                internal readonly Handle[] Elements;
-                internal Link Next;
+                internal readonly Handle[] elements;
+                internal Link next;
 
                 internal int ReadIndex { get; set; }
 
@@ -69,13 +69,13 @@ namespace NetUV.Core.Common
 
                 internal Link()
                 {
-                    this.Elements = new Handle[LinkCapacity];
+                    this.elements = new Handle[LinkCapacity];
                 }
             }
 
             Link head, tail;
-            internal WeakOrderQueue Next;
-            internal WeakReference<Thread> OwnerThread;
+            internal WeakOrderQueue next;
+            internal WeakReference<Thread> ownerThread;
             readonly int id = Interlocked.Increment(ref idSource);
 
             internal bool IsEmpty => this.tail.ReadIndex == this.tail.WriteIndex;
@@ -84,11 +84,11 @@ namespace NetUV.Core.Common
             {
                 Contract.Requires(stack != null);
 
-                this.OwnerThread = new WeakReference<Thread>(thread);
+                this.ownerThread = new WeakReference<Thread>(thread);
                 this.head = this.tail = new Link();
                 lock (stack)
                 {
-                    this.Next = stack.HeadQueue;
+                    this.next = stack.HeadQueue;
                     stack.HeadQueue = this;
                 }
             }
@@ -97,16 +97,16 @@ namespace NetUV.Core.Common
             {
                 Contract.Requires(handle != null);
 
-                handle.LastRecycledId = this.id;
+                handle.lastRecycledId = this.id;
 
                 Link tailLink = this.tail;
                 int writeIndex = tailLink.WriteIndex;
                 if (writeIndex == LinkCapacity)
                 {
-                    this.tail = tailLink = tailLink.Next = new Link();
+                    this.tail = tailLink = tailLink.next = new Link();
                     writeIndex = tailLink.WriteIndex;
                 }
-                tailLink.Elements[writeIndex] = handle;
+                tailLink.elements[writeIndex] = handle;
                 handle.Stack = null;
                 tailLink.WriteIndex = writeIndex + 1;
             }
@@ -124,11 +124,11 @@ namespace NetUV.Core.Common
 
                 if (headLink.ReadIndex == LinkCapacity)
                 {
-                    if (headLink.Next == null)
+                    if (headLink.next == null)
                     {
                         return false;
                     }
-                    this.head = headLink = headLink.Next;
+                    this.head = headLink = headLink.next;
                 }
 
                 int srcStart = headLink.ReadIndex;
@@ -139,10 +139,10 @@ namespace NetUV.Core.Common
                     return false;
                 }
 
-                int dstSize = dst.Size;
+                int dstSize = dst.size;
                 int expectedCapacity = dstSize + srcSize;
 
-                if (expectedCapacity > dst.Elements.Length)
+                if (expectedCapacity > dst.elements.Length)
                 {
                     int actualCapacity = dst.IncreaseCapacity(expectedCapacity);
                     srcEnd = Math.Min(srcStart + actualCapacity - dstSize, srcEnd);
@@ -150,17 +150,17 @@ namespace NetUV.Core.Common
 
                 if (srcStart != srcEnd)
                 {
-                    Handle[] srcElems = headLink.Elements;
-                    Handle[] dstElems = dst.Elements;
+                    Handle[] srcElems = headLink.elements;
+                    Handle[] dstElems = dst.elements;
                     int newDstSize = dstSize;
                     for (int i = srcStart; i < srcEnd; i++)
                     {
                         Handle element = srcElems[i];
-                        if (element.RecycleId == 0)
+                        if (element.recycleId == 0)
                         {
-                            element.RecycleId = element.LastRecycledId;
+                            element.recycleId = element.lastRecycledId;
                         }
-                        else if (element.RecycleId != element.LastRecycledId)
+                        else if (element.recycleId != element.lastRecycledId)
                         {
                             throw new InvalidOperationException("recycled already");
                         }
@@ -168,11 +168,11 @@ namespace NetUV.Core.Common
                         dstElems[newDstSize++] = element;
                         srcElems[i] = null;
                     }
-                    dst.Size = newDstSize;
+                    dst.size = newDstSize;
 
-                    if (srcEnd == LinkCapacity && headLink.Next != null)
+                    if (srcEnd == LinkCapacity && headLink.next != null)
                     {
-                        this.head = headLink.Next;
+                        this.head = headLink.next;
                     }
 
                     headLink.ReadIndex = srcEnd;
@@ -191,10 +191,10 @@ namespace NetUV.Core.Common
             internal readonly ThreadLocalPool Parent;
             internal readonly Thread Thread;
 
-            internal Handle[] Elements;
+            internal Handle[] elements;
 
             readonly int maxCapacity;
-            //internal int size;
+            internal int size;
 
             WeakOrderQueue headQueue;
             WeakOrderQueue cursorQueue;
@@ -206,7 +206,7 @@ namespace NetUV.Core.Common
                 set => Volatile.Write(ref this.headQueue, value);
             }
 
-            internal int Size { get; set; }
+            internal int Size => this.size;
 
             internal Stack(int maxCapacity, ThreadLocalPool parent, Thread thread)
             {
@@ -214,23 +214,23 @@ namespace NetUV.Core.Common
                 this.Parent = parent;
                 this.Thread = thread;
 
-                this.Elements = new Handle[Math.Min(InitialCapacity, maxCapacity)];
+                this.elements = new Handle[Math.Min(InitialCapacity, maxCapacity)];
             }
 
             internal int IncreaseCapacity(int expectedCapacity)
             {
-                int newCapacity = this.Elements.Length;
-                int capacity = this.maxCapacity;
+                int newCapacity = this.elements.Length;
+                int maximumCapacity = this.maxCapacity;
                 do
                 {
                     newCapacity <<= 1;
                 }
-                while (newCapacity < expectedCapacity && newCapacity < capacity);
+                while (newCapacity < expectedCapacity && newCapacity < maximumCapacity);
 
-                newCapacity = Math.Min(newCapacity, capacity);
-                if (newCapacity != this.Elements.Length)
+                newCapacity = Math.Min(newCapacity, maximumCapacity);
+                if (newCapacity != this.elements.Length)
                 {
-                    Array.Resize(ref this.Elements, newCapacity);
+                    Array.Resize(ref this.elements, newCapacity);
                 }
 
                 return newCapacity;
@@ -239,49 +239,50 @@ namespace NetUV.Core.Common
             internal void Push(Handle item)
             {
                 Contract.Requires(item != null);
-                if ((item.RecycleId | item.LastRecycledId) != 0)
+
+                if ((item.recycleId | item.lastRecycledId) != 0)
                 {
                     throw new InvalidOperationException("released already");
                 }
-                item.RecycleId = item.LastRecycledId = OwnThreadId;
+                item.recycleId = item.lastRecycledId = ownThreadId;
 
-                int size = this.Size;
-                if (size >= this.maxCapacity)
+                int currentSize = this.size;
+                if (currentSize >= this.maxCapacity)
                 {
                     // Hit the maximum capacity - drop the possibly youngest object.
                     return;
                 }
-                if (size == this.Elements.Length)
+                if (currentSize == this.elements.Length)
                 {
-                    Array.Resize(ref this.Elements, Math.Min(size << 1, this.maxCapacity));
+                    Array.Resize(ref this.elements, Math.Min(currentSize << 1, this.maxCapacity));
                 }
 
-                this.Elements[size] = item;
-                this.Size = size + 1;
+                this.elements[currentSize] = item;
+                this.size = currentSize + 1;
             }
 
             internal bool TryPop(out Handle item)
             {
-                int size = this.Size;
-                if (size == 0)
+                int currentSize = this.size;
+                if (currentSize == 0)
                 {
                     if (!this.Scavenge())
                     {
                         item = null;
                         return false;
                     }
-                    size = this.Size;
+                    currentSize = this.size;
                 }
-                size--;
-                Handle ret = this.Elements[size];
-                if (ret.LastRecycledId != ret.RecycleId)
+                currentSize--;
+                Handle ret = this.elements[currentSize];
+                if (ret.lastRecycledId != ret.recycleId)
                 {
                     throw new InvalidOperationException("recycled multiple times");
                 }
-                ret.RecycleId = 0;
-                ret.LastRecycledId = 0;
+                ret.recycleId = 0;
+                ret.lastRecycledId = 0;
                 item = ret;
-                this.Size = size;
+                this.size = currentSize;
 
                 return true;
             }
@@ -322,17 +323,15 @@ namespace NetUV.Core.Common
                         break;
                     }
 
-                    WeakOrderQueue next = cursor.Next;
-#pragma warning disable 168
-                    if (!cursor.OwnerThread.TryGetTarget(out Thread _))
-#pragma warning restore 168
+                    WeakOrderQueue next = cursor.next;
+                    if (!cursor.ownerThread.TryGetTarget(out Thread _))
                     {
                         // If the thread associated with the queue is gone, unlink it, after
                         // performing a volatile read to confirm there is no data left to collect.
                         // We never unlink the first queue, as we don't want to synchronize on updating the head.
                         if (!cursor.IsEmpty)
                         {
-                            for (;;)
+                            for (; ; )
                             {
                                 if (cursor.Transfer(this))
                                 {
@@ -346,7 +345,7 @@ namespace NetUV.Core.Common
                         }
                         if (prev != null)
                         {
-                            prev.Next = next;
+                            prev.next = next;
                         }
                     }
                     else
@@ -367,8 +366,7 @@ namespace NetUV.Core.Common
         internal static readonly int DefaultMaxCapacity = 262144;
         internal static readonly int InitialCapacity = Math.Min(256, DefaultMaxCapacity);
         static int idSource = int.MinValue;
-
-        static readonly int OwnThreadId = Interlocked.Increment(ref idSource);
+        static readonly int ownThreadId = Interlocked.Increment(ref idSource);
 
         internal static readonly DelayedThreadLocal DelayedPool = new DelayedThreadLocal();
 
@@ -386,9 +384,6 @@ namespace NetUV.Core.Common
         public int MaxCapacity { get; }
     }
 
-    /// <summary>
-    /// Forked from https://github.com/Azure/DotNetty
-    /// </summary>
     public sealed class ThreadLocalPool<T> : ThreadLocalPool
         where T : class
     {
@@ -435,7 +430,7 @@ namespace NetUV.Core.Common
             return handle;
         }
 
-        internal int ThreadLocalCapacity => this.threadLocal.Value.Elements.Length;
+        internal int ThreadLocalCapacity => this.threadLocal.Value.elements.Length;
 
         internal int ThreadLocalSize => this.threadLocal.Value.Size;
 

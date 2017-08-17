@@ -4,6 +4,7 @@
 namespace NetUV.Core.Handles
 {
     using System;
+    using System.Diagnostics;
     using System.Diagnostics.Contracts;
     using NetUV.Core.Buffers;
     using NetUV.Core.Channels;
@@ -17,20 +18,21 @@ namespace NetUV.Core.Handles
         const int DefaultPoolSize = 1024;
 
         static readonly ILog Log = LogFactory.ForContext<Pipeline>();
+
         static readonly ThreadLocalPool<WriteRequest> Recycler = 
             new ThreadLocalPool<WriteRequest>(handle => new WriteRequest(handle), DefaultPoolSize);
 
         readonly StreamHandle streamHandle;
-        readonly ByteBufferAllocator allocator;
+        readonly PooledByteBufferAllocator allocator;
         readonly ReceiveBufferSizeEstimate receiveBufferSizeEstimate;
-        readonly BufferQueue bufferQueue;
+        readonly HeapBufferQueue bufferQueue;
         IStreamConsumer<StreamHandle> streamConsumer;
 
         internal Pipeline(StreamHandle streamHandle)
-            : this(streamHandle, ByteBufferAllocator.Pooled)
+            : this(streamHandle, PooledByteBufferAllocator.Default)
         { }
 
-        internal Pipeline(StreamHandle streamHandle, ByteBufferAllocator allocator)
+        internal Pipeline(StreamHandle streamHandle, PooledByteBufferAllocator allocator)
         {
             Contract.Requires(streamHandle != null);
             Contract.Requires(allocator != null);
@@ -38,12 +40,13 @@ namespace NetUV.Core.Handles
             this.streamHandle = streamHandle;
             this.allocator = allocator;
             this.receiveBufferSizeEstimate = new ReceiveBufferSizeEstimate();
-            this.bufferQueue = new BufferQueue();
+            this.bufferQueue = new HeapBufferQueue();
         }
 
         internal void Consumer(IStreamConsumer<StreamHandle> consumer)
         {
             Contract.Requires(consumer != null);
+
             this.streamConsumer = consumer;
         }
 
@@ -54,49 +57,55 @@ namespace NetUV.Core.Handles
             return new WritableBuffer(this.allocator.Buffer(size));
         }
 
-        internal BufferRef AllocateReadBuffer()
+        internal HeapBufferRef AllocateReadBuffer()
         {
-            IArrayBuffer<byte> buffer = this.receiveBufferSizeEstimate.Allocate(this.allocator);
+            IByteBuffer buffer = this.receiveBufferSizeEstimate.Allocate(this.allocator);
+
             if (Log.IsTraceEnabled)
             {
                 Log.TraceFormat("{0} receive buffer allocated size = {1}", nameof(Pipeline), buffer.Capacity);
             }
 
-            var bufferRef = new BufferRef(buffer, buffer.WriterIndex, buffer.WritableCount);
+            var bufferRef = new HeapBufferRef(buffer);
             this.bufferQueue.Enqueue(bufferRef);
 
             return bufferRef;
         }
 
-        internal IArrayBuffer<byte> GetBuffer(ref uv_buf_t buf)
+        internal IByteBuffer GetBuffer(ref uv_buf_t buf)
         {
-            IArrayBuffer<byte> byteBuffer = null;
-
-            if (this.bufferQueue.TryDequeue(out BufferRef bufferRef))
+            IByteBuffer byteBuffer = null;
+            HeapBufferRef bufferRef = null;
+            try
             {
-                byteBuffer = bufferRef.GetByteBuffer();
+                if (this.bufferQueue.TryDequeue(out bufferRef))
+                {
+                    byteBuffer = bufferRef.GetHeapBuffer();
+                }
             }
-            bufferRef?.Dispose();
+            finally
+            {
+                bufferRef?.Dispose();
+            }
 
             return byteBuffer;
         }
 
-        internal void OnReadCompleted(IArrayBuffer<byte> byteBuffer, Exception error = null)
+        internal void OnReadCompleted(IByteBuffer byteBuffer, Exception error = null)
         {
             this.bufferQueue.Clear();
             this.InvokeRead(byteBuffer, 0, error, true);
         } 
 
-        internal void OnReadCompleted(IArrayBuffer<byte> byteBuffer, int size)
+        internal void OnReadCompleted(IByteBuffer byteBuffer, int size)
         {
-            Contract.Requires(byteBuffer != null);
-            Contract.Requires(size >= 0);
+            Debug.Assert(byteBuffer != null && size >= 0);
 
             this.receiveBufferSizeEstimate.Record(size);
             this.InvokeRead(byteBuffer, size);
         }
 
-        void InvokeRead(IArrayBuffer<byte> byteBuffer, int size, Exception error = null, bool completed = false)
+        void InvokeRead(IByteBuffer byteBuffer, int size, Exception error = null, bool completed = false)
         {
             if (size == 0)
             {
@@ -122,7 +131,7 @@ namespace NetUV.Core.Handles
             }
         }
 
-        internal void QueueWrite(BufferRef bufferRef, Action<StreamHandle, Exception> completion)
+        internal void QueueWrite(ByteBufferRef bufferRef, Action<StreamHandle, Exception> completion)
         {
             Contract.Requires(bufferRef != null);
 
@@ -141,7 +150,7 @@ namespace NetUV.Core.Handles
             }
         }
 
-        internal void QueueWrite(BufferRef bufferRef, StreamHandle sendHandle, Action<StreamHandle, Exception> completion)
+        internal void QueueWrite(ByteBufferRef bufferRef, StreamHandle sendHandle, Action<StreamHandle, Exception> completion)
         {
             Contract.Requires(bufferRef != null);
             Contract.Requires(sendHandle != null);

@@ -10,12 +10,6 @@ namespace NetUV.Core.Common
     using System.Linq;
     using System.Reflection;
 
-    /// <summary>
-    /// A double-ended queue (deque), which provides O(1) indexed access, O(1) removals from the front and back, amortized
-    /// O(1) insertions to the front and back, and O(N) insertions and removals anywhere else (with the operations getting
-    /// slower as the index approaches the middle).
-    /// Forked from https://github.com/Azure/DotNetty
-    /// </summary>
     sealed class Deque<T> : IList<T>, IList
     {
         const int DefaultCapacity = 8;
@@ -119,12 +113,6 @@ namespace NetUV.Core.Common
             return true;
         }
 
-        /// <summary>
-        ///     Returns an enumerator that iterates through the collection.
-        /// </summary>
-        /// <returns>
-        ///     A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection.
-        /// </returns>
         public IEnumerator<T> GetEnumerator()
         {
             int count = this.Count;
@@ -134,12 +122,6 @@ namespace NetUV.Core.Common
             }
         }
 
-        /// <summary>
-        ///     Returns an enumerator that iterates through a collection.
-        /// </summary>
-        /// <returns>
-        ///     An <see cref="T:System.Collections.IEnumerator" /> object that can be used to iterate through the collection.
-        /// </returns>
         IEnumerator IEnumerable.GetEnumerator() => this.GetEnumerator();
 
         #endregion

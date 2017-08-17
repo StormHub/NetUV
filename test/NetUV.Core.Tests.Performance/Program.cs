@@ -7,6 +7,7 @@ namespace NetUV.Core.Tests.Performance
     using System.Collections.Generic;
     using System.Linq;
     using System.Runtime.InteropServices;
+    using NetUV.Core.Common;
     using NetUV.Core.Handles;
     using NetUV.Core.Logging;
 
@@ -31,7 +32,7 @@ namespace NetUV.Core.Tests.Performance
         {
             processorCount = Environment.ProcessorCount;
             Console.WriteLine(
-                  $" {RuntimeInformation.OSArchitecture} {RuntimeInformation.OSDescription}\n" 
+                  $"\n {RuntimeInformation.OSArchitecture} {RuntimeInformation.OSDescription}\n" 
                 + $" {RuntimeInformation.ProcessArchitecture} {RuntimeInformation.FrameworkDescription}\n" 
                 + $" Processor Count : {Environment.ProcessorCount} \n");
             
@@ -44,8 +45,14 @@ namespace NetUV.Core.Tests.Performance
             {
                 LogFactory.AddConsoleProvider();
             }
+            else
+            {
+                ResourceLeakDetector.Level = ResourceLeakDetector.DetectionLevel.Disabled;
+            }
 
-            Console.WriteLine($"\nNative version {Loop.NativeVersion}\n");
+            Console.WriteLine($"\nNative version {Loop.NativeVersion}");
+            Console.WriteLine($"Buffer leak detection : {nameof(ResourceLeakDetector)}.{ResourceLeakDetector.Level}\n");
+
             Run(category, name);
 
             if (!shouldPause)
