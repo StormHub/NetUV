@@ -4,6 +4,7 @@
 namespace NetUV.Core.Handles
 {
     using System;
+    using System.Diagnostics;
     using System.Diagnostics.Contracts;
     using NetUV.Core.Buffers;
     using NetUV.Core.Channels;
@@ -135,14 +136,13 @@ namespace NetUV.Core.Handles
         {
             Contract.Requires(completion != null);
 
-            IArrayBuffer<byte> buffer = writableBuffer.ArrayBuffer;
-            if (buffer == null 
-                || !buffer.IsReadable())
+            IByteBuffer buffer = writableBuffer.GetBuffer();
+            if (buffer == null  || !buffer.IsReadable())
             {
                 return;
             }
 
-            var bufferRef = new BufferRef(buffer, buffer.ReaderIndex, buffer.ReadableCount);
+            var bufferRef = new ByteBufferRef(buffer, buffer.ReaderIndex, buffer.ReadableBytes);
             this.pipeline.QueueWrite(bufferRef, completion);
         }
 
@@ -152,14 +152,13 @@ namespace NetUV.Core.Handles
             Contract.Requires(completion != null);
             Contract.Requires(sendHandle != null);
 
-            IArrayBuffer<byte> buffer = writableBuffer.ArrayBuffer;
-            if (buffer == null
-                || !buffer.IsReadable())
+            IByteBuffer buffer = writableBuffer.GetBuffer();
+            if (buffer == null || !buffer.IsReadable())
             {
                 return;
             }
 
-            var bufferRef = new BufferRef(buffer, buffer.ReaderIndex, buffer.ReadableCount);
+            var bufferRef = new ByteBufferRef(buffer, buffer.ReaderIndex, buffer.ReadableBytes);
             this.pipeline.QueueWrite(bufferRef, sendHandle, completion);
         }
 
@@ -177,8 +176,8 @@ namespace NetUV.Core.Handles
             Contract.Requires(offset >= 0 && count > 0);
             Contract.Requires((offset + count) <= array.Length);
 
-            IArrayBuffer<byte> buffer = Unpooled.WrappedBuffer(array, offset, count);
-            var bufferRef = new BufferRef(buffer, buffer.ReaderIndex, count);
+            IByteBuffer buffer = Unpooled.WrappedBuffer(array, offset, count);
+            var bufferRef = new ByteBufferRef(buffer, buffer.ReaderIndex, count);
             this.pipeline.QueueWrite(bufferRef, completion);
         }
 
@@ -198,8 +197,8 @@ namespace NetUV.Core.Handles
             Contract.Requires(offset >= 0 && count > 0);
             Contract.Requires((offset + count) <= array.Length);
 
-            IArrayBuffer<byte> buffer = Unpooled.WrappedBuffer(array, offset, count);
-            var bufferRef = new BufferRef(buffer, buffer.ReaderIndex, count);
+            IByteBuffer buffer = Unpooled.WrappedBuffer(array, offset, count);
+            var bufferRef = new ByteBufferRef(buffer, buffer.ReaderIndex, count);
             this.pipeline.QueueWrite(bufferRef, sendHandle, completion);
         }
 
@@ -304,7 +303,7 @@ namespace NetUV.Core.Handles
 
         protected override void Close() => this.pipeline.Dispose();
 
-        void OnReadCallback(IArrayBuffer<byte> byteBuffer, int status)
+        void OnReadCallback(IByteBuffer byteBuffer, int status)
         {
             //
             //  nread is > 0 if there is data available or < 0 on error.
@@ -345,18 +344,16 @@ namespace NetUV.Core.Handles
         static void OnReadCallback(IntPtr handle, IntPtr nread, ref uv_buf_t buf)
         {
             var stream = HandleContext.GetTarget<StreamHandle>(handle);
-            IArrayBuffer<byte> byteBuffer = stream.pipeline.GetBuffer(ref buf);
+            IByteBuffer byteBuffer = stream.pipeline.GetBuffer(ref buf);
             stream.OnReadCallback(byteBuffer, (int)nread.ToInt64());
         }
 
         void OnAllocateCallback(out uv_buf_t buf)
         {
-            BufferRef bufferRef = this.pipeline.AllocateReadBuffer();
-            uv_buf_t[] bufs = bufferRef.GetBuffer();
-#if DEBUG
-            Contract.Assert(bufs != null && bufs.Length > 0);
-#endif
-            // ReSharper disable once PossibleNullReferenceException
+            HeapBufferRef bufferRef = this.pipeline.AllocateReadBuffer();
+            uv_buf_t[] bufs = bufferRef.GetNativeBuffer();
+
+            Debug.Assert(bufs != null);
             buf = bufs[0];
         }
 

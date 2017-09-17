@@ -13,7 +13,7 @@ namespace NetUV.Core.Requests
 
         readonly RequestContext handle;
         Action<WriteBufferRequest, Exception> completion;
-        BufferRef buffer;
+        ByteBufferRef buffer;
 
         protected WriteBufferRequest(uv_req_type requestType)
             : base(requestType)
@@ -28,7 +28,7 @@ namespace NetUV.Core.Requests
 
         internal override IntPtr InternalHandle => this.handle.Handle;
 
-        internal void Prepare(BufferRef bufferRef, Action<WriteBufferRequest, Exception> callback)
+        internal void Prepare(ByteBufferRef bufferRef, Action<WriteBufferRequest, Exception> callback)
         {
             Contract.Requires(bufferRef != null);
             Contract.Requires(callback != null);
@@ -53,13 +53,13 @@ namespace NetUV.Core.Requests
                         $"{nameof(WriteRequest)} buffer has not been initialized.");
                 }
 
-                return this.buffer.GetBuffer();
+                return this.buffer.GetNativeBuffer();
             }
         }
 
         protected virtual void Release()
         {
-            BufferRef buf = this.buffer;
+            ByteBufferRef buf = this.buffer;
             this.buffer = null;
             this.completion = null;
 

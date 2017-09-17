@@ -9,151 +9,76 @@ namespace NetUV.Core.Buffers
 
     public struct WritableBuffer : IDisposable
     {
-        readonly bool isLittleEndian;
+        readonly IByteBuffer buffer;
 
-        internal WritableBuffer(IArrayBuffer<byte> buffer) 
-            : this(buffer, BitConverter.IsLittleEndian)
-        {
-        }
-
-        internal WritableBuffer(IArrayBuffer<byte> buffer, bool isLittleEndian)
+        internal WritableBuffer(IByteBuffer buffer)
         {
             Contract.Requires(buffer != null);
 
-            this.ArrayBuffer = buffer;
-            this.isLittleEndian = isLittleEndian;
+            this.buffer = buffer;
         }
-
-        internal IArrayBuffer<byte> ArrayBuffer { get; private set; }
 
         public static WritableBuffer From(byte[] array)
         {
-            Contract.Requires(array != null && array.Length > 0);
+            Contract.Requires(array != null);
 
-            IArrayBuffer<byte> buffer = Unpooled.WrappedBuffer(array);
-            return new WritableBuffer(buffer);
+            IByteBuffer buf = Unpooled.WrappedBuffer(array);
+            return new WritableBuffer(buf);
         }
 
-        public void WriteBoolean(bool value)
-        {
-            IArrayBuffer<byte> buffer = this.ArrayBuffer;
-            if (buffer == null)
-            {
-                throw new ObjectDisposedException(
-                    $"{nameof(WritableBuffer)} has already been disposed.");
-            }
+        internal IByteBuffer GetBuffer() => this.buffer;
 
-            buffer.SetBoolean(value);
-            buffer.SetWriterIndex(buffer.WriterIndex + sizeof(bool));
-        }
+        public void WriteBoolean(bool value) => this.buffer.WriteBoolean(value);
 
-        public void WriteByte(byte value)
-        {
-            IArrayBuffer<byte> buffer = this.ArrayBuffer;
-            if (buffer == null)
-            {
-                throw new ObjectDisposedException(
-                    $"{nameof(WritableBuffer)} has already been disposed.");
-            }
+        public void WriteByte(byte value) => this.buffer.WriteByte(value);
 
-            buffer.EnsureWritable(1);
-            buffer.Write(value);
-            buffer.SetWriterIndex(buffer.WriterIndex + 1);
-        }
+        public void WriteSByte(sbyte value) => this.buffer.WriteByte((byte)value);
 
-        public void WriteSByte(sbyte value) => this.WriteByte((byte)value);
+        public void WriteInt16(short value) => this.buffer.WriteShort(value);
 
-        public void WriteInt16(short value)
-        {
-            IArrayBuffer<byte> buffer = this.ArrayBuffer;
-            if (buffer == null)
-            {
-                throw new ObjectDisposedException(
-                    $"{nameof(WritableBuffer)} has already been disposed.");
-            }
+        public void WriteInt16LE(short value) => this.buffer.WriteShortLE(value);
 
-            buffer.SetInt16(value, this.isLittleEndian);
-            buffer.SetWriterIndex(buffer.WriterIndex + sizeof(short));
-        }
+        public void WriteUInt16(ushort value) => this.buffer.WriteUnsignedShort(value);
 
-        public void WriteUInt16(ushort value) => this.WriteInt16((short)value);
+        public void WriteUInt16LE(ushort value) => this.buffer.WriteUnsignedShortLE(value);
 
-        public void WriteInt32(int value)
-        {
-            IArrayBuffer<byte> buffer = this.ArrayBuffer;
-            if (buffer == null)
-            {
-                throw new ObjectDisposedException(
-                    $"{nameof(WritableBuffer)} has already been disposed.");
-            }
+        public void WriteInt24(int value) => this.buffer.WriteMedium(value);
 
-            buffer.SetInt32(value, this.isLittleEndian);
-            buffer.SetWriterIndex(buffer.WriterIndex + sizeof(int));
-        }
+        public void WriteInt24LE(int value) => this.buffer.WriteMediumLE(value);
 
-        public void WriteUInt32(uint value) => this.WriteInt32((int)value);
+        public void WriteInt32(int value) => this.buffer.WriteInt(value);
 
-        public void WriteInt64(long value)
-        {
-            IArrayBuffer<byte> buffer = this.ArrayBuffer;
-            if (buffer == null)
-            {
-                throw new ObjectDisposedException(
-                    $"{nameof(WritableBuffer)} has already been disposed.");
-            }
+        public void WriteInt32LE(int value) => this.buffer.WriteIntLE(value);
 
-            buffer.SetInt64(value, this.isLittleEndian);
-            buffer.SetWriterIndex(buffer.WriterIndex + sizeof(long));
-        }
+        public void WriteUInt32(uint value) => this.buffer.WriteInt((int)value);
 
-        public void WriteUInt64(ulong value) => this.WriteInt64((long)value);
+        public void WriteUInt32LE(uint value) => this.buffer.WriteIntLE((int)value);
 
-        public void WriteFloat(float value)
-        {
-            IArrayBuffer<byte> buffer = this.ArrayBuffer;
-            if (buffer == null)
-            {
-                throw new ObjectDisposedException(
-                    $"{nameof(WritableBuffer)} has already been disposed.");
-            }
+        public void WriteInt64(long value) => this.buffer.WriteLong(value);
 
-            buffer.SetFloat(value, this.isLittleEndian);
-            buffer.SetWriterIndex(buffer.WriterIndex + sizeof(float));
-        }
+        public void WriteInt64LE(long value) => this.buffer.WriteLongLE(value);
 
-        public void WriteDouble(double value)
-        {
-            IArrayBuffer<byte> buffer = this.ArrayBuffer;
-            if (buffer == null)
-            {
-                throw new ObjectDisposedException(
-                    $"{nameof(WritableBuffer)} has already been disposed.");
-            }
+        public void WriteUInt64(ulong value) => this.buffer.WriteLong((long)value);
 
-            buffer.SetDouble(value, this.isLittleEndian);
-            buffer.SetWriterIndex(buffer.WriterIndex + sizeof(double));
-        }
+        public void WriteUInt64LE(ulong value) => this.buffer.WriteLongLE((long)value);
+
+        public void WriteFloat(float value) => this.buffer.WriteFloat(value);
+
+        public void WriteFloatLE(float value) => this.buffer.WriteFloatLE(value);
+
+        public void WriteDouble(double value) => this.buffer.WriteDouble(value);
+
+        public void WriteDoubleLE(double value) => this.buffer.WriteDoubleLE(value);
 
         public void WriteString(string value, Encoding encoding)
         {
             Contract.Requires(!string.IsNullOrEmpty(value));
             Contract.Requires(encoding != null);
 
-            IArrayBuffer<byte> buffer = this.ArrayBuffer;
-            if (buffer == null)
-            {
-                throw new ObjectDisposedException(
-                    $"{nameof(WritableBuffer)} has already been disposed.");
-            }
-
-            int count = buffer.SetString(value, encoding);
-            buffer.SetWriterIndex(buffer.WriterIndex + count);
+            byte[] bytes = encoding.GetBytes(value);
+            this.buffer.WriteBytes(bytes);
         }
 
-        public void Dispose()
-        {
-            this.ArrayBuffer?.Release();
-            this.ArrayBuffer = null;
-        }
+        public void Dispose() => this.buffer.Release();
     }
 }

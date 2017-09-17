@@ -5,19 +5,11 @@ namespace NetUV.Core.Buffers
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Diagnostics.Contracts;
     using NetUV.Core.Common;
     using NetUV.Core.Logging;
 
-    /// <summary>
-    /// Automatically increases and decreases the predicted buffer size on feed back.
-    /// It gradually increases the expected number of readable bytes if the previous
-    /// read fully filled the allocated buffer. It gradually decreases the expected
-    /// number of readable bytes if the read operation was not able to fill a certain
-    /// amount of the allocated buffer two times consecutively. Otherwise, it keeps
-    /// returning the same prediction.
-    /// Forked from https://github.com/Azure/DotNetty
-    /// </summary>
     sealed class ReceiveBufferSizeEstimate
     {
         static readonly ILog Log = LogFactory.ForContext<ReceiveBufferSizeEstimate>();
@@ -87,20 +79,7 @@ namespace NetUV.Core.Buffers
         int index;
         bool decreaseNow;
 
-        /// <summary>
-        /// Creates a new predictor with the default parameters.  With the default
-        /// parameters, the expected buffer size starts from <c>1024</c>, does not
-        /// go down below <c>64</c>, and does not go up above <c>65536</c>.
-        /// </summary>
-        public ReceiveBufferSizeEstimate()
-            : this(DefaultMinimum, DefaultInitial, DefaultMaximum)
-        { }
-
-        /// <summary>Creates a new predictor with the specified parameters.</summary>
-        /// <param name="minimum">the inclusive lower bound of the expected buffer size</param>
-        /// <param name="initial">the initial buffer size when no feed back was received</param>
-        /// <param name="maximum">the inclusive upper bound of the expected buffer size</param>
-        public ReceiveBufferSizeEstimate(int minimum, int initial, int maximum)
+        public ReceiveBufferSizeEstimate(int minimum = DefaultMinimum, int initial = DefaultInitial, int maximum = DefaultMaximum)
         {
             Contract.Requires(minimum > 0);
             Contract.Requires(initial >= minimum);
@@ -130,17 +109,16 @@ namespace NetUV.Core.Buffers
             this.ReceiveBufferSize = SizeTable[this.index];
         }
 
-        internal IArrayBuffer<byte> Allocate(ByteBufferAllocator allocator)
+        internal IByteBuffer Allocate(PooledByteBufferAllocator allocator)
         {
-            Contract.Requires(allocator != null);
+            Debug.Assert(allocator != null);
 
             if (Log.IsDebugEnabled)
             {
-                Log.DebugFormat("{0} allocate, estimated size = {1}", 
-                    nameof(ReceiveBufferSizeEstimate), this.ReceiveBufferSize);
+                Log.DebugFormat("{0} allocate, estimated size = {1}", nameof(ReceiveBufferSizeEstimate), this.ReceiveBufferSize);
             }
 
-            return allocator.Buffer(this.ReceiveBufferSize);
+            return allocator.HeapBuffer(this.ReceiveBufferSize);
         }
 
         int ReceiveBufferSize { get; set; }
@@ -167,7 +145,10 @@ namespace NetUV.Core.Buffers
                 this.decreaseNow = false;
             }
 
-            Log.DebugFormat("{0} record actual size = {1}, next size = {2}", nameof(ReceiveBufferSizeEstimate), actualReadBytes, this.ReceiveBufferSize);
+            if (Log.IsDebugEnabled)
+            {
+                Log.DebugFormat("{0} record actual size = {1}, next size = {2}", nameof(ReceiveBufferSizeEstimate), actualReadBytes, this.ReceiveBufferSize);
+            }
         }
     }
 }

@@ -5,14 +5,22 @@ namespace NetUV.Core.Common
 {
     using System.Diagnostics.Contracts;
     using System.Threading;
+    using NetUV.Core.Concurrency;
 
-    /// Forked from https://github.com/JCTools/JCTools
+    /// Forked from
+    /// <a href="https://github.com/JCTools/JCTools">JCTools</a>
+    /// .
     /// A Multi-Producer-Single-Consumer queue based on a {@link ConcurrentCircularArrayQueue}. This implies that
     /// any thread may call the offer method, but only a single thread may call poll/peek for correctness to
-    /// maintained.This implementation follows patterns documented on the package level for False Sharing protection.
-    /// This implementation is using the http://sourceforge.net/projects/mc-fastflow/ Fast Flow method for polling 
-    /// from the queue (with minor change to correctly publish the index) and an extension of
+    /// maintained.
+    /// <br />
+    /// This implementation follows patterns documented on the package level for False Sharing protection.
+    /// <br />
+    /// This implementation is using the
+    /// <a href="http://sourceforge.net/projects/mc-fastflow/">Fast Flow</a>
+    /// method for polling from the queue (with minor change to correctly publish the index) and an extension of
     /// the Leslie Lamport concurrent queue algorithm (originated by Martin Thompson) on the producer side.
+    /// <br />
     sealed class MpscArrayQueue<T> : MpscArrayQueueConsumerField<T>
         where T : class
     {
@@ -232,7 +240,8 @@ namespace NetUV.Core.Common
 
         protected MpscArrayQueueL1Pad(int capacity)
             : base(capacity)
-        { }
+        {
+        }
     }
 
     abstract class MpscArrayQueueTailField<T> : MpscArrayQueueL1Pad<T>
@@ -242,12 +251,12 @@ namespace NetUV.Core.Common
 
         protected MpscArrayQueueTailField(int capacity)
             : base(capacity)
-        { }
+        {
+        }
 
         protected long ProducerIndex => Volatile.Read(ref this.producerIndex);
 
-        protected bool TrySetProducerIndex(long expect, long newValue) => 
-            Interlocked.CompareExchange(ref this.producerIndex, newValue, expect) == expect;
+        protected bool TrySetProducerIndex(long expect, long newValue) => Interlocked.CompareExchange(ref this.producerIndex, newValue, expect) == expect;
     }
 
     abstract class MpscArrayQueueMidPad<T> : MpscArrayQueueTailField<T>
@@ -260,7 +269,8 @@ namespace NetUV.Core.Common
 
         protected MpscArrayQueueMidPad(int capacity)
             : base(capacity)
-        { }
+        {
+        }
     }
 
     abstract class MpscArrayQueueHeadCacheField<T> : MpscArrayQueueMidPad<T>
@@ -270,7 +280,8 @@ namespace NetUV.Core.Common
 
         protected MpscArrayQueueHeadCacheField(int capacity)
             : base(capacity)
-        { }
+        {
+        }
 
         protected long ConsumerIndexCache
         {
@@ -289,7 +300,8 @@ namespace NetUV.Core.Common
 
         protected MpscArrayQueueL2Pad(int capacity)
             : base(capacity)
-        { }
+        {
+        }
     }
 
     abstract class MpscArrayQueueConsumerField<T> : MpscArrayQueueL2Pad<T>
@@ -299,88 +311,13 @@ namespace NetUV.Core.Common
 
         protected MpscArrayQueueConsumerField(int capacity)
             : base(capacity)
-        { }
+        {
+        }
 
         protected long ConsumerIndex
         {
             get => Volatile.Read(ref this.consumerIndex);
-            set => Volatile.Write(ref this.consumerIndex, value);
+            set => Volatile.Write(ref this.consumerIndex, value); // todo: revisit: UNSAFE.putOrderedLong -- StoreStore fence
         }
-    }
-
-    /// Forked from https://github.com/JCTools/JCTools JCTools
-    /// A concurrent access enabling class used by circular array based queues this class exposes an offset computation
-    /// method along with differently memory fenced load/store methods into the underlying array. The class is pre-padded and
-    /// the array is padded on either side to help with False sharing prvention. It is expected theat subclasses handle post
-    /// padding. Offset calculation is separate from access to enable the reuse of a give compute offset.
-    /// Load/Store methods using a buffer parameter are provided to allow the prevention of field reload after a LoadLoad barrier.
-    abstract class ConcurrentCircularArrayQueue<T> : ConcurrentCircularArrayQueueL0Pad<T>
-        where T : class
-    {
-        protected long Mask;
-        protected readonly T[] Buffer;
-
-        protected ConcurrentCircularArrayQueue(int capacity)
-        {
-            int actualCapacity = IntegerExtensions.RoundUpToPowerOfTwo(capacity);
-            this.Mask = actualCapacity - 1;
-            // pad data on either end with some empty slots.
-            this.Buffer = new T[actualCapacity + RefArrayAccessUtil.RefBufferPad * 2];
-        }
-
-        /// @param index desirable element index
-        /// @return the offset in bytes within the array for a given index.
-        protected long CalcElementOffset(long index) => RefArrayAccessUtil.CalcElementOffset(index, this.Mask);
-
-        /// A plain store (no ordering/fences) of an element to a given offset
-        /// @param offset computed via {@link ConcurrentCircularArrayQueue#calcElementOffset(long)}
-        /// @param e a kitty
-        protected void SpElement(long offset, T e) => RefArrayAccessUtil.SpElement(this.Buffer, offset, e);
-
-        /// An ordered store(store + StoreStore barrier) of an element to a given offset
-        /// @param offset computed via {@link ConcurrentCircularArrayQueue#calcElementOffset(long)}
-        /// @param e an orderly kitty
-        protected void SoElement(long offset, T e) => RefArrayAccessUtil.SoElement(this.Buffer, offset, e);
-
-        /// A plain load (no ordering/fences) of an element from a given offset.
-        /// @param offset computed via {@link ConcurrentCircularArrayQueue#calcElementOffset(long)}
-        /// @return the element at the offset
-        protected T LpElement(long offset) => RefArrayAccessUtil.LpElement(this.Buffer, offset);
-
-        /// A volatile load (load + LoadLoad barrier) of an element from a given offset.
-        /// @param offset computed via {@link ConcurrentCircularArrayQueue#calcElementOffset(long)}
-        /// @return the element at the offset
-        protected T LvElement(long offset) => RefArrayAccessUtil.LvElement(this.Buffer, offset);
-
-        public override void Clear()
-        {
-            while (this.TryDequeue(out T _) || !this.IsEmpty)
-            {
-                // looping
-            }
-        }
-
-        public int Capacity() => (int)(this.Mask + 1);
-    }
-
-    abstract class ConcurrentCircularArrayQueueL0Pad<T>
-    {
-
-#pragma warning disable 169 // padded reference
-        long p00, p01, p02, p03, p04, p05, p06, p07;
-        long p30, p31, p32, p33, p34, p35, p36, p37;
-#pragma warning restore 169
-
-        public abstract bool TryEnqueue(T item);
-
-        public abstract bool TryDequeue(out T item);
-
-        public abstract bool TryPeek(out T item);
-
-        public abstract int Count { get; }
-
-        public abstract bool IsEmpty { get; }
-
-        public abstract void Clear();
     }
 }

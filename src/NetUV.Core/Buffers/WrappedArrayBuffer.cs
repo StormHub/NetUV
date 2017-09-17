@@ -3,13 +3,15 @@
 
 namespace NetUV.Core.Buffers
 {
+    using System;
     using System.Diagnostics.Contracts;
+    using System.Text;
 
-    class WrappedArrayBuffer<T> : IArrayBuffer<T>
+    class WrappedByteBuffer : IByteBuffer
     {
-        protected readonly IArrayBuffer<T> Buf;
+        protected readonly IByteBuffer Buf;
 
-        protected WrappedArrayBuffer(IArrayBuffer<T> buf)
+        protected WrappedByteBuffer(IByteBuffer buf)
         {
             Contract.Requires(buf != null);
 
@@ -18,7 +20,7 @@ namespace NetUV.Core.Buffers
 
         public int Capacity => this.Buf.Capacity;
 
-        public virtual IArrayBuffer<T> AdjustCapacity(int newCapacity)
+        public virtual IByteBuffer AdjustCapacity(int newCapacity)
         {
             this.Buf.AdjustCapacity(newCapacity);
             return this;
@@ -26,13 +28,13 @@ namespace NetUV.Core.Buffers
 
         public int MaxCapacity => this.Buf.MaxCapacity;
 
-        public IArrayBufferAllocator<T> Allocator => this.Buf.Allocator;
+        public IByteBufferAllocator Allocator => this.Buf.Allocator;
 
-        public IArrayBuffer<T> Unwrap() => this.Buf;
+        public IByteBuffer Unwrap() => this.Buf;
 
         public int ReaderIndex => this.Buf.ReaderIndex;
 
-        public IArrayBuffer<T> SetReaderIndex(int readerIndex)
+        public IByteBuffer SetReaderIndex(int readerIndex)
         {
             this.Buf.SetReaderIndex(readerIndex);
             return this;
@@ -40,71 +42,71 @@ namespace NetUV.Core.Buffers
 
         public int WriterIndex => this.Buf.WriterIndex;
 
-        public IArrayBuffer<T> SetWriterIndex(int writerIndex)
+        public IByteBuffer SetWriterIndex(int writerIndex)
         {
             this.Buf.SetWriterIndex(writerIndex);
             return this;
         }
 
-        public virtual IArrayBuffer<T> SetIndex(int readerIndex, int writerIndex)
+        public virtual IByteBuffer SetIndex(int readerIndex, int writerIndex)
         {
             this.Buf.SetIndex(readerIndex, writerIndex);
             return this;
         }
 
-        public int ReadableCount => this.Buf.ReadableCount;
+        public int ReadableBytes => this.Buf.ReadableBytes;
 
-        public int WritableCount => this.Buf.WritableCount;
+        public int WritableBytes => this.Buf.WritableBytes;
 
-        public int MaxWritableCount => this.Buf.MaxWritableCount;
+        public int MaxWritableBytes => this.Buf.MaxWritableBytes;
 
         public bool IsReadable() => this.Buf.IsReadable();
 
         public bool IsWritable() => this.Buf.IsWritable();
 
-        public IArrayBuffer<T> Clear()
+        public IByteBuffer Clear()
         {
             this.Buf.Clear();
             return this;
         }
 
-        public IArrayBuffer<T> MarkReaderIndex()
+        public IByteBuffer MarkReaderIndex()
         {
             this.Buf.MarkReaderIndex();
             return this;
         }
 
-        public IArrayBuffer<T> ResetReaderIndex()
+        public IByteBuffer ResetReaderIndex()
         {
             this.Buf.ResetReaderIndex();
             return this;
         }
 
-        public IArrayBuffer<T> MarkWriterIndex()
+        public IByteBuffer MarkWriterIndex()
         {
             this.Buf.MarkWriterIndex();
             return this;
         }
 
-        public IArrayBuffer<T> ResetWriterIndex()
+        public IByteBuffer ResetWriterIndex()
         {
             this.Buf.ResetWriterIndex();
             return this;
         }
 
-        public virtual IArrayBuffer<T> DiscardReadCount()
+        public virtual IByteBuffer DiscardReadBytes()
         {
-            this.Buf.DiscardReadCount();
+            this.Buf.DiscardReadBytes();
             return this;
         }
 
-        public virtual IArrayBuffer<T> DiscardSomeReadCount()
+        public virtual IByteBuffer DiscardSomeReadBytes()
         {
-            this.Buf.DiscardSomeReadCount();
+            this.Buf.DiscardSomeReadBytes();
             return this;
         }
 
-        public virtual IArrayBuffer<T> EnsureWritable(int minWritableBytes)
+        public virtual IByteBuffer EnsureWritable(int minWritableBytes)
         {
             this.Buf.EnsureWritable(minWritableBytes);
             return this;
@@ -112,177 +114,485 @@ namespace NetUV.Core.Buffers
 
         public virtual int EnsureWritable(int minWritableBytes, bool force) => this.Buf.EnsureWritable(minWritableBytes, force);
 
+        public virtual bool GetBoolean(int index) => this.Buf.GetBoolean(index);
 
-        public virtual T Get(int index) => this.Buf.Get(index);
+        public virtual byte GetByte(int index) => this.Buf.GetByte(index);
 
-        public virtual IArrayBuffer<T> Get(int index, IArrayBuffer<T> dst)
+        public virtual short GetShort(int index) => this.Buf.GetShort(index);
+
+        public virtual short GetShortLE(int index) => this.Buf.GetShortLE(index);
+
+        public virtual ushort GetUnsignedShort(int index) => this.Buf.GetUnsignedShort(index);
+
+        public virtual ushort GetUnsignedShortLE(int index) => this.Buf.GetUnsignedShortLE(index);
+
+        public virtual int GetMedium(int index) => this.Buf.GetMedium(index);
+
+        public virtual int GetMediumLE(int index) => this.Buf.GetMediumLE(index);
+
+        public virtual int GetUnsignedMedium(int index) => this.Buf.GetUnsignedMedium(index);
+
+        public virtual int GetUnsignedMediumLE(int index) => this.Buf.GetUnsignedMediumLE(index);
+
+        public virtual int GetInt(int index) => this.Buf.GetInt(index);
+
+        public virtual int GetIntLE(int index) => this.Buf.GetIntLE(index);
+
+        public virtual uint GetUnsignedInt(int index) => this.Buf.GetUnsignedInt(index);
+
+        public virtual uint GetUnsignedIntLE(int index) => this.Buf.GetUnsignedIntLE(index);
+
+        public virtual long GetLong(int index) => this.Buf.GetLong(index);
+
+        public virtual long GetLongLE(int index) => this.Buf.GetLongLE(index);
+
+        public virtual char GetChar(int index) => this.Buf.GetChar(index);
+
+        public virtual float GetFloat(int index) => this.Buf.GetFloat(index);
+
+        public float GetFloatLE(int index) => this.Buf.GetFloatLE(index);
+
+        public virtual double GetDouble(int index) => this.Buf.GetDouble(index);
+
+        public double GetDoubleLE(int index) => this.Buf.GetDoubleLE(index);
+
+        public virtual IByteBuffer GetBytes(int index, IByteBuffer dst)
         {
-            this.Buf.Get(index, dst);
+            this.Buf.GetBytes(index, dst);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Get(int index, IArrayBuffer<T> dst, int length)
+        public virtual IByteBuffer GetBytes(int index, IByteBuffer dst, int length)
         {
-            this.Buf.Get(index, dst, length);
+            this.Buf.GetBytes(index, dst, length);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Get(int index, IArrayBuffer<T> dst, int dstIndex, int length)
+        public virtual IByteBuffer GetBytes(int index, IByteBuffer dst, int dstIndex, int length)
         {
-            this.Buf.Get(index, dst, dstIndex, length);
+            this.Buf.GetBytes(index, dst, dstIndex, length);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Get(int index, T[] dst)
+        public virtual IByteBuffer GetBytes(int index, byte[] dst)
         {
-            this.Buf.Get(index, dst);
+            this.Buf.GetBytes(index, dst);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Get(int index, T[] dst, int dstIndex, int length)
+        public virtual IByteBuffer GetBytes(int index, byte[] dst, int dstIndex, int length)
         {
-            this.Buf.Get(index, dst, dstIndex, length);
+            this.Buf.GetBytes(index, dst, dstIndex, length);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Set(int index, T value)
+        public virtual IByteBuffer SetBoolean(int index, bool value)
         {
-            this.Buf.Set(index, value);
+            this.Buf.SetBoolean(index, value);
             return this;
         }
 
-
-        public virtual IArrayBuffer<T> Set(int index, IArrayBuffer<T> src)
+        public virtual IByteBuffer SetByte(int index, int value)
         {
-            this.Buf.Set(index, src);
+            this.Buf.SetByte(index, value);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Set(int index, IArrayBuffer<T> src, int length)
+        public virtual IByteBuffer SetShort(int index, int value)
         {
-            this.Buf.Set(index, src, length);
+            this.Buf.SetShort(index, value);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Set(int index, IArrayBuffer<T> src, int srcIndex, int length)
+        public virtual IByteBuffer SetShortLE(int index, int value)
         {
-            this.Buf.Set(index, src, srcIndex, length);
+            this.Buf.SetShortLE(index, value);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Set(int index, T[] src)
+        public IByteBuffer SetUnsignedShort(int index, ushort value) => this.Buf.SetUnsignedShort(index, value);
+
+        public IByteBuffer SetUnsignedShortLE(int index, ushort value) => this.Buf.SetUnsignedShortLE(index, value);
+
+        public virtual IByteBuffer SetMedium(int index, int value)
         {
-            this.Buf.Set(index, src);
+            this.Buf.SetMedium(index, value);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Set(int index, T[] src, int srcIndex, int length)
+        public virtual IByteBuffer SetMediumLE(int index, int value)
         {
-            this.Buf.Set(index, src, srcIndex, length);
+            this.Buf.SetMediumLE(index, value);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Read(int length) => this.Buf.Read(length);
-
-        public virtual IArrayBuffer<T> ReadSlice(int length) => this.Buf.ReadSlice(length);
-
-        public virtual IArrayBuffer<T> Read(IArrayBuffer<T> dst)
+        public virtual IByteBuffer SetInt(int index, int value)
         {
-            this.Buf.Read(dst);
+            this.Buf.SetInt(index, value);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Read(IArrayBuffer<T> dst, int length)
+        public virtual IByteBuffer SetIntLE(int index, int value)
         {
-            this.Buf.Read(dst, length);
+            this.Buf.SetIntLE(index, value);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Read(IArrayBuffer<T> dst, int dstIndex, int length)
+        public IByteBuffer SetUnsignedInt(int index, uint value) => this.Buf.SetUnsignedInt(index, value);
+
+        public IByteBuffer SetUnsignedIntLE(int index, uint value) => this.Buf.SetUnsignedIntLE(index, value);
+
+        public virtual IByteBuffer SetLong(int index, long value)
         {
-            this.Buf.Read(dst, dstIndex, length);
+            this.Buf.SetLong(index, value);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Read(T[] dst)
+        public virtual IByteBuffer SetLongLE(int index, long value)
         {
-            this.Buf.Read(dst);
+            this.Buf.SetLongLE(index, value);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Read(T[] dst, int length)
+        public virtual IByteBuffer SetChar(int index, char value)
         {
-            this.Buf.Read(dst, length);
+            this.Buf.SetChar(index, value);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Read(T[] dst, int dstIndex, int length)
+        public virtual IByteBuffer SetFloat(int index, float value)
         {
-            this.Buf.Read(dst, dstIndex, length);
+            this.Buf.SetFloat(index, value);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Skip(int length)
+        public IByteBuffer SetFloatLE(int index, float value)
         {
-            this.Buf.Skip(length);
+            this.Buf.SetFloatLE(index, value);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Write(T value)
+        public virtual IByteBuffer SetDouble(int index, double value)
         {
-            this.Buf.Write(value);
+            this.Buf.SetDouble(index, value);
             return this;
         }
 
-
-        public virtual IArrayBuffer<T> Write(IArrayBuffer<T> src)
+        public IByteBuffer SetDoubleLE(int index, double value)
         {
-            this.Buf.Write(src);
+            this.Buf.SetDoubleLE(index, value);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Write(IArrayBuffer<T> src, int length)
+        public virtual IByteBuffer SetBytes(int index, IByteBuffer src)
         {
-            this.Buf.Write(src, length);
+            this.Buf.SetBytes(index, src);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Write(IArrayBuffer<T> src, int srcIndex, int length)
+        public virtual IByteBuffer SetBytes(int index, IByteBuffer src, int length)
         {
-            this.Buf.Write(src, srcIndex, length);
+            this.Buf.SetBytes(index, src, length);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Write(T[] src)
+        public virtual IByteBuffer SetBytes(int index, IByteBuffer src, int srcIndex, int length)
         {
-            this.Buf.Write(src);
+            this.Buf.SetBytes(index, src, srcIndex, length);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Write(T[] src, int srcIndex, int length)
+        public virtual IByteBuffer SetBytes(int index, byte[] src)
         {
-            this.Buf.Write(src, srcIndex, length);
+            this.Buf.SetBytes(index, src);
             return this;
         }
 
-        public virtual IArrayBuffer<T> Copy() => this.Buf.Copy();
+        public virtual IByteBuffer SetBytes(int index, byte[] src, int srcIndex, int length)
+        {
+            this.Buf.SetBytes(index, src, srcIndex, length);
+            return this;
+        }
 
-        public virtual IArrayBuffer<T> Copy(int index, int length) => this.Buf.Copy(index, length);
+        public virtual IByteBuffer SetZero(int index, int length)
+        {
+            this.Buf.SetZero(index, length);
+            return this;
+        }
 
-        public virtual IArrayBuffer<T> Slice() => this.Buf.Slice();
+        public virtual bool ReadBoolean() => this.Buf.ReadBoolean();
 
-        public virtual IArrayBuffer<T> Slice(int index, int length) => this.Buf.Slice(index, length);
+        public virtual byte ReadByte() => this.Buf.ReadByte();
 
-        public virtual T[] ToArray() => this.Buf.ToArray();
+        public virtual short ReadShort() => this.Buf.ReadShort();
 
-        public virtual IArrayBuffer<T> Duplicate() => this.Buf.Duplicate();
+        public virtual short ReadShortLE() => this.Buf.ReadShortLE();
 
-        public virtual bool HasArray => this.Buf.HasArray;
+        public virtual ushort ReadUnsignedShort() => this.Buf.ReadUnsignedShort();
 
-        public virtual T[] Array => this.Buf.Array;
+        public virtual ushort ReadUnsignedShortLE() => this.Buf.ReadUnsignedShortLE();
 
-        public virtual int ArrayOffset => this.Buf.ArrayOffset;
+        public virtual int ReadMedium() => this.Buf.ReadMedium();
 
+        public virtual int ReadMediumLE() => this.Buf.ReadMediumLE();
+
+        public virtual int ReadUnsignedMedium() => this.Buf.ReadUnsignedMedium();
+
+        public virtual int ReadUnsignedMediumLE() => this.Buf.ReadUnsignedMediumLE();
+
+        public virtual int ReadInt() => this.Buf.ReadInt();
+
+        public virtual int ReadIntLE() => this.Buf.ReadIntLE();
+
+        public virtual uint ReadUnsignedInt() => this.Buf.ReadUnsignedInt();
+
+        public virtual uint ReadUnsignedIntLE() => this.Buf.ReadUnsignedIntLE();
+
+        public virtual long ReadLong() => this.Buf.ReadLong();
+
+        public virtual long ReadLongLE() => this.Buf.ReadLongLE();
+
+        public virtual char ReadChar() => this.Buf.ReadChar();
+
+        public virtual float ReadFloat() => this.Buf.ReadFloat();
+
+        public float ReadFloatLE() => this.Buf.ReadFloatLE();
+
+        public virtual double ReadDouble() => this.Buf.ReadDouble();
+
+        public double ReadDoubleLE() => this.Buf.ReadDoubleLE();
+
+        public virtual IByteBuffer ReadBytes(int length) => this.Buf.ReadBytes(length);
+
+        public virtual IByteBuffer ReadSlice(int length) => this.Buf.ReadSlice(length);
+
+        public virtual IByteBuffer ReadRetainedSlice(int length) => this.Buf.ReadRetainedSlice(length);
+
+        public virtual IByteBuffer ReadBytes(IByteBuffer dst)
+        {
+            this.Buf.ReadBytes(dst);
+            return this;
+        }
+
+        public virtual IByteBuffer ReadBytes(IByteBuffer dst, int length)
+        {
+            this.Buf.ReadBytes(dst, length);
+            return this;
+        }
+
+        public virtual IByteBuffer ReadBytes(IByteBuffer dst, int dstIndex, int length)
+        {
+            this.Buf.ReadBytes(dst, dstIndex, length);
+            return this;
+        }
+
+        public virtual IByteBuffer ReadBytes(byte[] dst)
+        {
+            this.Buf.ReadBytes(dst);
+            return this;
+        }
+
+        public virtual IByteBuffer ReadBytes(byte[] dst, int dstIndex, int length)
+        {
+            this.Buf.ReadBytes(dst, dstIndex, length);
+            return this;
+        }
+
+        public virtual IByteBuffer SkipBytes(int length)
+        {
+            this.Buf.SkipBytes(length);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteBoolean(bool value)
+        {
+            this.Buf.WriteBoolean(value);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteByte(int value)
+        {
+            this.Buf.WriteByte(value);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteShort(int value)
+        {
+            this.Buf.WriteShort(value);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteShortLE(int value)
+        {
+            this.Buf.WriteShortLE(value);
+            return this;
+        }
+
+        public IByteBuffer WriteUnsignedShort(ushort value) => this.Buf.WriteUnsignedShort(value);
+
+        public IByteBuffer WriteUnsignedShortLE(ushort value) => this.Buf.WriteUnsignedShortLE(value);
+
+        public virtual IByteBuffer WriteMedium(int value)
+        {
+            this.Buf.WriteMedium(value);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteMediumLE(int value)
+        {
+            this.Buf.WriteMediumLE(value);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteInt(int value)
+        {
+            this.Buf.WriteInt(value);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteIntLE(int value)
+        {
+            this.Buf.WriteIntLE(value);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteLong(long value)
+        {
+            this.Buf.WriteLong(value);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteLongLE(long value)
+        {
+            this.Buf.WriteLongLE(value);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteChar(char value)
+        {
+            this.Buf.WriteChar(value);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteFloat(float value)
+        {
+            this.Buf.WriteFloat(value);
+            return this;
+        }
+
+        public IByteBuffer WriteFloatLE(float value)
+        {
+            this.Buf.WriteFloatLE(value);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteDouble(double value)
+        {
+            this.Buf.WriteDouble(value);
+            return this;
+        }
+
+        public IByteBuffer WriteDoubleLE(double value)
+        {
+            this.Buf.WriteDoubleLE(value);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteBytes(IByteBuffer src)
+        {
+            this.Buf.WriteBytes(src);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteBytes(IByteBuffer src, int length)
+        {
+            this.Buf.WriteBytes(src, length);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteBytes(IByteBuffer src, int srcIndex, int length)
+        {
+            this.Buf.WriteBytes(src, srcIndex, length);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteBytes(byte[] src)
+        {
+            this.Buf.WriteBytes(src);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteBytes(byte[] src, int srcIndex, int length)
+        {
+            this.Buf.WriteBytes(src, srcIndex, length);
+            return this;
+        }
+
+        public virtual IByteBuffer WriteZero(int length)
+        {
+            this.Buf.WriteZero(length);
+            return this;
+        }
+
+        public virtual int IndexOf(int fromIndex, int toIndex, byte value) => this.Buf.IndexOf(fromIndex, toIndex, value);
+
+        public virtual int BytesBefore(byte value) => this.Buf.BytesBefore(value);
+
+        public virtual int BytesBefore(int length, byte value) => this.Buf.BytesBefore(length, value);
+
+        public virtual int BytesBefore(int index, int length, byte value) => this.Buf.BytesBefore(index, length, value);
+
+        public virtual int ForEachByte(ByteProcessor processor) => this.Buf.ForEachByte(processor);
+
+        public virtual int ForEachByte(int index, int length, ByteProcessor processor) => this.Buf.ForEachByte(index, length, processor);
+
+        public virtual int ForEachByteDesc(ByteProcessor processor) => this.Buf.ForEachByteDesc(processor);
+
+        public virtual int ForEachByteDesc(int index, int length, ByteProcessor processor) => this.Buf.ForEachByteDesc(index, length, processor);
+
+        public virtual IByteBuffer Copy() => this.Buf.Copy();
+
+        public virtual IByteBuffer Copy(int index, int length) => this.Buf.Copy(index, length);
+
+        public virtual IByteBuffer Slice() => this.Buf.Slice();
+
+        public virtual IByteBuffer RetainedSlice() => this.Buf.RetainedSlice();
+
+        public virtual IByteBuffer Slice(int index, int length) => this.Buf.Slice(index, length);
+
+        public virtual IByteBuffer RetainedSlice(int index, int length) => this.Buf.RetainedSlice(index, length);
+
+        public virtual IByteBuffer Duplicate() => this.Buf.Duplicate();
+
+        public virtual IByteBuffer RetainedDuplicate() => this.Buf.RetainedDuplicate();
+
+        public virtual int IoBufferCount => this.Buf.IoBufferCount;
+
+        public virtual ArraySegment<byte> GetIoBuffer() => this.Buf.GetIoBuffer();
+
+        public virtual ArraySegment<byte> GetIoBuffer(int index, int length) => this.Buf.GetIoBuffer(index, length);
+
+        public virtual ArraySegment<byte>[] GetIoBuffers() => this.Buf.GetIoBuffers();
+
+        public virtual ArraySegment<byte>[] GetIoBuffers(int index, int length) => this.Buf.GetIoBuffers(index, length);
+
+        public bool HasArray => this.Buf.HasArray;
+
+        public int ArrayOffset => this.Buf.ArrayOffset;
+
+        public byte[] Array => this.Buf.Array;
+
+        public virtual string ToString(Encoding encoding) => this.Buf.ToString(encoding);
+
+        public virtual string ToString(int index, int length, Encoding encoding) => this.Buf.ToString(index, length, encoding);
+
+        public sealed override int GetHashCode() => this.Buf.GetHashCode();
+
+        public sealed override bool Equals(object obj) => this.Buf.Equals(obj);
+
+        public bool Equals(IByteBuffer buffer) => this.Buf.Equals(buffer);
+
+        public int CompareTo(IByteBuffer buffer) => this.Buf.CompareTo(buffer);
 
         public override string ToString() => $"{this.GetType().Name} ({this.Buf})";
 
@@ -301,13 +611,9 @@ namespace NetUV.Core.Buffers
         public bool IsReadable(int size) => this.Buf.IsReadable(size);
 
         public bool IsWritable(int size) => this.Buf.IsWritable(size);
-        
+
         public int ReferenceCount => this.Buf.ReferenceCount;
 
         public virtual bool Release(int decrement = 1) => this.Buf.Release(decrement);
-
-        public void CheckIndex(int index) => this.Buf.CheckIndex(index);
-
-        public void CheckIndex(int index, int fieldLength) => this.Buf.CheckIndex(index, fieldLength);
     }
 }
