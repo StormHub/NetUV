@@ -61,12 +61,7 @@ namespace NetUV.Core.Handles
             return (((uv_stream_t *)this.InternalHandle)->write_queue_size).ToInt64();
         }
 
-        public WritableBuffer Allocate(int size)
-        {
-            Contract.Requires(size > 0);
-
-            return this.pipeline.Allocate(size);
-        }
+        public WritableBuffer Allocate() => this.pipeline.Allocate();
 
         public void OnRead(
             Action<StreamHandle, ReadableBuffer> onAccept,
