@@ -50,12 +50,7 @@ namespace NetUV.Core.Handles
             this.streamConsumer = consumer;
         }
 
-        internal WritableBuffer Allocate(int size)
-        {
-            Contract.Requires(size > 0);
-
-            return new WritableBuffer(this.allocator.Buffer(size));
-        }
+        internal WritableBuffer Allocate() => new WritableBuffer(this.allocator.HeapBuffer());
 
         internal HeapBufferRef AllocateReadBuffer()
         {

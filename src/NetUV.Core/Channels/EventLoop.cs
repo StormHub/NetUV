@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Johnny Z. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+#pragma warning disable 420
 namespace NetUV.Core.Channels
 {
     using System;
@@ -9,13 +10,16 @@ namespace NetUV.Core.Channels
     using System.Threading;
     using System.Threading.Tasks;
     using NetUV.Core.Handles;
+    using Timer = NetUV.Core.Handles.Timer;
 
     public sealed class EventLoop : IDisposable
     {
+        const long DefaultBreakoutInterval = 100;
         readonly TaskCompletionSource<bool> loopCompletionSource;
         readonly Thread thread;
         readonly Loop loop;
         readonly Async asyncHandle;
+        readonly Timer timerHandle;
         readonly ConcurrentQueue<Activator> queue;
 
         const int NotStartedState = 1;
@@ -69,7 +73,8 @@ namespace NetUV.Core.Channels
             this.loopCompletionSource = new TaskCompletionSource<bool>();
             this.queue = new ConcurrentQueue<Activator>();
             this.loop = new Loop();
-            this.asyncHandle = this.loop.CreateAsync(this.OnAsync);
+            this.asyncHandle = this.loop.CreateAsync(this.OnCallback);
+            this.timerHandle = this.loop.CreateTimer();
             this.thread = new Thread(RunLoop);
             this.thread.Start(this);
         }
@@ -116,9 +121,7 @@ namespace NetUV.Core.Channels
                             break;
                     }
                 }
-#pragma warning disable 420
                 if (Interlocked.CompareExchange(ref this.executionState, newState, oldState) == oldState)
-#pragma warning restore 420
                 {
                     break;
                 }
@@ -178,31 +181,54 @@ namespace NetUV.Core.Channels
             eventLoop.executionState = TerminatedState;
         }
 
-        void OnAsync(Async handle)
+        void OnCallback(ScheduleHandle handle)
         {
+            long runTasks = 0;
+            long deadline = this.loop.NowInHighResolution + DefaultBreakoutInterval;
             while (true)
             {
                 if (this.IsShuttingDown)
                 {
-                    this.asyncHandle.RemoveReference();
-                    this.loop.Dispose();
+                    this.Close();
                     break;
                 }
 
                 if (!this.queue.TryDequeue(out Activator activator))
                 {
+                    this.timerHandle.Stop();
                     break;
                 }
 
                 activator.Execute(this.loop);
+                runTasks++;
+                if ((runTasks & 0x3F) == 0)
+                {
+                    long executionTime = this.loop.NowInHighResolution;
+                    if (executionTime >= deadline)
+                    {
+                        this.timerHandle.Start(this.OnCallback, DefaultBreakoutInterval, 1);
+                        break;
+                    }
+                }
             }
+        }
+
+        void Close()
+        {
+            if (this.IsShutdown)
+            {
+                return;
+            }
+
+            this.timerHandle.Stop();
+            this.asyncHandle.RemoveReference();
+            this.timerHandle.RemoveReference();
+            this.loop.Dispose();
         }
 
         public void Dispose()
         {
-#pragma warning disable 168
             while (this.queue.TryDequeue(out Activator _))
-#pragma warning restore 168
             { }
 
             this.loop.Dispose();

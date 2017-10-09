@@ -75,11 +75,9 @@ namespace NetUV.Core.Handles
             return NativeMethods.GetFileDescriptor(this.InternalHandle);
         }
 
-        public WritableBuffer Allocate(int size)
+        public WritableBuffer Allocate()
         {
-            Contract.Requires(size > 0);
-
-            IByteBuffer buffer = this.allocator.Buffer(size);
+            IByteBuffer buffer = this.allocator.HeapBuffer();
             return new WritableBuffer(buffer);
         }
 

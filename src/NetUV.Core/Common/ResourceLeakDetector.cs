@@ -16,7 +16,7 @@ namespace NetUV.Core.Common
     public sealed class ResourceLeakDetector
     {
         const string PropLevel = "LeakDetection.level";
-        const DetectionLevel DefaultLevel = DetectionLevel.Simple;
+        const DetectionLevel DefaultLevel = DetectionLevel.Disabled;
 
         const string PropMaxRecords = "LeakDetection.maxRecords";
         const int DefaultMaxRecords = 4;
