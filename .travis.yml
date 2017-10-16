@@ -23,7 +23,7 @@ matrix:
       env: CONFIGURATION=Release
     - os: osx
       mono: none
-      osx_image: xcode8.2
+      osx_image: xcode9
       env: CONFIGURATION=Release
 
 install:
