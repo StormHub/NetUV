@@ -38,7 +38,7 @@ install:
     fi
 
   - if test "$TRAVIS_OS_NAME" == "linux"; then nvm install stable && nvm use stable; fi
-  - if test "$TRAVIS_OS_NAME" == "osx"; then brew update; brew install openssl; ln -s /usr/local/opt/openssl/lib/libcrypto.1.0.0.dylib /usr/local/lib/; ln -s /usr/local/opt/openssl/lib/libssl.1.0.0.dylib /usr/local/lib/; fiopenssl; ulimit -S -n 8192;fi
+  - if test "$TRAVIS_OS_NAME" == "osx"; then brew install openssl; ln -s /usr/local/opt/openssl/lib/libcrypto.1.0.0.dylib /usr/local/lib/; ln -s /usr/local/opt/openssl/lib/libssl.1.0.0.dylib /usr/local/lib/; fiopenssl; ulimit -S -n 8192;fi
 
 before_script: 
  - chmod a+x ./build.sh
