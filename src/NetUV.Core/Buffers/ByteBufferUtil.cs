@@ -329,7 +329,7 @@ namespace NetUV.Core.Buffers
                 try
                 {
                     buffer.WriteBytes(src, readerIndex, len);
-                    ArraySegment<byte> ioBuf = src.GetIoBuffer();
+                    ArraySegment<byte> ioBuf = buffer.GetIoBuffer();
                     return encoding.GetString(ioBuf.Array, ioBuf.Offset, ioBuf.Count);
                 }
                 finally
