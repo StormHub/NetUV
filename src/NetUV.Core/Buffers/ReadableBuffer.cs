@@ -4,6 +4,7 @@
 namespace NetUV.Core.Buffers
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics.Contracts;
     using System.Text;
     using NetUV.Core.Common;
@@ -22,7 +23,37 @@ namespace NetUV.Core.Buffers
             this.buffer.SetWriterIndex(count);
         }
 
+        ReadableBuffer(IByteBuffer buffer)
+        {
+            Contract.Requires(buffer != null);
+
+            this.buffer = buffer;
+        }
+
         public int Count => this.buffer.ReadableBytes;
+
+        public ReadableBuffer Retain()
+        {
+            this.buffer.Retain();
+            return this;
+        }
+
+        public static ReadableBuffer Composite(IEnumerable<ReadableBuffer> buffers)
+        {
+            Contract.Requires(buffers != null);
+
+            CompositeByteBuffer composite = Unpooled.CompositeBuffer();
+            foreach (ReadableBuffer buf in buffers)
+            {
+                IByteBuffer byteBuffer = buf.buffer;
+                if (byteBuffer.ReadableBytes > 0)
+                {
+                    composite.AddComponent(byteBuffer);
+                }
+            }
+
+            return new ReadableBuffer(composite);
+        }
 
         public string ReadString(Encoding encoding, byte[] separator)
         {
