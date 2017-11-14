@@ -1,14 +1,19 @@
 ﻿// Copyright (c) Johnny Z. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+// ReSharper disable ConvertToAutoProperty
 namespace NetUV.Core.Buffers
 {
     using System;
     using System.Diagnostics.Contracts;
+    using System.IO;
+    using System.Threading;
+    using System.Threading.Tasks;
     using NetUV.Core.Common;
 
     class UnpooledHeapByteBuffer : AbstractReferenceCountedByteBuffer
     {
+        readonly IByteBufferAllocator allocator;
         byte[] array;
 
         protected internal UnpooledHeapByteBuffer(IByteBufferAllocator alloc, int initialCapacity, int maxCapacity)
@@ -17,7 +22,7 @@ namespace NetUV.Core.Buffers
             Contract.Requires(alloc != null);
             Contract.Requires(initialCapacity <= maxCapacity);
 
-            this.Allocator = alloc;
+            this.allocator = alloc;
             this.SetArray(this.NewArray(initialCapacity));
             this.SetIndex0(0, 0);
         }
@@ -33,7 +38,7 @@ namespace NetUV.Core.Buffers
                 throw new ArgumentException($"initialCapacity({initialArray.Length}) > maxCapacity({maxCapacity})");
             }
 
-            this.Allocator = alloc;
+            this.allocator = alloc;
             this.SetArray(initialArray);
             this.SetIndex0(0, initialArray.Length);
         }
@@ -49,7 +54,9 @@ namespace NetUV.Core.Buffers
 
         protected void SetArray(byte[] initialArray) => this.array = initialArray;
 
-        public override IByteBufferAllocator Allocator { get; }
+        public override IByteBufferAllocator Allocator => this.allocator;
+
+        public override bool IsDirect => false;
 
         public override int Capacity
         {
@@ -69,7 +76,7 @@ namespace NetUV.Core.Buffers
             if (newCapacity > oldCapacity)
             {
                 byte[] newArray = this.AllocateArray(newCapacity);
-                PlatformDependent.CopyMemory(this.array, 0, newArray, 0, this.array.Length);
+                PlatformDependent.CopyMemory(this.array, 0, newArray, 0, oldCapacity);
 
                 this.SetArray(newArray);
                 this.FreeArray(oldArray);
@@ -112,6 +119,16 @@ namespace NetUV.Core.Buffers
 
         public override int ArrayOffset => 0;
 
+        public override bool HasMemoryAddress => true;
+
+        public override ref byte GetPinnableMemoryAddress()
+        {
+            this.EnsureAccessible();
+            return ref this.array[0];
+        }
+
+        public override IntPtr AddressOfPinnedMemory() => IntPtr.Zero;
+
         public override IByteBuffer GetBytes(int index, IByteBuffer dst, int dstIndex, int length)
         {
             this.CheckDstIndex(index, length, dstIndex, dst.Capacity);
@@ -134,6 +151,13 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
+        public override IByteBuffer GetBytes(int index, Stream destination, int length)
+        {
+            this.EnsureAccessible();
+            destination.Write(this.Array, this.ArrayOffset + index, length);
+            return this;
+        }
+
         public override IByteBuffer SetBytes(int index, IByteBuffer src, int srcIndex, int length)
         {
             this.CheckSrcIndex(index, length, srcIndex, src.Capacity);
@@ -153,6 +177,22 @@ namespace NetUV.Core.Buffers
             this.CheckSrcIndex(index, length, srcIndex, src.Length);
             PlatformDependent.CopyMemory(src, srcIndex, this.array, index, length);
             return this;
+        }
+
+        public override async Task<int> SetBytesAsync(int index, Stream src, int length, CancellationToken cancellationToken)
+        {
+            this.EnsureAccessible();
+            int readTotal = 0;
+            int read;
+            int offset = this.ArrayOffset + index;
+            do
+            {
+                read = await src.ReadAsync(this.Array, offset + readTotal, length - readTotal, cancellationToken);
+                readTotal += read;
+            }
+            while (read > 0 && readTotal < length);
+
+            return readTotal;
         }
 
         public override int IoBufferCount => 1;

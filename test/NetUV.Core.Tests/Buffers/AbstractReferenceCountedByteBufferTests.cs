@@ -4,6 +4,9 @@
 namespace NetUV.Core.Tests.Buffers
 {
     using System;
+    using System.IO;
+    using System.Threading;
+    using System.Threading.Tasks;
     using NetUV.Core.Buffers;
     using Xunit;
 
@@ -88,6 +91,8 @@ namespace NetUV.Core.Tests.Buffers
 
             public override IByteBuffer GetBytes(int index, IByteBuffer destination, int dstIndex, int length) => throw new NotSupportedException();
 
+            public override IByteBuffer GetBytes(int index, Stream destination, int length) => throw new NotSupportedException();
+
             protected internal override void _SetByte(int index, int value) => throw new NotSupportedException();
 
             protected internal override void _SetShort(int index, int value) => throw new NotSupportedException();
@@ -108,6 +113,8 @@ namespace NetUV.Core.Tests.Buffers
 
             public override IByteBuffer SetBytes(int index, IByteBuffer src, int srcIndex, int length) => throw new NotSupportedException();
 
+            public override Task<int> SetBytesAsync(int index, Stream src, int length, CancellationToken cancellationToken) => throw new NotSupportedException();
+
             public override int IoBufferCount => throw new NotSupportedException();
 
             public override ArraySegment<byte> GetIoBuffer(int index, int length) => throw new NotSupportedException();
@@ -120,7 +127,15 @@ namespace NetUV.Core.Tests.Buffers
 
             public override int ArrayOffset => throw new NotSupportedException();
 
+            public override bool HasMemoryAddress => throw new NotSupportedException();
+
+            public override ref byte GetPinnableMemoryAddress() => throw new NotSupportedException();
+
+            public override IntPtr AddressOfPinnedMemory() => throw new NotSupportedException();
+
             public override IByteBuffer Unwrap() => throw new NotSupportedException();
+
+            public override bool IsDirect => throw new NotSupportedException();
 
             public override IByteBuffer Copy(int index, int length) => throw new NotSupportedException();
 

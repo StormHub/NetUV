@@ -25,7 +25,7 @@ namespace NetUV.Core.Handles
         readonly StreamHandle streamHandle;
         readonly PooledByteBufferAllocator allocator;
         readonly ReceiveBufferSizeEstimate receiveBufferSizeEstimate;
-        readonly HeapBufferQueue bufferQueue;
+        readonly PendingReadQueue bufferQueue;
         IStreamConsumer<StreamHandle> streamConsumer;
 
         internal Pipeline(StreamHandle streamHandle)
@@ -40,7 +40,7 @@ namespace NetUV.Core.Handles
             this.streamHandle = streamHandle;
             this.allocator = allocator;
             this.receiveBufferSizeEstimate = new ReceiveBufferSizeEstimate();
-            this.bufferQueue = new HeapBufferQueue();
+            this.bufferQueue = new PendingReadQueue();
         }
 
         internal void Consumer(IStreamConsumer<StreamHandle> consumer)
@@ -52,7 +52,7 @@ namespace NetUV.Core.Handles
 
         internal WritableBuffer Allocate() => new WritableBuffer(this.allocator.HeapBuffer());
 
-        internal HeapBufferRef AllocateReadBuffer()
+        internal ReadBufferRef AllocateReadBuffer()
         {
             IByteBuffer buffer = this.receiveBufferSizeEstimate.Allocate(this.allocator);
 
@@ -61,7 +61,7 @@ namespace NetUV.Core.Handles
                 Log.TraceFormat("{0} receive buffer allocated size = {1}", nameof(Pipeline), buffer.Capacity);
             }
 
-            var bufferRef = new HeapBufferRef(buffer);
+            var bufferRef = new ReadBufferRef(buffer);
             this.bufferQueue.Enqueue(bufferRef);
 
             return bufferRef;
@@ -70,12 +70,12 @@ namespace NetUV.Core.Handles
         internal IByteBuffer GetBuffer(ref uv_buf_t buf)
         {
             IByteBuffer byteBuffer = null;
-            HeapBufferRef bufferRef = null;
+            ReadBufferRef bufferRef = null;
             try
             {
                 if (this.bufferQueue.TryDequeue(out bufferRef))
                 {
-                    byteBuffer = bufferRef.GetHeapBuffer();
+                    byteBuffer = bufferRef.Buffer;
                 }
             }
             finally
@@ -126,7 +126,7 @@ namespace NetUV.Core.Handles
             }
         }
 
-        internal void QueueWrite(ByteBufferRef bufferRef, Action<StreamHandle, Exception> completion)
+        internal void QueueWrite(WriteBufferRef bufferRef, Action<StreamHandle, Exception> completion)
         {
             Contract.Requires(bufferRef != null);
 
@@ -145,7 +145,7 @@ namespace NetUV.Core.Handles
             }
         }
 
-        internal void QueueWrite(ByteBufferRef bufferRef, StreamHandle sendHandle, Action<StreamHandle, Exception> completion)
+        internal void QueueWrite(WriteBufferRef bufferRef, StreamHandle sendHandle, Action<StreamHandle, Exception> completion)
         {
             Contract.Requires(bufferRef != null);
             Contract.Requires(sendHandle != null);

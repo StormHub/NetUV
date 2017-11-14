@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Johnny Z. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+// ReSharper disable ConvertToAutoPropertyWhenPossible
 namespace NetUV.Core.Common
 {
     using System;
@@ -8,10 +9,27 @@ namespace NetUV.Core.Common
     using System.Runtime.CompilerServices;
     using System.Threading;
     using NetUV.Core.Concurrency;
+    using NetUV.Core.Logging;
     using NetUV.Core.Native;
 
     static class PlatformDependent
     {
+        static readonly ILog Logger = LogFactory.ForContext(typeof(PlatformDependent));
+
+        static readonly bool UseDirectBuffer;
+        static readonly bool IsLinux = Platform.IsLinux;
+
+        static PlatformDependent()
+        {
+            UseDirectBuffer = !SystemPropertyUtil.GetBoolean("io.noPreferDirect", false);
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.DebugFormat("io.noPreferDirect: {0}", !UseDirectBuffer);
+            }
+        }
+
+        public static bool DirectBufferPreferred => UseDirectBuffer;
+
         static int seed = (int)(Stopwatch.GetTimestamp() & 0xFFFFFFFF); //used to safly cast long to int, because the timestamp returned is long and it doesn't fit into an int
         static readonly ThreadLocal<Random> ThreadLocalRandom = new ThreadLocal<Random>(() => new Random(Interlocked.Increment(ref seed))); //used to simulate java ThreadLocalRandom
 
@@ -23,46 +41,80 @@ namespace NetUV.Core.Common
 
         public static unsafe void CopyMemory(byte[] src, int srcIndex, byte[] dst, int dstIndex, int length)
         {
-            if (length == 0)
-            {
-                return;
-            }
-
-            if (ReferenceEquals(src, dst))
-            {
-                // On linux, it seems like Unsafe.CopyBlock does not work properly
-                // if the source and destination array are the same and with overlapped
-                // regions, have to use Buffer.MemoryCopy.
-                // For example: 
-                // for array of 1024 bytes, copy bytes from 1 to 1024 into 0 to 1023
-                if (Platform.IsLinux)
-                {
-                    fixed (byte* bytes = src)
-                        Buffer.MemoryCopy(bytes + srcIndex, bytes + dstIndex, (uint)length, (uint)length);
-                }
-                else
-                {
-                    fixed (byte* bytes = src)
-                        Unsafe.CopyBlock(bytes + dstIndex, bytes + srcIndex, (uint)length);
-                }
-            }
-            else
+            if (length > 0)
             {
                 fixed (byte* source = &src[srcIndex])
-                    fixed (byte* destination = &dst[dstIndex])
-                        Unsafe.CopyBlock(destination, source, (uint)length);
+                fixed (byte* destination = &dst[dstIndex])
+                {
+                    if (IsLinux)
+                    {
+                        Buffer.MemoryCopy(source, destination, length, length);
+                    }
+                    else
+                    {
+                        Unsafe.CopyBlock(destination, source, unchecked((uint)length));
+                    }
+                }
             }
         }
 
         public static unsafe void Clear(byte[] src, int srcIndex, int length)
         {
-            if (length == 0)
+            if (length > 0)
             {
-                return;
+                fixed (void* source = &src[srcIndex])
+                    Unsafe.InitBlock(source, default(byte), unchecked((uint)length));
             }
+        }
 
-            fixed (void* source = &src[srcIndex])
-                Unsafe.InitBlock(source, default(byte), (uint)length);
+        public static unsafe void CopyMemory(byte* src, byte* dst, int length)
+        {
+            if (length > 0)
+            {
+                if (IsLinux)
+                {
+                    Buffer.MemoryCopy(src, dst, length, length);
+                }
+                else
+                {
+                    Unsafe.CopyBlock(dst, src, unchecked((uint)length));
+                }
+            }
+        }
+
+        public static unsafe void CopyMemory(byte* src, byte[] dst, int dstIndex, int length)
+        {
+            if (length > 0)
+            {
+                fixed (byte* destination = &dst[dstIndex])
+                    Unsafe.CopyBlock(destination, src, unchecked((uint)length));
+            }
+        }
+
+        public static unsafe void CopyMemory(byte[] src, int srcIndex, byte* dst, int length)
+        {
+            if (length > 0)
+            {
+                fixed (byte* source = &src[srcIndex])
+                    Unsafe.CopyBlock(dst, source, unchecked((uint)length));
+            }
+        }
+
+        public static unsafe void SetMemory(byte* src, int length, byte value)
+        {
+            if (length > 0)
+            {
+                Unsafe.InitBlock(src, value, unchecked((uint)length));
+            }
+        }
+
+        public static unsafe void SetMemory(byte[] src, int srcIndex, int length, byte value)
+        {
+            if (length > 0)
+            {
+                fixed (byte* source = &src[srcIndex])
+                    Unsafe.InitBlock(source, value, unchecked((uint)length));
+            }
         }
     }
 }

@@ -5,10 +5,10 @@ namespace NetUV.Core.Tests.Buffers
 {
     using NetUV.Core.Buffers;
 
-    public sealed class UnpooledByteBufferAllocatorTests : AbstractByteBufferAllocatorTests
+    public class UnpooledByteBufferAllocatorTests : AbstractByteBufferAllocatorTests
     {
-        internal override IByteBufferAllocator NewAllocator() => new UnpooledByteBufferAllocator();
+        internal override IByteBufferAllocator NewAllocator(bool preferDirect) => new UnpooledByteBufferAllocator(preferDirect);
 
-        internal override IByteBufferAllocator NewUnpooledAllocator() => new UnpooledByteBufferAllocator();
+        internal override IByteBufferAllocator NewUnpooledAllocator() => new UnpooledByteBufferAllocator(false);
     }
 }

@@ -4,7 +4,6 @@
 namespace NetUV.Core.Handles
 {
     using System;
-    using System.Diagnostics;
     using System.Diagnostics.Contracts;
     using NetUV.Core.Buffers;
     using NetUV.Core.Channels;
@@ -137,7 +136,7 @@ namespace NetUV.Core.Handles
                 return;
             }
 
-            var bufferRef = new ByteBufferRef(buffer, buffer.ReaderIndex, buffer.ReadableBytes);
+            var bufferRef = new WriteBufferRef(buffer);
             this.pipeline.QueueWrite(bufferRef, completion);
         }
 
@@ -153,13 +152,13 @@ namespace NetUV.Core.Handles
                 return;
             }
 
-            var bufferRef = new ByteBufferRef(buffer, buffer.ReaderIndex, buffer.ReadableBytes);
+            var bufferRef = new WriteBufferRef(buffer);
             this.pipeline.QueueWrite(bufferRef, sendHandle, completion);
         }
 
         public void QueueWriteStream(byte[] array, Action<StreamHandle, Exception> completion)
         {
-            Contract.Requires(array != null && array.Length > 0);
+            Contract.Requires(array != null);
 
             this.QueueWriteStream(array, 0, array.Length, completion);
         }
@@ -172,14 +171,14 @@ namespace NetUV.Core.Handles
             Contract.Requires((offset + count) <= array.Length);
 
             IByteBuffer buffer = Unpooled.WrappedBuffer(array, offset, count);
-            var bufferRef = new ByteBufferRef(buffer, buffer.ReaderIndex, count);
+            var bufferRef = new WriteBufferRef(buffer);
             this.pipeline.QueueWrite(bufferRef, completion);
         }
 
         public void QueueWriteStream(byte[] array, StreamHandle sendHandle, 
             Action<StreamHandle, Exception> completion)
         {
-            Contract.Requires(array != null && array.Length > 0);
+            Contract.Requires(array != null);
 
             this.QueueWriteStream(array, 0, array.Length, sendHandle, completion);
         }
@@ -193,7 +192,7 @@ namespace NetUV.Core.Handles
             Contract.Requires((offset + count) <= array.Length);
 
             IByteBuffer buffer = Unpooled.WrappedBuffer(array, offset, count);
-            var bufferRef = new ByteBufferRef(buffer, buffer.ReaderIndex, count);
+            var bufferRef = new WriteBufferRef(buffer);
             this.pipeline.QueueWrite(bufferRef, sendHandle, completion);
         }
 
@@ -204,12 +203,11 @@ namespace NetUV.Core.Handles
             this.Validate();
             try
             {
-                uv_buf_t[] bufs = request.Bufs;
-
                 NativeMethods.WriteStream(
                     request.InternalHandle, 
                     this.InternalHandle,
-                    ref bufs);
+                    ref request.Bufs, 
+                    ref request.Size);
             }
             catch (Exception exception)
             {
@@ -226,12 +224,11 @@ namespace NetUV.Core.Handles
             this.Validate();
             try
             {
-                uv_buf_t[] bufs = request.Bufs;
-
                 NativeMethods.WriteStream(
                     request.InternalHandle,
                     this.InternalHandle,
-                    ref bufs, 
+                    ref request.Bufs,
+                    ref request.Size,
                     sendHandle.InternalHandle);
             }
             catch (Exception exception)
@@ -241,11 +238,9 @@ namespace NetUV.Core.Handles
             }
         }
 
-
         public void TryWrite(byte[] array)
         {
             Contract.Requires(array != null && array.Length > 0);
-
             this.TryWrite(array, 0, array.Length);
         }
 
@@ -345,11 +340,8 @@ namespace NetUV.Core.Handles
 
         void OnAllocateCallback(out uv_buf_t buf)
         {
-            HeapBufferRef bufferRef = this.pipeline.AllocateReadBuffer();
-            uv_buf_t[] bufs = bufferRef.GetNativeBuffer();
-
-            Debug.Assert(bufs != null);
-            buf = bufs[0];
+            ReadBufferRef bufferRef = this.pipeline.AllocateReadBuffer();
+            buf = bufferRef.Buf;
         }
 
         static void OnAllocateCallback(IntPtr handle, IntPtr suggestedSize, out uv_buf_t buf)

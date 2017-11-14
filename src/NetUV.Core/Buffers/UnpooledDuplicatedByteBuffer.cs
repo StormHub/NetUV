@@ -3,6 +3,11 @@
 
 namespace NetUV.Core.Buffers
 {
+    using System;
+    using System.IO;
+    using System.Threading;
+    using System.Threading.Tasks;
+
     class UnpooledDuplicatedByteBuffer : AbstractDerivedByteBuffer
     {
         readonly AbstractByteBuffer buffer;
@@ -40,6 +45,8 @@ namespace NetUV.Core.Buffers
 
         public override IByteBufferAllocator Allocator => this.Unwrap().Allocator;
 
+        public override bool IsDirect => this.Unwrap().IsDirect;
+
         public override int Capacity => this.Unwrap().Capacity;
 
         public override IByteBuffer AdjustCapacity(int newCapacity) => this.Unwrap().AdjustCapacity(newCapacity);
@@ -51,6 +58,12 @@ namespace NetUV.Core.Buffers
         public override byte[] Array => this.Unwrap().Array;
 
         public override int ArrayOffset => this.Unwrap().ArrayOffset;
+
+        public override bool HasMemoryAddress => this.Unwrap().HasMemoryAddress;
+
+        public override ref byte GetPinnableMemoryAddress() => ref this.Unwrap().GetPinnableMemoryAddress();
+
+        public override IntPtr AddressOfPinnedMemory() => this.Unwrap().AddressOfPinnedMemory();
 
         protected internal override byte _GetByte(int index) => this.UnwrapCore()._GetByte(index);
 
@@ -74,6 +87,8 @@ namespace NetUV.Core.Buffers
 
         public override IByteBuffer GetBytes(int index, byte[] destination, int dstIndex, int length) => this.Unwrap().GetBytes(index, destination, dstIndex, length);
 
+        public override IByteBuffer GetBytes(int index, Stream destination, int length) => this.Unwrap().GetBytes(index, destination, length);
+
         protected internal override void _SetByte(int index, int value) => this.UnwrapCore()._SetByte(index, value);
 
         protected internal override void _SetShort(int index, int value) => this.UnwrapCore()._SetShort(index, value);
@@ -86,6 +101,8 @@ namespace NetUV.Core.Buffers
 
         public override IByteBuffer SetBytes(int index, IByteBuffer src, int srcIndex, int length) => this.Unwrap().SetBytes(index, src, srcIndex, length);
 
+        public override Task<int> SetBytesAsync(int index, Stream src, int length, CancellationToken cancellationToken) => this.Unwrap().SetBytesAsync(index, src, length, cancellationToken);
+
         public override IByteBuffer SetBytes(int index, byte[] src, int srcIndex, int length) => this.Unwrap().SetBytes(index, src, srcIndex, length);
 
         protected internal override void _SetInt(int index, int value) => this.UnwrapCore()._SetInt(index, value);
@@ -96,8 +113,8 @@ namespace NetUV.Core.Buffers
 
         protected internal override void _SetLongLE(int index, long value) => this.UnwrapCore()._SetLongLE(index, value);
 
-        public override int ForEachByte(int index, int length, ByteProcessor processor) => this.Unwrap().ForEachByte(index, length, processor);
+        public override int ForEachByte(int index, int length, IByteProcessor processor) => this.Unwrap().ForEachByte(index, length, processor);
 
-        public override int ForEachByteDesc(int index, int length, ByteProcessor processor) => this.Unwrap().ForEachByteDesc(index, length, processor);
+        public override int ForEachByteDesc(int index, int length, IByteProcessor processor) => this.Unwrap().ForEachByteDesc(index, length, processor);
     }
 }

@@ -4,7 +4,10 @@
 namespace NetUV.Core.Buffers
 {
     using System;
+    using System.IO;
     using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
     using NetUV.Core.Common;
 
     using static AdvancedLeakAwareByteBuffer;
@@ -214,6 +217,12 @@ namespace NetUV.Core.Buffers
             return base.SetBytes(index, src, srcIndex, length);
         }
 
+        public override Task<int> SetBytesAsync(int index, Stream input, int length, CancellationToken cancellationToken)
+        {
+            RecordLeakNonRefCountingOperation(this.Leak);
+            return base.SetBytesAsync(index, input, length, cancellationToken);
+        }
+
         public override IByteBuffer SetZero(int index, int length)
         {
             RecordLeakNonRefCountingOperation(this.Leak);
@@ -284,6 +293,12 @@ namespace NetUV.Core.Buffers
         {
             RecordLeakNonRefCountingOperation(this.Leak);
             return base.ReadBytes(dst, dstIndex, length);
+        }
+
+        public override IByteBuffer ReadBytes(Stream output, int length)
+        {
+            RecordLeakNonRefCountingOperation(this.Leak);
+            return base.ReadBytes(output, length);
         }
 
         public override IByteBuffer SkipBytes(int length)
@@ -376,6 +391,12 @@ namespace NetUV.Core.Buffers
             return base.WriteBytes(src, srcIndex, length);
         }
 
+        public override Task WriteBytesAsync(Stream input, int length, CancellationToken cancellationToken)
+        {
+            RecordLeakNonRefCountingOperation(this.Leak);
+            return base.WriteBytesAsync(input, length, cancellationToken);
+        }
+
         public override IByteBuffer WriteZero(int length)
         {
             RecordLeakNonRefCountingOperation(this.Leak);
@@ -394,25 +415,25 @@ namespace NetUV.Core.Buffers
             return base.BytesBefore(index, length, value);
         }
 
-        public override int ForEachByte(ByteProcessor processor)
+        public override int ForEachByte(IByteProcessor processor)
         {
             RecordLeakNonRefCountingOperation(this.Leak);
             return base.ForEachByte(processor);
         }
 
-        public override int ForEachByte(int index, int length, ByteProcessor processor)
+        public override int ForEachByte(int index, int length, IByteProcessor processor)
         {
             RecordLeakNonRefCountingOperation(this.Leak);
             return base.ForEachByte(index, length, processor);
         }
 
-        public override int ForEachByteDesc(ByteProcessor processor)
+        public override int ForEachByteDesc(IByteProcessor processor)
         {
             RecordLeakNonRefCountingOperation(this.Leak);
             return base.ForEachByteDesc(processor);
         }
 
-        public override int ForEachByteDesc(int index, int length, ByteProcessor processor)
+        public override int ForEachByteDesc(int index, int length, IByteProcessor processor)
         {
             RecordLeakNonRefCountingOperation(this.Leak);
             return base.ForEachByteDesc(index, length, processor);
@@ -565,19 +586,43 @@ namespace NetUV.Core.Buffers
             return base.WriteLongLE(value);
         }
 
-        public override IReferenceCounted Retain(int increment = 1)
+        public override IByteBuffer GetBytes(int index, Stream destination, int length)
+        {
+            RecordLeakNonRefCountingOperation(this.Leak);
+            return base.GetBytes(index, destination, length);
+        }
+
+        public override IReferenceCounted Retain()
+        {
+            this.Leak.Record();
+            return base.Retain();
+        }
+
+        public override IReferenceCounted Retain(int increment)
         {
             this.Leak.Record();
             return base.Retain(increment);
         }
 
-        public override bool Release(int decrement = 1)
+        public override bool Release()
+        {
+            this.Leak.Record();
+            return base.Release();
+        }
+
+        public override bool Release(int decrement)
         {
             this.Leak.Record();
             return base.Release(decrement);
         }
 
-        public override IReferenceCounted Touch(object hint = null)
+        public override IReferenceCounted Touch()
+        {
+            this.Leak.Record();
+            return this;
+        }
+
+        public override IReferenceCounted Touch(object hint)
         {
             this.Leak.Record(hint);
             return this;

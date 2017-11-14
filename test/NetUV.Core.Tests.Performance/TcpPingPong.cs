@@ -98,7 +98,7 @@ namespace NetUV.Core.Tests.Performance
                 {
                     if (token != PingMessage[this.state])
                     {
-                        Console.WriteLine($"Tcp ping pong : failed, wrong message token received {token}.");
+                        Console.WriteLine($"Tcp ping pong : failed, wrong message received '{token}'.");
                         stream.CloseHandle(OnClose);
                         return;
                     }

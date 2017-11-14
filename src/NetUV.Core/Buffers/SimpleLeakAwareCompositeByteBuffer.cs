@@ -17,7 +17,21 @@ namespace NetUV.Core.Buffers
             this.Leak = leak;
         }
 
-        public override bool Release(int decrement = 1)
+        public override bool Release()
+        {
+            // Call unwrap() before just in case that super.release() will change the ByteBuf instance that is returned
+            // by unwrap().
+            IByteBuffer unwrapped = this.Unwrap();
+            if (base.Release())
+            {
+                this.CloseLeak(unwrapped);
+                return true;
+            }
+
+            return false;
+        }
+
+        public override bool Release(int decrement)
         {
             // Call unwrap() before just in case that super.release() will change the ByteBuf instance that is returned
             // by unwrap().

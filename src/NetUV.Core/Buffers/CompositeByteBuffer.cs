@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Johnny Z. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+// ReSharper disable ConvertToAutoProperty
 namespace NetUV.Core.Buffers
 {
     using System;
@@ -8,7 +9,10 @@ namespace NetUV.Core.Buffers
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.Diagnostics.Contracts;
+    using System.IO;
     using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
     using NetUV.Core.Common;
 
     class CompositeByteBuffer : AbstractReferenceCountedByteBuffer, IEnumerable<IByteBuffer>
@@ -32,34 +36,40 @@ namespace NetUV.Core.Buffers
         }
 
         static readonly ArraySegment<byte> EmptyNioBuffer = Unpooled.Empty.GetIoBuffer();
+
+        readonly IByteBufferAllocator allocator;
+        readonly bool direct;
         readonly List<ComponentEntry> components;
+        readonly int maxNumComponents;
 
         bool freed;
 
-        public CompositeByteBuffer(IByteBufferAllocator allocator, int maxNumComponents)
+        public CompositeByteBuffer(IByteBufferAllocator allocator, bool direct, int maxNumComponents)
             : base(AbstractByteBufferAllocator.DefaultMaxCapacity)
         {
             Contract.Requires(allocator != null);
             Contract.Requires(maxNumComponents >= 2);
 
-            this.Allocator = allocator;
-            this.MaxNumComponents = maxNumComponents;
+            this.allocator = allocator;
+            this.direct = direct;
+            this.maxNumComponents = maxNumComponents;
             this.components = NewList(maxNumComponents);
         }
 
-        public CompositeByteBuffer(IByteBufferAllocator allocator, int maxNumComponents, params IByteBuffer[] buffers)
-            : this(allocator, maxNumComponents, buffers, 0, buffers.Length)
+        public CompositeByteBuffer(IByteBufferAllocator allocator, bool direct, int maxNumComponents, params IByteBuffer[] buffers)
+            : this(allocator, direct, maxNumComponents, buffers, 0, buffers.Length)
         {
         }
 
-        internal CompositeByteBuffer(IByteBufferAllocator allocator, int maxNumComponents, IByteBuffer[] buffers, int offset, int length)
+        internal CompositeByteBuffer(IByteBufferAllocator allocator, bool direct, int maxNumComponents, IByteBuffer[] buffers, int offset, int length)
             : base(AbstractByteBufferAllocator.DefaultMaxCapacity)
         {
             Contract.Requires(allocator != null);
             Contract.Requires(maxNumComponents >= 2);
 
-            this.Allocator = allocator;
-            this.MaxNumComponents = maxNumComponents;
+            this.allocator = allocator;
+            this.direct = direct;
+            this.maxNumComponents = maxNumComponents;
             this.components = NewList(maxNumComponents);
 
             this.AddComponents0(false, 0, buffers, offset, length);
@@ -68,15 +78,15 @@ namespace NetUV.Core.Buffers
         }
 
         public CompositeByteBuffer(
-            IByteBufferAllocator allocator, int maxNumComponents, IEnumerable<IByteBuffer> buffers)
+            IByteBufferAllocator allocator, bool direct, int maxNumComponents, IEnumerable<IByteBuffer> buffers)
             : base(AbstractByteBufferAllocator.DefaultMaxCapacity)
         {
             Contract.Requires(allocator != null);
             Contract.Requires(maxNumComponents >= 2);
 
-            this.Allocator = allocator;
-            this.MaxNumComponents = maxNumComponents;
-
+            this.allocator = allocator;
+            this.direct = direct;
+            this.maxNumComponents = maxNumComponents;
             this.components = NewList(maxNumComponents);
 
             this.AddComponents0(false, 0, buffers);
@@ -90,23 +100,48 @@ namespace NetUV.Core.Buffers
         // Special constructor used by WrappedCompositeByteBuf
         internal CompositeByteBuffer(IByteBufferAllocator allocator) : base(int.MaxValue)
         {
-            this.Allocator = allocator;
-            this.MaxNumComponents = 0;
+            this.allocator = allocator;
+            this.direct = false;
+            this.maxNumComponents = 0;
             this.components = new List<ComponentEntry>(0);
         }
 
+        /// <summary>
+        ///     Add the given {@link IByteBuffer}.
+        ///     Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuffer}.
+        ///     If you need to have it increased you need to handle it by your own.
+        ///     @param buffer the {@link IByteBuffer} to add
+        /// </summary>
         public virtual CompositeByteBuffer AddComponent(IByteBuffer buffer) => this.AddComponent(false, buffer);
 
+        /// <summary>
+        ///     Add the given {@link IByteBuffer}s.
+        ///     Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuffer}.
+        ///     If you need to have it increased you need to handle it by your own.
+        ///     @param buffers the {@link IByteBuffer}s to add
+        /// </summary>
         public virtual CompositeByteBuffer AddComponents(params IByteBuffer[] buffers) => this.AddComponents(false, buffers);
 
+        /// <summary>
+        ///     Add the given {@link IByteBuffer}s.
+        ///     Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuffer}.
+        ///     If you need to have it increased you need to handle it by your own.
+        ///     @param buffers the {@link IByteBuffer}s to add
+        /// </summary>
         public virtual CompositeByteBuffer AddComponents(IEnumerable<IByteBuffer> buffers) => this.AddComponents(false, buffers);
 
+        /// <summary>
+        ///     Add the given {@link IByteBuffer} on the specific index.
+        ///     Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuffer}.
+        ///     If you need to have it increased you need to handle it by your own.
+        ///     @param cIndex the index on which the {@link IByteBuffer} will be added
+        ///     @param buffer the {@link IByteBuffer} to add
+        /// </summary>
         public virtual CompositeByteBuffer AddComponent(int cIndex, IByteBuffer buffer) => this.AddComponent(false, cIndex, buffer);
 
         public virtual CompositeByteBuffer AddComponent(bool increaseWriterIndex, IByteBuffer buffer)
         {
             Contract.Requires(buffer != null);
-
             this.AddComponent0(increaseWriterIndex, this.components.Count, buffer);
             this.ConsolidateIfNeeded();
             return this;
@@ -184,6 +219,13 @@ namespace NetUV.Core.Buffers
             }
         }
 
+        /// <summary>
+        ///     Add the given {@link IByteBuffer}s on the specific index
+        ///     Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuffer}.
+        ///     If you need to have it increased you need to handle it by your own.
+        ///     @param cIndex the index on which the {@link IByteBuffer} will be added.
+        ///     @param buffers the {@link IByteBuffer}s to add
+        /// </summary>
         public virtual CompositeByteBuffer AddComponents(int cIndex, params IByteBuffer[] buffers)
         {
             this.AddComponents0(false, cIndex, buffers, 0, buffers.Length);
@@ -239,6 +281,13 @@ namespace NetUV.Core.Buffers
             }
         }
 
+        /// <summary>
+        ///     Add the given {@link ByteBuf}s on the specific index
+        ///     Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuffer}.
+        ///     If you need to have it increased you need to handle it by your own.
+        ///     @param cIndex the index on which the {@link IByteBuffer} will be added.
+        ///     @param buffers the {@link IByteBuffer}s to add
+        /// </summary>
         public virtual CompositeByteBuffer AddComponents(int cIndex, IEnumerable<IByteBuffer> buffers)
         {
             this.AddComponents0(false, cIndex, buffers);
@@ -246,7 +295,7 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
-        internal int AddComponents0(bool increaseIndex, int cIndex, IEnumerable<IByteBuffer> buffers)
+        int AddComponents0(bool increaseIndex, int cIndex, IEnumerable<IByteBuffer> buffers)
         {
             Contract.Requires(buffers != null);
 
@@ -260,6 +309,10 @@ namespace NetUV.Core.Buffers
             return this.AddComponents0(increaseIndex, cIndex, array, 0, array.Length);
         }
 
+        /// <summary>
+        ///     This should only be called as last operation from a method as this may adjust the underlying
+        ///     array of components and so affect the index etc.
+        /// </summary>
         void ConsolidateIfNeeded()
         {
             // Consolidate if the number of components will exceed the allowed maximum by the current
@@ -300,7 +353,7 @@ namespace NetUV.Core.Buffers
             this.EnsureAccessible();
             if (cIndex < 0 || cIndex + numComponents > this.components.Count)
             {
-                throw new ArgumentOutOfRangeException($"cIndex: {cIndex}, numComponents: {numComponents} (expected: cIndex >= 0 && cIndex + numComponents <= totalNumComponents({this.components.Count}))");
+                throw new ArgumentOutOfRangeException($"cIndex: {cIndex}, numComponents: {numComponents} " + $"(expected: cIndex >= 0 && cIndex + numComponents <= totalNumComponents({this.components.Count}))");
             }
         }
 
@@ -329,6 +382,10 @@ namespace NetUV.Core.Buffers
             }
         }
 
+        /// <summary>
+        ///     Remove the {@link IByteBuffer} from the given index.
+        ///     @param cIndex the index on from which the {@link IByteBuffer} will be remove
+        /// </summary>
         public virtual CompositeByteBuffer RemoveComponent(int cIndex)
         {
             this.CheckComponentIndex(cIndex);
@@ -343,6 +400,11 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
+        /// <summary>
+        ///     Remove the number of {@link IByteBuffer}s starting from the given index.
+        ///     @param cIndex the index on which the {@link IByteBuffer}s will be started to removed
+        ///     @param numComponents the number of components to remove
+        /// </summary>
         public virtual CompositeByteBuffer RemoveComponents(int cIndex, int numComponents)
         {
             this.CheckComponentIndex(cIndex, numComponents);
@@ -379,6 +441,9 @@ namespace NetUV.Core.Buffers
 
         IEnumerator IEnumerable.GetEnumerator() => this.GetEnumerator();
 
+        /// <summary>
+        ///     Same with {@link #slice(int, int)} except that this method returns a list.
+        /// </summary>
         public virtual IList<IByteBuffer> Decompose(int offset, int length)
         {
             this.CheckIndex(offset, length);
@@ -520,6 +585,27 @@ namespace NetUV.Core.Buffers
             return buffers.ToArray();
         }
 
+
+        public override bool IsDirect
+        {
+            get
+            {
+                int size = this.components.Count;
+                if (size == 0)
+                {
+                    return false;
+                }
+                for (int i = 0; i < size; i++)
+                {
+                    if (!this.components[i].Buffer.IsDirect)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+
         public override bool HasArray
         {
             get
@@ -565,6 +651,42 @@ namespace NetUV.Core.Buffers
                     default:
                         throw new NotSupportedException();
                 }
+            }
+        }
+
+        public override bool HasMemoryAddress
+        {
+            get
+            {
+                switch (this.components.Count)
+                {
+                    case 1:
+                        return this.components[0].Buffer.HasMemoryAddress;
+                    default:
+                        return false;
+                }
+            }
+        }
+
+        public override ref byte GetPinnableMemoryAddress()
+        {
+            switch (this.components.Count)
+            {
+                case 1:
+                    return ref this.components[0].Buffer.GetPinnableMemoryAddress();
+                default:
+                    throw new NotSupportedException();
+            }
+        }
+
+        public override IntPtr AddressOfPinnedMemory()
+        {
+            switch (this.components.Count)
+            {
+                case 1:
+                    return this.components[0].Buffer.AddressOfPinnedMemory();
+                default:
+                    throw new NotSupportedException();
             }
         }
 
@@ -640,7 +762,7 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
-        public override IByteBufferAllocator Allocator { get; }
+        public override IByteBufferAllocator Allocator => this.allocator;
 
         /// <summary>
         ///     Return the current number of {@link IByteBuffer}'s that are composed in this instance
@@ -650,7 +772,7 @@ namespace NetUV.Core.Buffers
         /// <summary>
         ///     Return the max number of {@link IByteBuffer}'s that are composed in this instance
         /// </summary>
-        public virtual int MaxNumComponents { get; }
+        public virtual int MaxNumComponents => this.maxNumComponents;
 
         /// <summary>
         ///     Return the index for the given offset
@@ -798,6 +920,29 @@ namespace NetUV.Core.Buffers
                 s.GetBytes(index - adjustment, dst, dstIndex, localLength);
                 index += localLength;
                 dstIndex += localLength;
+                length -= localLength;
+                i++;
+            }
+            return this;
+        }
+
+        public override IByteBuffer GetBytes(int index, Stream destination, int length)
+        {
+            this.CheckIndex(index, length);
+            if (length == 0)
+            {
+                return this;
+            }
+
+            int i = this.ToComponentIndex(index);
+            while (length > 0)
+            {
+                ComponentEntry c = this.components[i];
+                IByteBuffer s = c.Buffer;
+                int adjustment = c.Offset;
+                int localLength = Math.Min(length, s.Capacity - (index - adjustment));
+                s.GetBytes(index - adjustment, destination, localLength);
+                index += localLength;
                 length -= localLength;
                 i++;
             }
@@ -970,6 +1115,56 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
+        public override async Task<int> SetBytesAsync(int index, Stream src, int length, CancellationToken cancellationToken)
+        {
+            this.CheckIndex(index, length);
+            if (length == 0)
+            {
+                return 0;
+                //return src.Read(EmptyArrays.EMPTY_BYTES);
+            }
+
+            int i = this.ToComponentIndex(index);
+            int readBytes = 0;
+
+            do
+            {
+                ComponentEntry c = this.components[i];
+                IByteBuffer s = c.Buffer;
+                int adjustment = c.Offset;
+                int localLength = Math.Min(length, s.Capacity - (index - adjustment));
+                int localReadBytes = await s.SetBytesAsync(index - adjustment, src, localLength, cancellationToken);
+                if (localReadBytes < 0)
+                {
+                    if (readBytes == 0)
+                    {
+                        return -1;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                if (localReadBytes == localLength)
+                {
+                    index += localLength;
+                    length -= localLength;
+                    readBytes += localLength;
+                    i++;
+                }
+                else
+                {
+                    index += localReadBytes;
+                    length -= localReadBytes;
+                    readBytes += localReadBytes;
+                }
+            }
+            while (length > 0);
+
+            return readBytes;
+        }
+
         public override IByteBuffer SetBytes(int index, IByteBuffer src, int srcIndex, int length)
         {
             this.CheckSrcIndex(index, length, srcIndex, src.Capacity);
@@ -1020,7 +1215,7 @@ namespace NetUV.Core.Buffers
         public override IByteBuffer Copy(int index, int length)
         {
             this.CheckIndex(index, length);
-            IByteBuffer dst = Unpooled.Buffer(length);
+            IByteBuffer dst = this.AllocateBuffer(length);
             if (length != 0)
             {
                 this.CopyTo(index, length, this.ToComponentIndex(index), dst);
@@ -1049,16 +1244,36 @@ namespace NetUV.Core.Buffers
             dst.SetWriterIndex(dst.Capacity);
         }
 
+        /// <summary>
+        ///     Return the {@link IByteBuffer} on the specified index
+        ///     @param cIndex the index for which the {@link IByteBuffer} should be returned
+        ///     @return buffer the {@link IByteBuffer} on the specified index
+        /// </summary>
         public virtual IByteBuffer this[int cIndex] => this.InternalComponent(cIndex).Duplicate();
 
+        /// <summary>
+        ///     Return the {@link IByteBuffer} on the specified index
+        ///     @param offset the offset for which the {@link IByteBuffer} should be returned
+        ///     @return the {@link IByteBuffer} on the specified index
+        /// </summary>
         public virtual IByteBuffer ComponentAtOffset(int offset) => this.InternalComponentAtOffset(offset).Duplicate();
 
+        /// <summary>
+        ///     Return the internal {@link IByteBuffer} on the specified index. Note that updating the indexes of the returned
+        ///     buffer will lead to an undefined behavior of this buffer.
+        ///     @param cIndex the index for which the {@link IByteBuffer} should be returned
+        /// </summary>
         public virtual IByteBuffer InternalComponent(int cIndex)
         {
             this.CheckComponentIndex(cIndex);
             return this.components[cIndex].Buffer;
         }
 
+        /// <summary>
+        ///     Return the internal {@link IByteBuffer} on the specified offset. Note that updating the indexes of the returned
+        ///     buffer will lead to an undefined behavior of this buffer.
+        ///     @param offset the offset for which the {@link IByteBuffer} should be returned
+        /// </summary>
         public virtual IByteBuffer InternalComponentAtOffset(int offset) => this.FindComponent(offset).Buffer;
 
         ComponentEntry FindComponent(int offset)
@@ -1244,7 +1459,8 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
-        IByteBuffer AllocateBuffer(int capacity) => this.Allocator.Buffer(capacity);
+        IByteBuffer AllocateBuffer(int capacity) =>
+            this.direct ? this.Allocator.DirectBuffer(capacity) : this.Allocator.HeapBuffer(capacity);
 
         public override string ToString()
         {

@@ -512,7 +512,7 @@ namespace NetUV.Core.Native
             }
         }
 
-        internal static void UdpSend(IntPtr requestHandle, IntPtr handle, IPEndPoint remoteEndPoint, ref uv_buf_t[] bufs)
+        internal static void UdpSend(IntPtr requestHandle, IntPtr handle, IPEndPoint remoteEndPoint, ref uv_buf_t[] bufs, ref int size)
         {
             Contract.Requires(requestHandle != IntPtr.Zero);
             Contract.Requires(handle != IntPtr.Zero);
@@ -524,7 +524,8 @@ namespace NetUV.Core.Native
             int result = uv_udp_send(
                 requestHandle, 
                 handle, 
-                bufs, bufs.Length, 
+                bufs, 
+                size, 
                 ref addr, 
                 WriteBufferRequest.WriteCallback);
             if (result < 0)

@@ -5,20 +5,22 @@ namespace NetUV.Core.Native
 {
     using System;
     using System.Diagnostics.Contracts;
+    using System.Runtime.CompilerServices;
+    using NetUV.Core.Buffers;
     using NetUV.Core.Common;
 
-    sealed class HeapBufferQueue : IDisposable
+    sealed class PendingReadQueue : IDisposable
     {
-        readonly SpscLinkedQueue<HeapBufferRef> queue;
+        readonly SpscLinkedQueue<ReadBufferRef> queue;
         volatile bool disposed;
 
-        internal HeapBufferQueue()
+        internal PendingReadQueue()
         {
-            this.queue = new SpscLinkedQueue<HeapBufferRef>();
+            this.queue = new SpscLinkedQueue<ReadBufferRef>();
             this.disposed = false;
         }
 
-        internal void Enqueue(HeapBufferRef bufferRef)
+        internal void Enqueue(ReadBufferRef bufferRef)
         {
             Contract.Requires(bufferRef != null);
 
@@ -26,34 +28,31 @@ namespace NetUV.Core.Native
             this.queue.Offer(bufferRef);
         }
 
-        internal bool TryDequeue(out HeapBufferRef bufferRef)
+        internal bool TryDequeue(out ReadBufferRef bufferRef)
         {
             this.CheckDisposed();
             bufferRef = this.queue.Poll();
             return bufferRef != null;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void CheckDisposed()
         {
             if (this.disposed)
             {
-                ThrowObjectDisposedException();
+                ThrowHelper.ThrowObjectDisposedException(nameof(PendingReadQueue));
             }
         }
-
-        static void ThrowObjectDisposedException() => throw new ObjectDisposedException(nameof(HeapBufferQueue));
 
         internal void Clear() => this.queue.Clear();
 
         public void Dispose()
         {
-            if (this.disposed)
+            if (!this.disposed)
             {
-                return;
+                this.Clear();
             }
-
             this.disposed = true;
-            this.Clear();
         }
     }
 }

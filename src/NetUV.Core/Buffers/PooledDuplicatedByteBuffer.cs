@@ -4,6 +4,9 @@
 namespace NetUV.Core.Buffers
 {
     using System;
+    using System.IO;
+    using System.Threading;
+    using System.Threading.Tasks;
     using NetUV.Core.Common;
 
     sealed class PooledDuplicatedByteBuffer : AbstractPooledDerivedByteBuffer
@@ -34,6 +37,10 @@ namespace NetUV.Core.Buffers
         }
 
         public override int ArrayOffset => this.Unwrap().ArrayOffset;
+
+        public override ref byte GetPinnableMemoryAddress() => ref this.Unwrap().GetPinnableMemoryAddress();
+
+        public override IntPtr AddressOfPinnedMemory() => this.Unwrap().AddressOfPinnedMemory();
 
         public override ArraySegment<byte> GetIoBuffer(int index, int length) => this.Unwrap().GetIoBuffer(index, length);
 
@@ -69,6 +76,8 @@ namespace NetUV.Core.Buffers
 
         public override IByteBuffer GetBytes(int index, byte[] destination, int dstIndex, int length) => this.Unwrap().GetBytes(index, destination, dstIndex, length);
 
+        public override IByteBuffer GetBytes(int index, Stream destination, int length) => this.Unwrap().GetBytes(index, destination, length);
+
         protected internal override void _SetByte(int index, int value) => this.UnwrapCore()._SetByte(index, value);
 
         protected internal override void _SetShort(int index, int value) => this.UnwrapCore()._SetShort(index, value);
@@ -80,6 +89,8 @@ namespace NetUV.Core.Buffers
         protected internal override void _SetMediumLE(int index, int value) => this.UnwrapCore()._SetMediumLE(index, value);
 
         public override IByteBuffer SetBytes(int index, IByteBuffer src, int srcIndex, int length) => this.Unwrap().SetBytes(index, src, srcIndex, length);
+
+        public override Task<int> SetBytesAsync(int index, Stream src, int length, CancellationToken cancellationToken) => this.Unwrap().SetBytesAsync(index, src, length, cancellationToken);
 
         public override IByteBuffer SetBytes(int index, byte[] src, int srcIndex, int length) => this.Unwrap().SetBytes(index, src, srcIndex, length);
 

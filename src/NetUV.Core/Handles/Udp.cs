@@ -24,7 +24,7 @@ namespace NetUV.Core.Handles
             new ThreadLocalPool<SendRequest>(handle => new SendRequest(handle), DefaultPoolSize);
 
         readonly PooledByteBufferAllocator allocator;
-        readonly HeapBufferQueue bufferQueue;
+        readonly PendingReadQueue bufferQueue;
 
         Action<Udp, IDatagramReadCompletion> readAction;
 
@@ -38,7 +38,7 @@ namespace NetUV.Core.Handles
             Contract.Requires(allocator != null);
 
             this.allocator = allocator;
-            this.bufferQueue = new HeapBufferQueue();
+            this.bufferQueue = new PendingReadQueue();
         }
 
         public int GetSendBufferSize()
@@ -77,7 +77,7 @@ namespace NetUV.Core.Handles
 
         public WritableBuffer Allocate()
         {
-            IByteBuffer buffer = this.allocator.HeapBuffer();
+            IByteBuffer buffer = this.allocator.Buffer();
             return new WritableBuffer(buffer);
         }
 
@@ -132,7 +132,7 @@ namespace NetUV.Core.Handles
             Contract.Requires(remoteEndPoint != null);
 
             IByteBuffer buffer = Unpooled.WrappedBuffer(array, offset, count);
-            var bufferRef = new ByteBufferRef(buffer, buffer.ReaderIndex, count);
+            var bufferRef = new WriteBufferRef(buffer);
             this.QueueSend(bufferRef, remoteEndPoint, completion);
         }
 
@@ -148,11 +148,11 @@ namespace NetUV.Core.Handles
                 return;
             }
 
-            var bufferRef = new ByteBufferRef(buffer, buffer.ReaderIndex, buffer.ReadableBytes);
+            var bufferRef = new WriteBufferRef(buffer);
             this.QueueSend(bufferRef, remoteEndPoint, completion);
         }
 
-        void QueueSend(ByteBufferRef bufferRef, 
+        void QueueSend(WriteBufferRef bufferRef, 
             IPEndPoint remoteEndPoint, 
             Action<Udp, Exception> completion)
         {
@@ -166,12 +166,12 @@ namespace NetUV.Core.Handles
                 request.Prepare(bufferRef,
                     (sendRequest, exception) => completion?.Invoke(this, exception));
 
-                uv_buf_t[] bufs = request.Bufs;
                 NativeMethods.UdpSend(
                     request.InternalHandle, 
                     this.InternalHandle, 
                     remoteEndPoint, 
-                    ref bufs);
+                    ref request.Bufs, 
+                    ref request.Size);
             }
             catch (Exception exception)
             {
@@ -383,31 +383,27 @@ namespace NetUV.Core.Handles
 
         void OnAllocateCallback(out uv_buf_t buf)
         {
-            var buffer = (PooledHeapByteBuffer)this.allocator.Buffer(FixedBufferSize);
+            IByteBuffer buffer = this.allocator.Buffer(FixedBufferSize);
             if (Log.IsTraceEnabled)
             {
                 Log.TraceFormat("{0} {1} receive buffer allocated size = {2}", this.HandleType, this.InternalHandle, buffer.Capacity);
             }
 
-            var bufferRef = new HeapBufferRef(buffer);
+            var bufferRef = new ReadBufferRef(buffer);
             this.bufferQueue.Enqueue(bufferRef);
-
-            uv_buf_t[] bufs = bufferRef.GetNativeBuffer();
-            Debug.Assert(bufs != null && bufs.Length > 0);
-
-            buf = bufs[0];
+            buf = bufferRef.Buf;
         }
 
         IByteBuffer GetBuffer()
         {
             IByteBuffer byteBuffer = null;
-            HeapBufferRef bufferRef = null;
+            ReadBufferRef bufferRef = null;
 
             try
             {
                 if (this.bufferQueue.TryDequeue(out bufferRef))
                 {
-                    byteBuffer = bufferRef.GetHeapBuffer();
+                    byteBuffer = bufferRef.Buffer;
                 }
             }
             finally

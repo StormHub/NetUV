@@ -6,8 +6,11 @@ namespace NetUV.Core.Buffers
 {
     using System;
     using System.Diagnostics.Contracts;
+    using System.IO;
     using System.Runtime.CompilerServices;
     using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
     using NetUV.Core.Common;
     using NetUV.Core.Logging;
 
@@ -63,7 +66,7 @@ namespace NetUV.Core.Buffers
         {
             if (index < 0 || index > this.writerIndex)
             {
-                throw new IndexOutOfRangeException($"ReaderIndex: {index} (expected: 0 <= readerIndex <= writerIndex({this.writerIndex})");
+                throw new IndexOutOfRangeException($"ReaderIndex: {index} (expected: 0 <= readerIndex <= writerIndex({this.WriterIndex})");
             }
 
             this.readerIndex = index;
@@ -234,7 +237,7 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
-        protected void EnsureWritable0(int minWritableBytes)
+        protected internal void EnsureWritable0(int minWritableBytes)
         {
             this.EnsureAccessible();
             if (minWritableBytes <= this.WritableBytes)
@@ -444,6 +447,8 @@ namespace NetUV.Core.Buffers
 
         public abstract IByteBuffer GetBytes(int index, IByteBuffer destination, int dstIndex, int length);
 
+        public abstract IByteBuffer GetBytes(int index, Stream destination, int length);
+
         public virtual IByteBuffer SetByte(int index, int value)
         {
             this.CheckIndex(index);
@@ -586,6 +591,7 @@ namespace NetUV.Core.Buffers
             this.SetBytes(index, src, 0, src.Length);
             return this;
         }
+
         public abstract IByteBuffer SetBytes(int index, byte[] src, int srcIndex, int length);
 
         public virtual IByteBuffer SetBytes(int index, IByteBuffer src)
@@ -609,6 +615,8 @@ namespace NetUV.Core.Buffers
         }
 
         public abstract IByteBuffer SetBytes(int index, IByteBuffer src, int srcIndex, int length);
+
+        public abstract Task<int> SetBytesAsync(int index, Stream src, int length, CancellationToken cancellationToken);
 
         public virtual IByteBuffer SetZero(int index, int length)
         {
@@ -808,6 +816,7 @@ namespace NetUV.Core.Buffers
 
         public virtual IByteBuffer ReadSlice(int length)
         {
+            this.CheckReadableBytes(length);
             IByteBuffer slice = this.Slice(this.readerIndex, length);
             this.readerIndex += length;
             return slice;
@@ -815,6 +824,7 @@ namespace NetUV.Core.Buffers
 
         public virtual IByteBuffer ReadRetainedSlice(int length)
         {
+            this.CheckReadableBytes(length);
             IByteBuffer slice = this.RetainedSlice(this.readerIndex, length);
             this.readerIndex += length;
             return slice;
@@ -859,6 +869,14 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
+        public virtual IByteBuffer ReadBytes(Stream destination, int length)
+        {
+            this.CheckReadableBytes(length);
+            this.GetBytes(this.readerIndex, destination, length);
+            this.readerIndex += length;
+            return this;
+        }
+
         public virtual IByteBuffer SkipBytes(int length)
         {
             this.CheckReadableBytes(length);
@@ -875,8 +893,7 @@ namespace NetUV.Core.Buffers
         public virtual IByteBuffer WriteByte(int value)
         {
             this.EnsureWritable0(1);
-            this._SetByte(this.writerIndex, value);
-            this.writerIndex++;
+            this._SetByte(this.writerIndex++, value);
             return this;
         }
 
@@ -896,9 +913,21 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
-        public IByteBuffer WriteUnsignedShort(ushort value) => this.WriteShort(unchecked((short)value));
+        public IByteBuffer WriteUnsignedShort(ushort value)
+        {
+            unchecked
+            {
+                return this.WriteShort((short)value);
+            }
+        }
 
-        public IByteBuffer WriteUnsignedShortLE(ushort value) => this.WriteShortLE(unchecked((short)value));
+        public IByteBuffer WriteUnsignedShortLE(ushort value)
+        {
+            unchecked
+            {
+                return this.WriteShortLE((short)value);
+            }
+        }
 
         public virtual IByteBuffer WriteMedium(int value)
         {
@@ -1009,6 +1038,23 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
+        public virtual async Task WriteBytesAsync(Stream stream, int length, CancellationToken cancellationToken)
+        {
+            this.EnsureWritable(length);
+            if (this.WritableBytes < length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(length));
+            }
+
+            int writerIdx = this.writerIndex;
+            int wrote = await this.SetBytesAsync(writerIdx, stream, length, cancellationToken);
+
+            Contract.Assert(writerIdx == this.writerIndex);
+            this.writerIndex = writerIdx + wrote;
+        }
+
+        public Task WriteBytesAsync(Stream stream, int length) => this.WriteBytesAsync(stream, length, CancellationToken.None);
+
         public virtual IByteBuffer WriteZero(int length)
         {
             if (length == 0)
@@ -1096,19 +1142,19 @@ namespace NetUV.Core.Buffers
             return endIndex - index;
         }
 
-        public virtual int ForEachByte(ByteProcessor processor)
+        public virtual int ForEachByte(IByteProcessor processor)
         {
             this.EnsureAccessible();
             return this.ForEachByteAsc0(this.readerIndex, this.writerIndex, processor);
         }
 
-        public virtual int ForEachByte(int index, int length, ByteProcessor processor)
+        public virtual int ForEachByte(int index, int length, IByteProcessor processor)
         {
             this.CheckIndex(index, length);
             return this.ForEachByteAsc0(index, index + length, processor);
         }
 
-        int ForEachByteAsc0(int start, int end, ByteProcessor processor)
+        int ForEachByteAsc0(int start, int end, IByteProcessor processor)
         {
             for (; start < end; ++start)
             {
@@ -1121,19 +1167,19 @@ namespace NetUV.Core.Buffers
             return -1;
         }
 
-        public virtual int ForEachByteDesc(ByteProcessor processor)
+        public virtual int ForEachByteDesc(IByteProcessor processor)
         {
             this.EnsureAccessible();
             return this.ForEachByteDesc0(this.writerIndex - 1, this.readerIndex, processor);
         }
 
-        public virtual int ForEachByteDesc(int index, int length, ByteProcessor processor)
+        public virtual int ForEachByteDesc(int index, int length, IByteProcessor processor)
         {
             this.CheckIndex(index, length);
             return this.ForEachByteDesc0(index + length - 1, index, processor);
         }
 
-        int ForEachByteDesc0(int rStart, int rEnd, ByteProcessor processor)
+        int ForEachByteDesc0(int rStart, int rEnd, IByteProcessor processor)
         {
             for (; rStart >= rEnd; --rStart)
             {
@@ -1218,12 +1264,11 @@ namespace NetUV.Core.Buffers
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void CheckReadableBytes(int minimumReadableBytes)
         {
             if (minimumReadableBytes < 0)
             {
-                ThrowHelper.ThrowArgumentOutOfRangeException(nameof(minimumReadableBytes), $"minimumReadableBytes: {minimumReadableBytes} (expected: >= 0)");
+                throw new ArgumentOutOfRangeException(nameof(minimumReadableBytes), $"minimumReadableBytes: {minimumReadableBytes} (expected: >= 0)");
             }
 
             this.CheckReadableBytes0(minimumReadableBytes);
@@ -1238,13 +1283,12 @@ namespace NetUV.Core.Buffers
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void CheckReadableBytes0(int minimumReadableBytes)
         {
             this.EnsureAccessible();
             if (this.readerIndex > this.writerIndex - minimumReadableBytes)
             {
-                ThrowHelper.ThrowIndexOutOfRangeException($"readerIndex({this.readerIndex}) + length({minimumReadableBytes}) exceeds writerIndex({this.writerIndex}): {this}");
+                throw new IndexOutOfRangeException($"readerIndex({this.readerIndex}) + length({minimumReadableBytes}) exceeds writerIndex({this.writerIndex}): {this}");
             }
         }
 
@@ -1253,7 +1297,7 @@ namespace NetUV.Core.Buffers
         {
             if (CheckAccessible && this.ReferenceCount == 0)
             {
-                ThrowHelper.ThrowIllegalReferenceCountException(0);
+                ThrowHelper.ThrowIllegalReferenceCountException();
             }
         }
 
@@ -1284,14 +1328,28 @@ namespace NetUV.Core.Buffers
 
         public abstract int ArrayOffset { get; }
 
+        public abstract bool HasMemoryAddress { get; }
+
+        public abstract ref byte GetPinnableMemoryAddress();
+
+        public abstract IntPtr AddressOfPinnedMemory();
+
         public abstract IByteBuffer Unwrap();
+
+        public abstract bool IsDirect { get; }
 
         public abstract int ReferenceCount { get; }
 
-        public abstract IReferenceCounted Retain(int increment = 1);
+        public abstract IReferenceCounted Retain();
 
-        public abstract IReferenceCounted Touch(object hint = null);
+        public abstract IReferenceCounted Retain(int increment);
 
-        public abstract bool Release(int decrement = 1);
+        public abstract IReferenceCounted Touch();
+
+        public abstract IReferenceCounted Touch(object hint);
+
+        public abstract bool Release();
+
+        public abstract bool Release(int decrement);
     }
 }

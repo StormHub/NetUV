@@ -4,7 +4,10 @@
 namespace NetUV.Core.Requests
 {
     using System;
+    using System.Diagnostics;
     using System.Diagnostics.Contracts;
+    using System.Runtime.CompilerServices;
+    using NetUV.Core.Buffers;
     using NetUV.Core.Native;
 
     abstract class WriteBufferRequest : ScheduleRequest
@@ -13,7 +16,7 @@ namespace NetUV.Core.Requests
 
         readonly RequestContext handle;
         Action<WriteBufferRequest, Exception> completion;
-        ByteBufferRef buffer;
+        WriteBufferRef bufferRef;
 
         protected WriteBufferRequest(uv_req_type requestType)
             : base(requestType)
@@ -23,46 +26,40 @@ namespace NetUV.Core.Requests
                 || requestType == uv_req_type.UV_UDP_SEND);
 
             this.handle = new RequestContext(requestType, 0, this);
-            this.buffer = null;
+            this.bufferRef = null;
         }
 
-        internal override IntPtr InternalHandle => this.handle.Handle;
-
-        internal void Prepare(ByteBufferRef bufferRef, Action<WriteBufferRequest, Exception> callback)
+        internal override IntPtr InternalHandle
         {
-            Contract.Requires(bufferRef != null);
-            Contract.Requires(callback != null);
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => this.handle.Handle;
+        }
 
-            if (this.buffer != null
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void Prepare(WriteBufferRef writeBufferRef, Action<WriteBufferRequest, Exception> callback)
+        {
+            Debug.Assert(writeBufferRef != null && callback != null);
+
+            if (this.bufferRef != null 
                 || !this.handle.IsValid)
             {
-                throw new InvalidOperationException($"{nameof(WriteRequest)} status is invalid.");
+                ThrowHelper.ThrowInvalidOperationException($"{nameof(WriteRequest)} status is invalid.");
             }
 
             this.completion = callback;
-            this.buffer = bufferRef;
+            this.bufferRef = writeBufferRef;
+            this.bufferRef.Prepare();
         }
 
-        internal uv_buf_t[] Bufs
-        {
-            get
-            {
-                if (this.buffer == null)
-                {
-                    throw new InvalidOperationException(
-                        $"{nameof(WriteRequest)} buffer has not been initialized.");
-                }
+        internal ref uv_buf_t[] Bufs => ref this.bufferRef.Bufs;
 
-                return this.buffer.GetNativeBuffer();
-            }
-        }
+        internal ref int Size => ref this.bufferRef.Size;
 
         protected virtual void Release()
         {
-            ByteBufferRef buf = this.buffer;
-            this.buffer = null;
+            WriteBufferRef buf = this.bufferRef;
+            this.bufferRef = null;
             this.completion = null;
-
             buf?.Dispose();
         }
 

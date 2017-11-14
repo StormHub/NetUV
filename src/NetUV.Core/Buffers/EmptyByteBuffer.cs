@@ -5,7 +5,10 @@ namespace NetUV.Core.Buffers
 {
     using System;
     using System.Diagnostics.Contracts;
+    using System.IO;
     using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
     using NetUV.Core.Common;
 
     sealed class EmptyByteBuffer : IByteBuffer
@@ -29,6 +32,8 @@ namespace NetUV.Core.Buffers
         public IByteBufferAllocator Allocator { get; }
 
         public IByteBuffer Unwrap() => null;
+
+        public bool IsDirect => true;
 
         public int ReaderIndex => 0;
 
@@ -206,6 +211,8 @@ namespace NetUV.Core.Buffers
 
         public IByteBuffer GetBytes(int index, byte[] destination, int dstIndex, int length) => this.CheckIndex(index, length);
 
+        public IByteBuffer GetBytes(int index, Stream destination, int length) => this.CheckIndex(index, length);
+
         public IByteBuffer SetBoolean(int index, bool value)
         {
             throw new IndexOutOfRangeException();
@@ -313,6 +320,12 @@ namespace NetUV.Core.Buffers
         public IByteBuffer SetBytes(int index, byte[] src) => this.CheckIndex(index, src.Length);
 
         public IByteBuffer SetBytes(int index, byte[] src, int srcIndex, int length) => this.CheckIndex(index, length);
+
+        public Task<int> SetBytesAsync(int index, Stream src, int length, CancellationToken cancellationToken)
+        {
+            this.CheckIndex(index, length);
+            return Task.FromResult(0);
+        }
 
         public IByteBuffer SetZero(int index, int length) => this.CheckIndex(index, length);
 
@@ -433,112 +446,51 @@ namespace NetUV.Core.Buffers
 
         public IByteBuffer ReadBytes(byte[] destination, int dstIndex, int length) => this.CheckLength(length);
 
+        public IByteBuffer ReadBytes(Stream destination, int length) => this.CheckLength(length);
+
         public IByteBuffer SkipBytes(int length) => this.CheckLength(length);
 
-        public IByteBuffer WriteBoolean(bool value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteBoolean(bool value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteByte(int value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteByte(int value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteShort(int value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteShort(int value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteShortLE(int value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteShortLE(int value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteUnsignedShort(ushort value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteUnsignedShort(ushort value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteUnsignedShortLE(ushort value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteUnsignedShortLE(ushort value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteMedium(int value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteMedium(int value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteMediumLE(int value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteMediumLE(int value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteUnsignedMedium(int value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteUnsignedMedium(int value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteUnsignedMediumLE(int value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteUnsignedMediumLE(int value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteInt(int value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteInt(int value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteIntLE(int value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteIntLE(int value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteUnsignedInt(uint value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteUnsignedInt(uint value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteUnsignedIntLE(uint value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteUnsignedIntLE(uint value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteLong(long value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteLong(long value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteLongLE(long value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteLongLE(long value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteChar(char value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteChar(char value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteFloat(float value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteFloat(float value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteFloatLE(float value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteFloatLE(float value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteDouble(double value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteDouble(double value) => throw new IndexOutOfRangeException();
 
-        public IByteBuffer WriteDoubleLE(double value)
-        {
-            throw new IndexOutOfRangeException();
-        }
+        public IByteBuffer WriteDoubleLE(double value) => throw new IndexOutOfRangeException();
 
         public IByteBuffer WriteBytes(IByteBuffer src) => this.CheckLength(src.ReadableBytes);
 
@@ -573,17 +525,17 @@ namespace NetUV.Core.Buffers
             return -1;
         }
 
-        public int ForEachByte(ByteProcessor processor) => -1;
+        public int ForEachByte(IByteProcessor processor) => -1;
 
-        public int ForEachByte(int index, int length, ByteProcessor processor)
+        public int ForEachByte(int index, int length, IByteProcessor processor)
         {
             this.CheckIndex(index, length);
             return -1;
         }
 
-        public int ForEachByteDesc(ByteProcessor processor) => -1;
+        public int ForEachByteDesc(IByteProcessor processor) => -1;
 
-        public int ForEachByteDesc(int index, int length, ByteProcessor processor)
+        public int ForEachByteDesc(int index, int length, IByteProcessor processor)
         {
             this.CheckIndex(index, length);
             return -1;
@@ -635,7 +587,9 @@ namespace NetUV.Core.Buffers
 
         public bool HasMemoryAddress => false;
 
-        public unsafe byte* MemoryAddress => throw new NotSupportedException();
+        public ref byte GetPinnableMemoryAddress() => throw new NotSupportedException();
+
+        public IntPtr AddressOfPinnedMemory() => IntPtr.Zero;
 
         public string ToString(Encoding encoding) => string.Empty;
 
@@ -683,25 +637,34 @@ namespace NetUV.Core.Buffers
 
         public IByteBuffer ReadRetainedSlice(int length) => this.CheckLength(length);
 
-        // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
+        public Task WriteBytesAsync(Stream stream, int length)
+        {
+            this.CheckLength(length);
+            return Task.CompletedTask;
+        }
+
+        public Task WriteBytesAsync(Stream stream, int length, CancellationToken cancellationToken)
+        {
+            this.CheckLength(length);
+            return Task.CompletedTask;
+        }
+
+        // ReSharper disable ParameterOnlyUsedForPreconditionCheck.Local
         IByteBuffer CheckIndex(int index)
         {
             if (index != 0)
             {
                 throw new IndexOutOfRangeException();
             }
-
             return this;
         }
 
-        // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
         IByteBuffer CheckIndex(int index, int length)
         {
             if (length < 0)
             {
-                throw new ArgumentException(nameof(length));
+                throw new ArgumentException("length: " + length);
             }
-
             if (index != 0 || length != 0)
             {
                 throw new IndexOutOfRangeException();
@@ -709,14 +672,14 @@ namespace NetUV.Core.Buffers
 
             return this;
         }
+        // ReSharper restore ParameterOnlyUsedForPreconditionCheck.Local
 
         IByteBuffer CheckLength(int length)
         {
             if (length < 0)
             {
-                throw new ArgumentException($"length: {length} (expected: >= 0)");
+                throw new ArgumentException("length: " + length + " (expected: >= 0)");
             }
-
             if (length != 0)
             {
                 throw new IndexOutOfRangeException();

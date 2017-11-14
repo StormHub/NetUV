@@ -113,27 +113,27 @@ namespace NetUV.Core.Native
             }
         }
 
-        internal static void WriteStream(IntPtr requestHandle, IntPtr streamHandle, ref uv_buf_t[] bufs)
+        internal static void WriteStream(IntPtr requestHandle, IntPtr streamHandle, ref uv_buf_t[] bufs, ref int size)
         {
             Contract.Requires(requestHandle != IntPtr.Zero);
             Contract.Requires(streamHandle != IntPtr.Zero);
             Contract.Requires(bufs != null && bufs.Length > 0);
 
-            int result = uv_write(requestHandle, streamHandle, bufs, bufs.Length, WriteBufferRequest.WriteCallback);
+            int result = uv_write(requestHandle, streamHandle, bufs, size, WriteBufferRequest.WriteCallback);
             if (result < 0)
             {
                 throw CreateError((uv_err_code)result);
             }
         }
 
-        internal static void WriteStream(IntPtr requestHandle, IntPtr streamHandle, ref uv_buf_t[] bufs, IntPtr sendHandle)
+        internal static void WriteStream(IntPtr requestHandle, IntPtr streamHandle, ref uv_buf_t[] bufs, ref int size, IntPtr sendHandle)
         {
             Contract.Requires(requestHandle != IntPtr.Zero);
             Contract.Requires(streamHandle != IntPtr.Zero);
             Contract.Requires(sendHandle != IntPtr.Zero);
             Contract.Requires(bufs != null && bufs.Length > 0);
 
-            int result = uv_write2(requestHandle, streamHandle, bufs, bufs.Length, sendHandle, WriteBufferRequest.WriteCallback);
+            int result = uv_write2(requestHandle, streamHandle, bufs, size, sendHandle, WriteBufferRequest.WriteCallback);
             if (result < 0)
             {
                 throw CreateError((uv_err_code)result);

@@ -5,7 +5,10 @@ namespace NetUV.Core.Buffers
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
 
     class WrappedCompositeByteBuffer : CompositeByteBuffer
     {
@@ -17,7 +20,9 @@ namespace NetUV.Core.Buffers
             this.SetMaxCapacity(this.wrapped.MaxCapacity);
         }
 
-        public override bool Release(int decrement = 1) => this.wrapped.Release(decrement);
+        public override bool Release() => this.wrapped.Release();
+
+        public override bool Release(int decrement) => this.wrapped.Release(decrement);
 
         public sealed override int ReaderIndex => this.wrapped.ReaderIndex;
 
@@ -95,13 +100,13 @@ namespace NetUV.Core.Buffers
 
         public override int BytesBefore(int index, int length, byte value) => this.wrapped.BytesBefore(index, length, value);
 
-        public override int ForEachByte(ByteProcessor processor) => this.wrapped.ForEachByte(processor);
+        public override int ForEachByte(IByteProcessor processor) => this.wrapped.ForEachByte(processor);
 
-        public override int ForEachByte(int index, int length, ByteProcessor processor) => this.wrapped.ForEachByte(index, length, processor);
+        public override int ForEachByte(int index, int length, IByteProcessor processor) => this.wrapped.ForEachByte(index, length, processor);
 
-        public override int ForEachByteDesc(ByteProcessor processor) => this.wrapped.ForEachByteDesc(processor);
+        public override int ForEachByteDesc(IByteProcessor processor) => this.wrapped.ForEachByteDesc(processor);
 
-        public override int ForEachByteDesc(int index, int length, ByteProcessor processor) => this.wrapped.ForEachByteDesc(index, length, processor);
+        public override int ForEachByteDesc(int index, int length, IByteProcessor processor) => this.wrapped.ForEachByteDesc(index, length, processor);
 
         public override int GetHashCode() => this.wrapped.GetHashCode();
 
@@ -122,6 +127,8 @@ namespace NetUV.Core.Buffers
         public override IByteBuffer WriteIntLE(int value) => this.wrapped.WriteIntLE(value);
 
         public override IByteBuffer WriteLongLE(long value) => this.wrapped.WriteLongLE(value);
+
+        public override Task WriteBytesAsync(Stream stream, int length, CancellationToken cancellationToken) => this.wrapped.WriteBytesAsync(stream, length, cancellationToken);
 
         public override CompositeByteBuffer AddComponent(IByteBuffer buffer)
         {
@@ -255,6 +262,8 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
+        public override IByteBuffer GetBytes(int index, Stream destination, int length) => this.wrapped.GetBytes(index, destination, length);
+
         public override IByteBuffer SetByte(int index, int value)
         {
             this.wrapped.SetByte(index, value);
@@ -314,6 +323,8 @@ namespace NetUV.Core.Buffers
             this.wrapped.SetBytes(index, src, srcIndex, length);
             return this;
         }
+
+        public override Task<int> SetBytesAsync(int index, Stream src, int length, CancellationToken cancellationToken) => this.wrapped.SetBytesAsync(index, src, length, cancellationToken);
 
         public override IByteBuffer Copy() => this.wrapped.Copy();
 
@@ -509,6 +520,8 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
+        public override IByteBuffer ReadBytes(Stream destination, int length) => this.wrapped.ReadBytes(destination, length);
+
         public override IByteBuffer SkipBytes(int length)
         {
             this.wrapped.SkipBytes(length);
@@ -605,13 +618,25 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
-        public override IReferenceCounted Retain(int increment = 1)
+        public override IReferenceCounted Retain(int increment)
         {
             this.wrapped.Retain(increment);
             return this;
         }
 
-        public override IReferenceCounted Touch(object hint = null)
+        public override IReferenceCounted Retain()
+        {
+            this.wrapped.Retain();
+            return this;
+        }
+
+        public override IReferenceCounted Touch()
+        {
+            this.wrapped.Touch();
+            return this;
+        }
+
+        public override IReferenceCounted Touch(object hint)
         {
             this.wrapped.Touch(hint);
             return this;

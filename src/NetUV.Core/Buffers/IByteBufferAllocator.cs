@@ -17,6 +17,12 @@ namespace NetUV.Core.Buffers
 
         IByteBuffer HeapBuffer(int initialCapacity, int maxCapacity);
 
+        IByteBuffer DirectBuffer();
+
+        IByteBuffer DirectBuffer(int initialCapacity);
+
+        IByteBuffer DirectBuffer(int initialCapacity, int maxCapacity);
+
         CompositeByteBuffer CompositeBuffer();
 
         CompositeByteBuffer CompositeBuffer(int maxComponents);
@@ -24,6 +30,12 @@ namespace NetUV.Core.Buffers
         CompositeByteBuffer CompositeHeapBuffer();
 
         CompositeByteBuffer CompositeHeapBuffer(int maxComponents);
+
+        CompositeByteBuffer CompositeDirectBuffer();
+
+        CompositeByteBuffer CompositeDirectBuffer(int maxComponents);
+
+        bool IsDirectBufferPooled { get; }
 
         int CalculateNewCapacity(int minNewCapacity, int maxCapacity);
     }
