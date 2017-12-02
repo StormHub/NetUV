@@ -67,8 +67,9 @@ namespace NetUV.Core.Handles
                 this.closeCallback = null;
                 this.UserToken = null;
             }
-        } 
+        }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Validate() => this.handle.Validate();
 
         public unsafe bool TryGetLoop(out Loop loop)

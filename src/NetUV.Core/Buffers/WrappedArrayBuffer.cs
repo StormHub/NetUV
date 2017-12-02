@@ -5,7 +5,10 @@ namespace NetUV.Core.Buffers
 {
     using System;
     using System.Diagnostics.Contracts;
+    using System.IO;
     using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
 
     class WrappedByteBuffer : IByteBuffer
     {
@@ -17,6 +20,12 @@ namespace NetUV.Core.Buffers
 
             this.Buf = buf;
         }
+
+        public bool HasMemoryAddress => this.Buf.HasMemoryAddress;
+
+        public ref byte GetPinnableMemoryAddress() => ref this.Buf.GetPinnableMemoryAddress();
+
+        public IntPtr AddressOfPinnedMemory() => this.Buf.AddressOfPinnedMemory();
 
         public int Capacity => this.Buf.Capacity;
 
@@ -31,6 +40,8 @@ namespace NetUV.Core.Buffers
         public IByteBufferAllocator Allocator => this.Buf.Allocator;
 
         public IByteBuffer Unwrap() => this.Buf;
+
+        public bool IsDirect => this.Buf.IsDirect;
 
         public int ReaderIndex => this.Buf.ReaderIndex;
 
@@ -186,6 +197,12 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
+        public virtual IByteBuffer GetBytes(int index, Stream output, int length)
+        {
+            this.Buf.GetBytes(index, output, length);
+            return this;
+        }
+
         public virtual IByteBuffer SetBoolean(int index, bool value)
         {
             this.Buf.SetBoolean(index, value);
@@ -314,6 +331,8 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
+        public virtual Task<int> SetBytesAsync(int index, Stream src, int length, CancellationToken cancellationToken) => this.Buf.SetBytesAsync(index, src, length, cancellationToken);
+
         public virtual IByteBuffer SetZero(int index, int length)
         {
             this.Buf.SetZero(index, length);
@@ -368,6 +387,8 @@ namespace NetUV.Core.Buffers
 
         public virtual IByteBuffer ReadRetainedSlice(int length) => this.Buf.ReadRetainedSlice(length);
 
+        public Task WriteBytesAsync(Stream stream, int length) => this.Buf.WriteBytesAsync(stream, length);
+
         public virtual IByteBuffer ReadBytes(IByteBuffer dst)
         {
             this.Buf.ReadBytes(dst);
@@ -395,6 +416,12 @@ namespace NetUV.Core.Buffers
         public virtual IByteBuffer ReadBytes(byte[] dst, int dstIndex, int length)
         {
             this.Buf.ReadBytes(dst, dstIndex, length);
+            return this;
+        }
+
+        public virtual IByteBuffer ReadBytes(Stream output, int length)
+        {
+            this.Buf.ReadBytes(output, length);
             return this;
         }
 
@@ -528,6 +555,8 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
+        public virtual Task WriteBytesAsync(Stream input, int length, CancellationToken cancellationToken) => this.Buf.WriteBytesAsync(input, length, cancellationToken);
+
         public virtual IByteBuffer WriteZero(int length)
         {
             this.Buf.WriteZero(length);
@@ -542,13 +571,13 @@ namespace NetUV.Core.Buffers
 
         public virtual int BytesBefore(int index, int length, byte value) => this.Buf.BytesBefore(index, length, value);
 
-        public virtual int ForEachByte(ByteProcessor processor) => this.Buf.ForEachByte(processor);
+        public virtual int ForEachByte(IByteProcessor processor) => this.Buf.ForEachByte(processor);
 
-        public virtual int ForEachByte(int index, int length, ByteProcessor processor) => this.Buf.ForEachByte(index, length, processor);
+        public virtual int ForEachByte(int index, int length, IByteProcessor processor) => this.Buf.ForEachByte(index, length, processor);
 
-        public virtual int ForEachByteDesc(ByteProcessor processor) => this.Buf.ForEachByteDesc(processor);
+        public virtual int ForEachByteDesc(IByteProcessor processor) => this.Buf.ForEachByteDesc(processor);
 
-        public virtual int ForEachByteDesc(int index, int length, ByteProcessor processor) => this.Buf.ForEachByteDesc(index, length, processor);
+        public virtual int ForEachByteDesc(int index, int length, IByteProcessor processor) => this.Buf.ForEachByteDesc(index, length, processor);
 
         public virtual IByteBuffer Copy() => this.Buf.Copy();
 
@@ -586,23 +615,35 @@ namespace NetUV.Core.Buffers
 
         public virtual string ToString(int index, int length, Encoding encoding) => this.Buf.ToString(index, length, encoding);
 
-        public sealed override int GetHashCode() => this.Buf.GetHashCode();
+        public override int GetHashCode() => this.Buf.GetHashCode();
 
-        public sealed override bool Equals(object obj) => this.Buf.Equals(obj);
+        public override bool Equals(object obj) => this.Buf.Equals(obj);
 
         public bool Equals(IByteBuffer buffer) => this.Buf.Equals(buffer);
 
         public int CompareTo(IByteBuffer buffer) => this.Buf.CompareTo(buffer);
 
-        public override string ToString() => $"{this.GetType().Name} ({this.Buf})";
+        public override string ToString() => this.GetType().Name + '(' + this.Buf + ')';
 
-        public virtual IReferenceCounted Retain(int increment = 1)
+        public virtual IReferenceCounted Retain(int increment)
         {
             this.Buf.Retain(increment);
             return this;
         }
 
-        public virtual IReferenceCounted Touch(object hint = null)
+        public virtual IReferenceCounted Retain()
+        {
+            this.Buf.Retain();
+            return this;
+        }
+
+        public virtual IReferenceCounted Touch()
+        {
+            this.Buf.Touch();
+            return this;
+        }
+
+        public virtual IReferenceCounted Touch(object hint)
         {
             this.Buf.Touch(hint);
             return this;
@@ -614,6 +655,8 @@ namespace NetUV.Core.Buffers
 
         public int ReferenceCount => this.Buf.ReferenceCount;
 
-        public virtual bool Release(int decrement = 1) => this.Buf.Release(decrement);
+        public virtual bool Release() => this.Buf.Release();
+
+        public virtual bool Release(int decrement) => this.Buf.Release(decrement);
     }
 }

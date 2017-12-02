@@ -12,16 +12,18 @@ namespace NetUV.Core.Tests.Buffers
 
         protected abstract int DefaultMaxComponents { get; }
 
-        internal abstract IByteBufferAllocator NewAllocator();
+        internal abstract IByteBufferAllocator NewAllocator(bool preferDirect);
 
-        [Fact]
-        public void Buffer()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Buffer(bool preferDirect)
         {
-            IByteBufferAllocator allocator = this.NewAllocator();
+            IByteBufferAllocator allocator = this.NewAllocator(preferDirect);
             IByteBuffer buffer = allocator.Buffer(1);
             try
             {
-                AssertBuffer(buffer, 1, this.DefaultMaxCapacity);
+                AssertBuffer(buffer, this.IsDirectExpected(preferDirect), 1, this.DefaultMaxCapacity);
             }
             finally
             {
@@ -29,14 +31,16 @@ namespace NetUV.Core.Tests.Buffers
             }
         }
 
-        [Fact]
-        public void BufferWithCapacity()
+        [Theory]
+        [InlineData(true, 8)]
+        [InlineData(false, 8)]
+        public void BufferWithCapacity(bool preferDirect, int maxCapacity)
         {
-            IByteBufferAllocator allocator = this.NewAllocator();
-            IByteBuffer buffer = allocator.Buffer(1, 8);
+            IByteBufferAllocator allocator = this.NewAllocator(preferDirect);
+            IByteBuffer buffer = allocator.Buffer(1, maxCapacity);
             try
             {
-                AssertBuffer(buffer, 1, 8);
+                AssertBuffer(buffer, this.IsDirectExpected(preferDirect), 1, maxCapacity);
             }
             finally
             {
@@ -44,14 +48,16 @@ namespace NetUV.Core.Tests.Buffers
             }
         }
 
-        [Fact]
-        public void HeapBuffer()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void HeapBuffer(bool preferDirect)
         {
-            IByteBufferAllocator allocator = this.NewAllocator();
+            IByteBufferAllocator allocator = this.NewAllocator(preferDirect);
             IByteBuffer buffer = allocator.HeapBuffer(1);
             try
             {
-                AssertBuffer(buffer, 1, this.DefaultMaxCapacity);
+                AssertBuffer(buffer, false, 1, this.DefaultMaxCapacity);
             }
             finally
             {
@@ -59,14 +65,18 @@ namespace NetUV.Core.Tests.Buffers
             }
         }
 
-        [Fact]
-        public void HeapBufferWithCapacity()
+        protected abstract bool IsDirectExpected(bool preferDirect);
+
+        [Theory]
+        [InlineData(true, 8)]
+        [InlineData(false, 8)]
+        public void HeapBufferWithCapacity(bool preferDirect, int maxCapacity)
         {
-            IByteBufferAllocator allocator = this.NewAllocator();
-            IByteBuffer buffer = allocator.HeapBuffer(1, 8);
+            IByteBufferAllocator allocator = this.NewAllocator(preferDirect);
+            IByteBuffer buffer = allocator.HeapBuffer(1, maxCapacity);
             try
             {
-                AssertBuffer(buffer, 1, 8);
+                AssertBuffer(buffer, false, 1, maxCapacity);
             }
             finally
             {
@@ -74,10 +84,46 @@ namespace NetUV.Core.Tests.Buffers
             }
         }
 
-        [Fact]
-        public void CompositeBuffer()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void DirectBuffer(bool preferDirect)
         {
-            IByteBufferAllocator allocator = this.NewAllocator();
+            IByteBufferAllocator allocator = this.NewAllocator(preferDirect);
+            IByteBuffer buffer = allocator.DirectBuffer(1);
+            try
+            {
+                AssertBuffer(buffer, true, 1, this.DefaultMaxCapacity);
+            }
+            finally
+            {
+                buffer.Release();
+            }
+        }
+
+        [Theory]
+        [InlineData(true, 8)]
+        [InlineData(false, 8)]
+        public void DirectBufferWithCapacity(bool preferDirect, int maxCapacity)
+        {
+            IByteBufferAllocator allocator = this.NewAllocator(preferDirect);
+            IByteBuffer buffer = allocator.DirectBuffer(1, maxCapacity);
+            try
+            {
+                AssertBuffer(buffer, true, 1, maxCapacity);
+            }
+            finally
+            {
+                buffer.Release();
+            }
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void CompositeBuffer(bool preferDirect)
+        {
+            IByteBufferAllocator allocator = this.NewAllocator(preferDirect);
             CompositeByteBuffer buffer = allocator.CompositeBuffer();
             try
             {
@@ -89,25 +135,17 @@ namespace NetUV.Core.Tests.Buffers
             }
         }
 
-        [Fact]
-        public void CompositeBufferWithCapacity()
-        {
-            IByteBufferAllocator allocator = this.NewAllocator();
-            CompositeByteBuffer buffer = allocator.CompositeBuffer(8);
-            try
-            {
-                this.AssertCompositeByteBuffer(buffer, 8);
-            }
-            finally
-            {
-                buffer.Release();
-            }
-        }
+        [Theory]
+        [InlineData(true, 8)]
+        [InlineData(false, 8)]
+        public void CompositeBufferWithCapacity(bool preferDirect, int maxNumComponents) => this.TestCompositeHeapBufferWithCapacity(preferDirect, maxNumComponents);
 
-        [Fact]
-        public void CompositeHeapBuffer()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void CompositeHeapBuffer(bool preferDirect)
         {
-            IByteBufferAllocator allocator = this.NewAllocator();
+            IByteBufferAllocator allocator = this.NewAllocator(preferDirect);
             CompositeByteBuffer buffer = allocator.CompositeHeapBuffer();
             try
             {
@@ -119,14 +157,18 @@ namespace NetUV.Core.Tests.Buffers
             }
         }
 
-        [Fact]
-        public void CompositeHeapBufferWithCapacity()
+        [Theory]
+        [InlineData(true, 8)]
+        [InlineData(false, 8)]
+        public void CompositeHeapBufferWithCapacity(bool preferDirect, int maxNumComponents) => this.TestCompositeHeapBufferWithCapacity(preferDirect, maxNumComponents);
+
+        void TestCompositeHeapBufferWithCapacity(bool preferDirect, int maxNumComponents)
         {
-            IByteBufferAllocator allocator = this.NewAllocator();
-            CompositeByteBuffer buffer = allocator.CompositeHeapBuffer(8);
+            IByteBufferAllocator allocator = this.NewAllocator(preferDirect);
+            CompositeByteBuffer buffer = allocator.CompositeHeapBuffer(maxNumComponents);
             try
             {
-                this.AssertCompositeByteBuffer(buffer, 8);
+                this.AssertCompositeByteBuffer(buffer, maxNumComponents);
             }
             finally
             {
@@ -134,14 +176,43 @@ namespace NetUV.Core.Tests.Buffers
             }
         }
 
-        static void AssertBuffer(IByteBuffer buffer, int expectedCapacity, int expectedMaxCapacity)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void CompositeDirectBuffer(bool preferDirect)
         {
-            if (!(buffer is CompositeByteBuffer))
+            IByteBufferAllocator allocator = this.NewAllocator(preferDirect);
+            CompositeByteBuffer buffer = allocator.CompositeDirectBuffer();
+            try
             {
-                Assert.True(buffer is UnpooledHeapByteBuffer || buffer is PooledHeapByteBuffer,
-                    $"Wrong byte buffer type{buffer.GetType().FullName}");
+                this.AssertCompositeByteBuffer(buffer, this.DefaultMaxComponents);
             }
+            finally
+            {
+                buffer.Release();
+            }
+        }
 
+        [Theory]
+        [InlineData(true, 8)]
+        [InlineData(false, 8)]
+        public void CompositeDirectBufferWithCapacity(bool preferDirect, int maxNumComponents)
+        {
+            IByteBufferAllocator allocator = this.NewAllocator(preferDirect);
+            CompositeByteBuffer buffer = allocator.CompositeDirectBuffer(maxNumComponents);
+            try
+            {
+                this.AssertCompositeByteBuffer(buffer, maxNumComponents);
+            }
+            finally
+            {
+                buffer.Release();
+            }
+        }
+
+        static void AssertBuffer(IByteBuffer buffer, bool expectedDirect, int expectedCapacity, int expectedMaxCapacity)
+        {
+            Assert.Equal(expectedDirect, buffer.IsDirect);
             Assert.Equal(expectedCapacity, buffer.Capacity);
             Assert.Equal(expectedMaxCapacity, buffer.MaxCapacity);
         }
@@ -150,7 +221,7 @@ namespace NetUV.Core.Tests.Buffers
         {
             Assert.Equal(0, buffer.NumComponents);
             Assert.Equal(expectedMaxNumComponents, buffer.MaxNumComponents);
-            AssertBuffer(buffer, 0, this.DefaultMaxCapacity);
+            AssertBuffer(buffer, false, 0, this.DefaultMaxCapacity);
         }
     }
 }

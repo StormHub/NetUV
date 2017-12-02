@@ -6,7 +6,7 @@ namespace NetUV.Core.Tests.Buffers
     using NetUV.Core.Buffers;
     using Xunit;
 
-    public sealed class UnreleaseableByteBufferTests
+    public class UnreleaseableByteBufferTests
     {
         [Fact]
         public void CantRelease()

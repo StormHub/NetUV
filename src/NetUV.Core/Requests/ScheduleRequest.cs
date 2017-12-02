@@ -17,7 +17,7 @@ namespace NetUV.Core.Requests
             this.RequestType = requestType;
         }
 
-        public virtual bool IsValid => this.InternalHandle != IntPtr.Zero;
+        public bool IsValid => this.InternalHandle != IntPtr.Zero;
 
         public object UserToken { get; set; }
 

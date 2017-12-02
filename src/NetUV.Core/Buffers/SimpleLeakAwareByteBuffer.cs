@@ -42,9 +42,22 @@ namespace NetUV.Core.Buffers
 
         public override IByteBuffer ReadSlice(int length) => this.NewSharedLeakAwareByteBuffer(base.ReadSlice(length));
 
-        public override IReferenceCounted Touch(object hint = null) => this;
+        public override IReferenceCounted Touch() => this;
 
-        public override bool Release(int decrement = 1)
+        public override IReferenceCounted Touch(object hint) => this;
+
+        public override bool Release()
+        {
+            if (base.Release())
+            {
+                this.CloseLeak();
+                return true;
+            }
+
+            return false;
+        }
+
+        public override bool Release(int decrement)
         {
             if (base.Release(decrement))
             {

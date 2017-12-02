@@ -100,7 +100,6 @@ namespace NetUV.Core.Tests.Performance
             {
                 return;
             }
-
             //
             // Scan for the letter Q which signals that we should quit the server.
             // If we get QS it means close the stream.
@@ -124,8 +123,7 @@ namespace NetUV.Core.Tests.Performance
 
         public void CloseServer()
         {
-            var serverStream = this.server as ServerStream;
-            if (serverStream != null)
+            if (this.server is ServerStream serverStream)
             {
                 serverStream.CloseHandle(OnClose);
             }

@@ -13,15 +13,15 @@ namespace NetUV.Core.Common
     using System.Threading;
     using NetUV.Core.Logging;
 
-    public sealed class ResourceLeakDetector
+    public class ResourceLeakDetector
     {
         const string PropLevel = "LeakDetection.level";
         const DetectionLevel DefaultLevel = DetectionLevel.Disabled;
 
-        const string PropMaxRecords = "LeakDetection.maxRecords";
-        const int DefaultMaxRecords = 4;
+        const string PropTargetRecords = "LeakDetection.targetRecords";
+        const int DefaultTargetRecords = 4;
 
-        static readonly int MaxRecords;
+        static readonly int TargetRecords;
 
         /// <summary>
         ///    Represents the level of resource leak detection.
@@ -63,21 +63,25 @@ namespace NetUV.Core.Common
                 level = DefaultLevel;
             }
 
-            MaxRecords = SystemPropertyUtil.GetInt(PropMaxRecords, DefaultMaxRecords);
-
+            TargetRecords = SystemPropertyUtil.GetInt(PropTargetRecords, DefaultTargetRecords);
             Level = level;
+
             if (Logger.IsDebugEnabled)
             {
-                Logger.DebugFormat("{0}: {1}", PropLevel, level.ToString().ToLowerInvariant());
-                Logger.DebugFormat("{0}: {1}", PropMaxRecords, MaxRecords);
+                Logger.DebugFormat("{0}: {1}", PropLevel, level.ToString().ToLower());
+                Logger.DebugFormat("{0}: {1}", PropTargetRecords, TargetRecords);
             }
         }
 
         // Should be power of two.
         const int DefaultSamplingInterval = 128;
 
+        /// Returns <c>true</c> if resource leak detection is enabled.
         public static bool Enabled => Level > DetectionLevel.Disabled;
 
+        /// <summary>
+        ///     Gets or sets resource leak detection level
+        /// </summary>
         public static DetectionLevel Level { get; set; }
 
         readonly ConditionalWeakTable<object, GCNotice> gcNotificationMap = new ConditionalWeakTable<object, GCNotice>();
@@ -118,7 +122,7 @@ namespace NetUV.Core.Common
 
             if (level < DetectionLevel.Paranoid)
             {
-                if (PlatformDependent.GetThreadLocalRandom().Next(this.samplingInterval) == 0)
+                if ((PlatformDependent.GetThreadLocalRandom().Next(this.samplingInterval)) == 0)
                 {
                     return new DefaultResourceLeak(this, obj);
                 }
@@ -133,35 +137,44 @@ namespace NetUV.Core.Common
             }
         }
 
-        internal void Report(IResourceLeakTracker resourceLeak)
+        void ReportLeak(DefaultResourceLeak resourceLeak)
         {
             string records = resourceLeak.ToString();
             if (this.reportedLeaks.TryAdd(records, true))
             {
                 if (records.Length == 0)
                 {
-                    Logger.ErrorFormat("LEAK: {0}.Release() was not called before it's garbage-collected. " +
-                        "Enable advanced leak reporting to find out where the leak occurred. " +
-                        "To enable advanced leak reporting, " +
-                        "set environment variable {1} to {2} or set {3}.Level in code. " +
-                        "See http://netty.io/wiki/reference-counted-objects.html for more information.", 
-                        this.resourceType, PropLevel, DetectionLevel.Advanced.ToString().ToLowerInvariant(), StringUtil.SimpleClassName(this));
+                    this.ReportUntracedLeak(this.resourceType);
                 }
                 else
                 {
-                    Logger.ErrorFormat(
-                        "LEAK: {0}.release() was not called before it's garbage-collected. " +
-                            "See http://netty.io/wiki/reference-counted-objects.html for more information.{1}", this.resourceType, records);
+                    this.ReportTracedLeak(this.resourceType, records);
                 }
             }
+        }
+
+        protected void ReportTracedLeak(string type, string records)
+        {
+            Logger.ErrorFormat(
+                "LEAK: {0}.Release() was not called before it's garbage-collected. {1}",
+                type, records);
+        }
+
+        protected void ReportUntracedLeak(string type)
+        {
+            Logger.ErrorFormat("LEAK: {0}.Release() was not called before it's garbage-collected. " +
+                "Enable advanced leak reporting to find out where the leak occurred. " +
+                "To enable advanced leak reporting, " +
+                "set environment variable {1} to {2} or set {3}.Level in code. ",
+                this.resourceType, PropLevel, DetectionLevel.Advanced.ToString().ToLower(), StringUtil.SimpleClassName(this));
         }
 
         sealed class DefaultResourceLeak : IResourceLeakTracker
         {
             readonly ResourceLeakDetector owner;
-            readonly string creationRecord;
-            readonly Deque<string> lastRecords = new Deque<string>();
-            int removedRecords;
+
+            RecordEntry head;
+            long droppedRecords;
 
             public DefaultResourceLeak(ResourceLeakDetector owner, object referent)
             {
@@ -176,136 +189,189 @@ namespace NetUV.Core.Common
                 {
                     owner.gcNotificationMap.Add(referent, new GCNotice(this, referent));
                 }
-
-                DetectionLevel level = Level;
-                if (level >= DetectionLevel.Advanced)
-                {
-                    this.creationRecord = NewRecord(null);
-                }
-                else
-                {
-                    this.creationRecord = null;
-                }
+                this.head = RecordEntry.Bottom;
             }
 
-            public void Record() => this.RecordInternal(null);
+            public void Record() => this.Record0(null);
 
-            public void Record(object hint) => this.RecordInternal(hint);
+            public void Record(object hint) => this.Record0(hint);
 
-            void RecordInternal(object hint)
+            void Record0(object hint)
             {
-                if (this.creationRecord != null && MaxRecords > 0)
+                // Check TARGET_RECORDS > 0 here to avoid similar check before remove from and add to lastRecords
+                if (TargetRecords > 0)
                 {
-                    string value = NewRecord(hint);
+                    string stackTrace = Environment.StackTrace;
 
-                    lock (this.lastRecords)
+                    RecordEntry oldHead;
+                    RecordEntry prevHead;
+                    RecordEntry newHead;
+                    bool dropped;
+                    do
                     {
-                        int size = this.lastRecords.Count;
-                        if (size == 0 || this.lastRecords[size - 1].Equals(value))
+                        if ((prevHead = oldHead = this.head) == null)
                         {
-                            if (size > MaxRecords)
-                            {
-                                this.lastRecords.RemoveFromFront();
-                                ++this.removedRecords;
-                            }
-                            this.lastRecords.AddToBack(value);
+                            // already closed.
+                            return;
                         }
+                        int numElements = oldHead.Pos + 1;
+                        if (numElements >= TargetRecords)
+                        {
+                            int backOffFactor = Math.Min(numElements - TargetRecords, 30);
+                            dropped = PlatformDependent.GetThreadLocalRandom().Next(1 << backOffFactor) != 0;
+                            if (dropped)
+                            {
+                                prevHead = oldHead.Next;
+                            }
+                        }
+                        else
+                        {
+                            dropped = false;
+                        }
+                        newHead = hint != null ? new RecordEntry(prevHead, stackTrace, hint) : new RecordEntry(prevHead, stackTrace);
+                    }
+                    while (Interlocked.CompareExchange(ref this.head, newHead, oldHead) != oldHead);
+                    if (dropped)
+                    {
+                        Interlocked.Increment(ref this.droppedRecords);
                     }
                 }
             }
 
             public bool Close(object trackedObject)
             {
-                return this.owner.gcNotificationMap.Remove(trackedObject);
+                if (this.owner.gcNotificationMap.Remove(trackedObject))
+                {
+                    Interlocked.Exchange(ref this.head, null);
+                    return true;
+                }
+                return false;
             }
 
+            // This is called from GCNotice finalizer 
             internal void CloseFinal(object trackedObject)
             {
-                if (this.Close(trackedObject))
+                if (this.owner.gcNotificationMap.Remove(trackedObject)
+                    && Volatile.Read(ref this.head) != null)
                 {
-                    this.owner.Report(this);
+                    this.owner.ReportLeak(this);
                 }
             }
 
             public override string ToString()
             {
-                if (this.creationRecord == null)
+                RecordEntry oldHead = Interlocked.Exchange(ref this.head, null);
+                if (oldHead == null)
                 {
+                    // Already closed
                     return string.Empty;
                 }
 
-                string[] array;
-                int removed;
-                lock (this.lastRecords)
+                long dropped = Interlocked.Read(ref this.droppedRecords);
+                int duped = 0;
+
+                int present = oldHead.Pos + 1;
+                // Guess about 2 kilobytes per stack trace
+                var buf = new StringBuilder(present * 2048);
+                buf.Append(StringUtil.Newline);
+                buf.Append("Recent access records: ").Append(StringUtil.Newline);
+
+                int i = 1;
+                var seen = new HashSet<string>();
+                for (; oldHead != RecordEntry.Bottom; oldHead = oldHead.Next)
                 {
-                    array = new string[this.lastRecords.Count];
-                    ((ICollection<string>)this.lastRecords).CopyTo(array, 0);
-                    removed = this.removedRecords;
+                    string s = oldHead.ToString();
+                    if (seen.Add(s))
+                    {
+                        if (oldHead.Next == RecordEntry.Bottom)
+                        {
+                            buf.Append("Created at:").Append(StringUtil.Newline).Append(s);
+                        }
+                        else
+                        {
+                            buf.Append('#').Append(i++).Append(':').Append(StringUtil.Newline).Append(s);
+                        }
+                    }
+                    else
+                    {
+                        duped++;
+                    }
                 }
 
-                StringBuilder buf = new StringBuilder(16384).Append(StringUtil.Newline);
-                if (removed > 0)
+                if (duped > 0)
                 {
-                    buf.Append("WARNING: ")
-                        .Append(removed)
-                        .Append(" leak records were discarded because the leak record count is limited to ")
-                        .Append(MaxRecords)
+                    buf.Append(": ")
+                        .Append(dropped)
+                        .Append(" leak records were discarded because they were duplicates")
+                        .Append(StringUtil.Newline);
+                }
+
+                if (dropped > 0)
+                {
+                    buf.Append(": ")
+                        .Append(dropped)
+                        .Append(" leak records were discarded because the leak record count is targeted to ")
+                        .Append(TargetRecords)
                         .Append(". Use system property ")
-                        .Append(PropMaxRecords)
+                        .Append(PropTargetRecords)
                         .Append(" to increase the limit.")
                         .Append(StringUtil.Newline);
                 }
 
-                buf.Append("Recent access records: ")
-                    .Append(array.Length)
-                    .Append(StringUtil.Newline);
-
-                if (array.Length > 0)
-                {
-                    for (int i = array.Length - 1; i >= 0; i--)
-                    {
-                        buf.Append('#')
-                            .Append(i + 1)
-                            .Append(':')
-                            .Append(StringUtil.Newline)
-                            .Append(array[i]);
-                    }
-                    buf.Append(StringUtil.Newline);
-                }
-
-                buf.Append("Created at:")
-                    .Append(StringUtil.Newline)
-                    .Append(this.creationRecord);
-
+                buf.Length = buf.Length - StringUtil.Newline.Length;
                 return buf.ToString();
             }
         }
 
-        static string NewRecord(object hint)
+        // Record
+        sealed class RecordEntry
         {
-            Contract.Ensures(Contract.Result<string>() != null);
+            internal static readonly RecordEntry Bottom = new RecordEntry();
 
-            var buf = new StringBuilder(4096);
+            readonly string hintString;
+            internal readonly RecordEntry Next;
+            internal readonly int Pos;
+            readonly string stackTrace;
 
-            // Append the hint first if available.
-            if (hint != null)
+            internal RecordEntry(RecordEntry next, string stackTrace, object hint)
             {
-                buf.Append("\tHint: ");
-                // Prefer a hint string to a simple string form.
-                if (hint is IResourceLeakHint leakHint)
-                {
-                    buf.Append(leakHint.ToHintString());
-                }
-                else
-                {
-                    buf.Append(hint);
-                }
-                buf.Append(StringUtil.Newline);
+                // This needs to be generated even if toString() is never called as it may change later on.
+                this.hintString = hint is IResourceLeakHint leakHint ? leakHint.ToHintString() : null;
+                this.Next = next;
+                this.Pos = next.Pos + 1;
+                this.stackTrace = stackTrace;
             }
 
-            // Append the stack trace.
-            buf.Append(Environment.StackTrace);
-            return buf.ToString();
+            internal RecordEntry(RecordEntry next, string stackTrace)
+            {
+                this.hintString = null;
+                this.Next = next;
+                this.Pos = next.Pos + 1;
+                this.stackTrace = stackTrace;
+            }
+
+            // Used to terminate the stack
+            RecordEntry()
+            {
+                this.hintString = null;
+                this.Next = null;
+                this.Pos = -1;
+                this.stackTrace = string.Empty;
+            }
+
+            public override string ToString()
+            {
+                var buf = new StringBuilder(2048);
+                if (this.hintString != null)
+                {
+                    buf.Append("\tHint: ").Append(this.hintString).Append(StringUtil.Newline);
+                }
+
+                // TODO: Use StackTrace class and support excludedMethods NETStandard2.0
+                // Append the stack trace.
+                buf.Append(this.stackTrace);
+                return buf.ToString();
+            }
         }
 
         class GCNotice

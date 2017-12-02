@@ -20,7 +20,7 @@ namespace NetUV.Core.Buffers
             Contract.Requires(count >= 0);
 
             this.buffer = buffer;
-            this.buffer.SetWriterIndex(count);
+            this.buffer.SetWriterIndex(this.buffer.WriterIndex + count);
         }
 
         ReadableBuffer(IByteBuffer buffer)

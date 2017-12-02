@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Johnny Z. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+// ReSharper disable ConvertToAutoPropertyWhenPossible
+// ReSharper disable ConvertToAutoProperty
 namespace NetUV.Core.Buffers
 {
     using System;
@@ -15,6 +17,7 @@ namespace NetUV.Core.Buffers
         static readonly ILog Logger = LogFactory.ForContext<PooledByteBufferAllocator>();
 
         public static readonly int DefaultNumHeapArena;
+        public static readonly int DefaultNumDirectArena;
 
         public static readonly int DefaultPageSize;
         public static readonly int DefaultMaxOrder; // 8192 << 11 = 16 MiB per chunk
@@ -30,7 +33,7 @@ namespace NetUV.Core.Buffers
 
         static PooledByteBufferAllocator()
         {
-            int defaultPageSize = SystemPropertyUtil.GetInt("Allocator.pageSize", 8192);
+            int defaultPageSize = SystemPropertyUtil.GetInt("io.netty.allocator.pageSize", 8192);
             Exception pageSizeFallbackCause = null;
             try
             {
@@ -43,7 +46,7 @@ namespace NetUV.Core.Buffers
             }
             DefaultPageSize = defaultPageSize;
 
-            int defaultMaxOrder = SystemPropertyUtil.GetInt("Allocator.maxOrder", 11);
+            int defaultMaxOrder = SystemPropertyUtil.GetInt("io.netty.allocator.maxOrder", 11);
             Exception maxOrderFallbackCause = null;
             try
             {
@@ -64,23 +67,27 @@ namespace NetUV.Core.Buffers
             // deallocation needs to be synchronized on the PoolArena.
             // See https://github.com/netty/netty/issues/3888
             int defaultMinNumArena = Environment.ProcessorCount * 2;
-            DefaultNumHeapArena = Math.Max(0, SystemPropertyUtil.GetInt("Allocator.numHeapArenas", defaultMinNumArena));
+            DefaultNumHeapArena = Math.Max(0, SystemPropertyUtil.GetInt("io.netty.allocator.numHeapArenas", defaultMinNumArena));
+            DefaultNumDirectArena = Math.Max(0, SystemPropertyUtil.GetInt("io.netty.allocator.numDirectArenas", defaultMinNumArena));
 
             // cache sizes
-            DefaultTinyCacheSize = SystemPropertyUtil.GetInt("Allocator.tinyCacheSize", 512);
-            DefaultSmallCacheSize = SystemPropertyUtil.GetInt("Allocator.smallCacheSize", 256);
-            DefaultNormalCacheSize = SystemPropertyUtil.GetInt("Allocator.normalCacheSize", 64);
+            DefaultTinyCacheSize = SystemPropertyUtil.GetInt("io.netty.allocator.tinyCacheSize", 512);
+            DefaultSmallCacheSize = SystemPropertyUtil.GetInt("io.netty.allocator.smallCacheSize", 256);
+            DefaultNormalCacheSize = SystemPropertyUtil.GetInt("io.netty.allocator.normalCacheSize", 64);
 
             // 32 kb is the default maximum capacity of the cached buffer. Similar to what is explained in
             // 'Scalable memory allocation using jemalloc'
-            DefaultMaxCachedBufferCapacity = SystemPropertyUtil.GetInt("Allocator.maxCachedBufferCapacity", 32 * 1024);
+            DefaultMaxCachedBufferCapacity = SystemPropertyUtil.GetInt("io.netty.allocator.maxCachedBufferCapacity", 32 * 1024);
 
             // the number of threshold of allocations when cached entries will be freed up if not frequently used
-            DefaultCacheTrimInterval = SystemPropertyUtil.GetInt("Allocator.cacheTrimInterval", 8192);
+            DefaultCacheTrimInterval = SystemPropertyUtil.GetInt(
+                "io.netty.allocator.cacheTrimInterval",
+                8192);
 
             if (Logger.IsDebugEnabled)
             {
                 Logger.DebugFormat("Allocator.numHeapArenas: {0}", DefaultNumHeapArena);
+                Logger.DebugFormat("Allocator.numDirectArenas: {0}", DefaultNumDirectArena);
                 if (pageSizeFallbackCause == null)
                 {
                     Logger.DebugFormat("Allocator.pageSize: {0}", DefaultPageSize);
@@ -97,7 +104,6 @@ namespace NetUV.Core.Buffers
                 {
                     Logger.DebugFormat("Allocator.maxOrder: {0} {1}", DefaultMaxOrder, maxOrderFallbackCause);
                 }
-
                 Logger.DebugFormat("Allocator.chunkSize: {0}", DefaultPageSize << DefaultMaxOrder);
                 Logger.DebugFormat("Allocator.tinyCacheSize: {0}", DefaultTinyCacheSize);
                 Logger.DebugFormat("Allocator.smallCacheSize: {0}", DefaultSmallCacheSize);
@@ -106,35 +112,63 @@ namespace NetUV.Core.Buffers
                 Logger.DebugFormat("Allocator.cacheTrimInterval: {0}", DefaultCacheTrimInterval);
             }
 
-            Default = new PooledByteBufferAllocator();
+            Default = new PooledByteBufferAllocator(PlatformDependent.DirectBufferPreferred);
         }
 
         public static readonly PooledByteBufferAllocator Default;
 
         readonly PoolArena<byte[]>[] heapArenas;
+        readonly PoolArena<byte[]>[] directArenas;
         readonly int tinyCacheSize;
         readonly int smallCacheSize;
         readonly int normalCacheSize;
         readonly IReadOnlyList<IPoolArenaMetric> heapArenaMetrics;
+        readonly IReadOnlyList<IPoolArenaMetric> directArenaMetrics;
         readonly PoolThreadLocalCache threadCache;
         readonly int chunkSize;
         readonly PooledByteBufferAllocatorMetric metric;
 
         public PooledByteBufferAllocator()
-            : this(DefaultNumHeapArena, DefaultPageSize, DefaultMaxOrder)
+            : this(false)
         {
         }
 
-        public PooledByteBufferAllocator(int nHeapArena, int pageSize, int maxOrder)
-            : this(nHeapArena, pageSize, maxOrder,
-                DefaultTinyCacheSize, DefaultSmallCacheSize, DefaultNormalCacheSize)
+        public PooledByteBufferAllocator(bool preferDirect)
+            : this(preferDirect, DefaultNumHeapArena, DefaultNumDirectArena, DefaultPageSize, DefaultMaxOrder)
         {
         }
 
-        public PooledByteBufferAllocator(int nHeapArena, int pageSize, int maxOrder,
-            int tinyCacheSize, int smallCacheSize, int normalCacheSize)
+        public PooledByteBufferAllocator(int nHeapArena, int nDirectArena, int pageSize, int maxOrder)
+            : this(false, nHeapArena, nDirectArena, pageSize, maxOrder)
+        {
+        }
+
+        public PooledByteBufferAllocator(bool preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder)
+            : this(
+                preferDirect,
+                nHeapArena,
+                nDirectArena,
+                pageSize,
+                maxOrder,
+                DefaultTinyCacheSize,
+                DefaultSmallCacheSize,
+                DefaultNormalCacheSize)
+        {
+        }
+
+        public PooledByteBufferAllocator(
+            bool preferDirect,
+            int nHeapArena,
+            int nDirectArena,
+            int pageSize,
+            int maxOrder,
+            int tinyCacheSize,
+            int smallCacheSize,
+            int normalCacheSize)
+            : base(preferDirect)
         {
             Contract.Requires(nHeapArena >= 0);
+            Contract.Requires(nDirectArena >= 0);
 
             this.threadCache = new PoolThreadLocalCache(this);
             this.tinyCacheSize = tinyCacheSize;
@@ -160,6 +194,24 @@ namespace NetUV.Core.Buffers
             {
                 this.heapArenas = null;
                 this.heapArenaMetrics = new IPoolArenaMetric[0];
+            }
+
+            if (nDirectArena > 0)
+            {
+                this.directArenas = NewArenaArray<byte[]>(nDirectArena);
+                var metrics = new List<IPoolArenaMetric>(this.directArenas.Length);
+                for (int i = 0; i < this.directArenas.Length; i++)
+                {
+                    var arena = new DirectArena(this, pageSize, maxOrder, pageShifts, this.chunkSize);
+                    this.directArenas[i] = arena;
+                    metrics.Add(arena);
+                }
+                this.directArenaMetrics = metrics.AsReadOnly();
+            }
+            else
+            {
+                this.directArenas = null;
+                this.directArenaMetrics = new IPoolArenaMetric[0];
             }
 
             this.metric = new PooledByteBufferAllocatorMetric(this);
@@ -211,6 +263,28 @@ namespace NetUV.Core.Buffers
             return ToLeakAwareBuffer(buf);
         }
 
+        protected override IByteBuffer NewDirectBuffer(int initialCapacity, int maxCapacity)
+        {
+            PoolThreadCache<byte[]> cache = this.threadCache.Value;
+            PoolArena<byte[]> directArena = cache.DirectArena;
+
+            IByteBuffer buf;
+            if (directArena != null)
+            {
+                buf = directArena.Allocate(cache, initialCapacity, maxCapacity);
+            }
+            else
+            {
+                buf = UnsafeByteBufferUtil.NewUnsafeDirectByteBuffer(this, initialCapacity, maxCapacity);
+            }
+
+            return ToLeakAwareBuffer(buf);
+        }
+
+        public static bool DefaultPreferDirect => PlatformDependent.DirectBufferPreferred;
+
+        public override bool IsDirectBufferPooled => this.heapArenas != null;
+
         sealed class PoolThreadLocalCache : FastThreadLocal<PoolThreadCache<byte[]>>
         {
             readonly PooledByteBufferAllocator owner;
@@ -225,9 +299,16 @@ namespace NetUV.Core.Buffers
                 lock (this)
                 {
                     PoolArena<byte[]> heapArena = this.LeastUsedArena(this.owner.heapArenas);
+                    PoolArena<byte[]> directArena = this.LeastUsedArena(this.owner.directArenas);
+
                     return new PoolThreadCache<byte[]>(
-                        heapArena, this.owner.tinyCacheSize, this.owner.smallCacheSize, this.owner.normalCacheSize,
-                        DefaultMaxCachedBufferCapacity, DefaultCacheTrimInterval);
+                        heapArena,
+                        directArena,
+                        this.owner.tinyCacheSize,
+                        this.owner.smallCacheSize,
+                        this.owner.normalCacheSize,
+                        DefaultMaxCachedBufferCapacity,
+                        DefaultCacheTrimInterval);
                 }
             }
 
@@ -256,7 +337,8 @@ namespace NetUV.Core.Buffers
 
         internal IReadOnlyList<IPoolArenaMetric> HeapArenas() => this.heapArenaMetrics;
 
-        // ReSharper disable ConvertToAutoPropertyWhenPossible
+        internal IReadOnlyList<IPoolArenaMetric> DirectArenas() => this.directArenaMetrics;
+
         internal int TinyCacheSize => this.tinyCacheSize;
 
         internal int SmallCacheSize => this.smallCacheSize;
@@ -264,15 +346,14 @@ namespace NetUV.Core.Buffers
         internal int NormalCacheSize => this.normalCacheSize;
 
         internal int ChunkSize => this.chunkSize;
-        // ReSharper restore ConvertToAutoPropertyWhenPossible
 
-        // ReSharper disable ConvertToAutoProperty
         public PooledByteBufferAllocatorMetric Metric => this.metric;
-        // ReSharper restore ConvertToAutoProperty
 
         IByteBufferAllocatorMetric IByteBufferAllocatorMetricProvider.Metric => this.Metric;
 
         internal long UsedHeapMemory => UsedMemory(this.heapArenas);
+
+        internal long UsedDirectMemory => UsedMemory(this.directArenas);
 
         static long UsedMemory(PoolArena<byte[]>[] arenas)
         {
@@ -301,13 +382,26 @@ namespace NetUV.Core.Buffers
         {
             int heapArenasLen = this.heapArenas?.Length ?? 0;
             StringBuilder buf = new StringBuilder(512)
-                    .Append(heapArenasLen)
-                    .Append(" heap arena(s):")
-                    .Append(StringUtil.Newline);
+                .Append(heapArenasLen)
+                .Append(" heap arena(s):")
+                .Append(StringUtil.Newline);
             if (heapArenasLen > 0)
             {
                 // ReSharper disable once PossibleNullReferenceException
                 foreach (PoolArena<byte[]> a in this.heapArenas)
+                {
+                    buf.Append(a);
+                }
+            }
+
+            int directArenasLen = this.directArenas?.Length ?? 0;
+            buf.Append(directArenasLen)
+                .Append(" direct arena(s):")
+                .Append(StringUtil.Newline);
+            if (directArenasLen > 0)
+            {
+                // ReSharper disable once PossibleNullReferenceException
+                foreach (PoolArena<byte[]> a in this.directArenas)
                 {
                     buf.Append(a);
                 }

@@ -3,14 +3,20 @@
 
 namespace NetUV.Core.Buffers
 {
-    interface IReferenceCounted
+    public interface IReferenceCounted
     {
         int ReferenceCount { get; }
 
-        IReferenceCounted Retain(int increment = 1);
+        IReferenceCounted Retain();
 
-        IReferenceCounted Touch(object hint = null);
+        IReferenceCounted Retain(int increment);
 
-        bool Release(int decrement = 1);
+        IReferenceCounted Touch();
+
+        IReferenceCounted Touch(object hint);
+
+        bool Release();
+
+        bool Release(int decrement);
     }
 }

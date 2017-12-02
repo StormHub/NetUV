@@ -7,7 +7,7 @@ namespace NetUV.Core.Tests.Buffers
     using NetUV.Core.Buffers;
     using Xunit;
 
-    public sealed class EmptyByteBufferTests
+    public class EmptyByteBufferTests
     {
         [Fact]
         public void IsWritable()
@@ -45,12 +45,11 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public unsafe void MemoryAddress()
+        public void MemoryAddress()
         {
             var empty = new EmptyByteBuffer(UnpooledByteBufferAllocator.Default);
             Assert.False(empty.HasMemoryAddress);
-            byte* address;
-            Assert.Throws<NotSupportedException>(() => address = empty.MemoryAddress);
+            Assert.Throws<NotSupportedException>(() => empty.GetPinnableMemoryAddress());
         }
     }
 }

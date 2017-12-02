@@ -4,6 +4,9 @@
 namespace NetUV.Core.Buffers
 {
     using System;
+    using System.IO;
+    using System.Threading;
+    using System.Threading.Tasks;
     using NetUV.Core.Common;
 
     sealed class PooledHeapByteBuffer : PooledByteBuffer<byte[]>
@@ -21,6 +24,8 @@ namespace NetUV.Core.Buffers
             : base(recyclerHandle, maxCapacity)
         {
         }
+
+        public override bool IsDirect => false;
 
         protected internal override byte _GetByte(int index) => HeapByteBufferUtil.GetByte(this.Memory, this.Idx(index));
 
@@ -61,6 +66,13 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
+        public override IByteBuffer GetBytes(int index, Stream destination, int length)
+        {
+            this.CheckIndex(index, length);
+            destination.Write(this.Memory, this.Idx(index), length);
+            return this;
+        }
+
         protected internal override void _SetByte(int index, int value) => HeapByteBufferUtil.SetByte(this.Memory, this.Idx(index), value);
 
         protected internal override void _SetShort(int index, int value) => HeapByteBufferUtil.SetShort(this.Memory, this.Idx(index), value);
@@ -93,6 +105,21 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
+        public override async Task<int> SetBytesAsync(int index, Stream src, int length, CancellationToken cancellationToken)
+        {
+            int readTotal = 0;
+            int read;
+            int offset = this.ArrayOffset + index;
+            do
+            {
+                read = await src.ReadAsync(this.Array, offset + readTotal, length - readTotal, cancellationToken);
+                readTotal += read;
+            }
+            while (read > 0 && readTotal < length);
+
+            return readTotal;
+        }
+
         public override IByteBuffer SetBytes(int index, byte[] src, int srcIndex, int length)
         {
             this.CheckSrcIndex(index, length, srcIndex, src.Length);
@@ -107,6 +134,7 @@ namespace NetUV.Core.Buffers
             copy.WriteBytes(this.Memory, this.Idx(index), length);
             return copy;
         }
+
 
         public override IByteBuffer SetZero(int index, int length)
         {
@@ -138,5 +166,15 @@ namespace NetUV.Core.Buffers
         }
 
         public override int ArrayOffset => this.Offset;
+
+        public override bool HasMemoryAddress => true;
+
+        public override ref byte GetPinnableMemoryAddress()
+        {
+            this.EnsureAccessible();
+            return ref this.Memory[this.Offset];
+        }
+
+        public override IntPtr AddressOfPinnedMemory() => IntPtr.Zero;
     }
 }

@@ -22,7 +22,9 @@ namespace NetUV.Core.Buffers
         //An unsafe operation intended for use by a subclass that sets the reference count of the buffer directly
         protected internal void SetReferenceCount(int value) => this.referenceCount = value;
 
-        public override IReferenceCounted Retain(int increment = 1)
+        public override IReferenceCounted Retain() => this.Retain0(1);
+
+        public override IReferenceCounted Retain(int increment)
         {
             Contract.Requires(increment > 0);
 
@@ -50,9 +52,13 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
-        public override IReferenceCounted Touch(object hint = null) => this;
+        public override IReferenceCounted Touch() => this;
 
-        public override bool Release(int decrement = 1)
+        public override IReferenceCounted Touch(object hint) => this;
+
+        public override bool Release() => this.Release0(1);
+
+        public override bool Release(int decrement)
         {
             Contract.Requires(decrement > 0);
 

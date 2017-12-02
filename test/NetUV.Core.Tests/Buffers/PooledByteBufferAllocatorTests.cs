@@ -1,17 +1,18 @@
 ﻿// Copyright (c) Johnny Z. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+// ReSharper disable ParameterOnlyUsedForPreconditionCheck.Local
 namespace NetUV.Core.Tests.Buffers
 {
     using System.Collections.Generic;
     using NetUV.Core.Buffers;
     using Xunit;
 
-    public sealed class PooledByteBufferAllocatorTests : AbstractByteBufferAllocatorTests
+    public class PooledByteBufferAllocatorTests : AbstractByteBufferAllocatorTests
     {
-        internal override IByteBufferAllocator NewAllocator() => new PooledByteBufferAllocator();
+        internal override IByteBufferAllocator NewAllocator(bool preferDirect) => new PooledByteBufferAllocator(preferDirect);
 
-        internal override IByteBufferAllocator NewUnpooledAllocator() => new PooledByteBufferAllocator(0, 8192, 1);
+        internal override IByteBufferAllocator NewUnpooledAllocator() => new PooledByteBufferAllocator(0, 0, 8192, 1);
 
         internal override long ExpectedUsedMemory(IByteBufferAllocator allocator, int capacity)
         {
@@ -27,27 +28,23 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void PooledHeapBuffer()
+        public void PooledUnsafeHeapBufferAndUnsafeDirectBuffer()
         {
-            IByteBufferAllocator allocator = this.NewAllocator();
+            var allocator = (PooledByteBufferAllocator)this.NewAllocator(true);
+            IByteBuffer directBuffer = allocator.DirectBuffer();
+            AssertInstanceOf<PooledUnsafeDirectByteBuffer>(directBuffer);
+            directBuffer.Release();
 
             IByteBuffer heapBuffer = allocator.HeapBuffer();
-
-            try
-            {
-                Assert.IsAssignableFrom<PooledHeapByteBuffer>(heapBuffer);
-            }
-            finally
-            {
-                heapBuffer.Release();
-            }
+            AssertInstanceOf<PooledHeapByteBuffer>(heapBuffer);
+            heapBuffer.Release();
         }
 
         [Fact]
-        public void ArenaMetricsNoCache() => ArenaMetrics0(new PooledByteBufferAllocator(2, 8192, 11, 0, 0, 0), 100, 0, 100, 100);
+        public void ArenaMetricsNoCache() => ArenaMetrics0(new PooledByteBufferAllocator(true, 2, 2, 8192, 11, 0, 0, 0), 100, 0, 100, 100);
 
         [Fact]
-        public void ArenaMetricsCache() => ArenaMetrics0(new PooledByteBufferAllocator(2, 8192, 11, 1000, 1000, 1000), 100, 1, 1, 0);
+        public void ArenaMetricsCache() => ArenaMetrics0(new PooledByteBufferAllocator(true, 2, 2, 8192, 11, 1000, 1000, 1000), 100, 1, 1, 0);
 
         static void ArenaMetrics0(PooledByteBufferAllocator allocator, int num, int expectedActive, int expectedAlloc, int expectedDealloc)
         {
@@ -105,7 +102,7 @@ namespace NetUV.Core.Tests.Buffers
         [Fact]
         public void SmallSubpageMetric()
         {
-            var allocator = new PooledByteBufferAllocator(1, 8192, 11, 0, 0, 0);
+            var allocator = new PooledByteBufferAllocator(true, 1, 1, 8192, 11, 0, 0, 0);
             IByteBuffer buffer = allocator.HeapBuffer(500);
             try
             {
@@ -122,7 +119,7 @@ namespace NetUV.Core.Tests.Buffers
         [Fact]
         public void TinySubpageMetric()
         {
-            var allocator = new PooledByteBufferAllocator(1, 8192, 11, 0, 0, 0);
+            var allocator = new PooledByteBufferAllocator(true, 1, 1, 8192, 11, 0, 0, 0);
             IByteBuffer buffer = allocator.HeapBuffer(1);
             try
             {
@@ -139,7 +136,7 @@ namespace NetUV.Core.Tests.Buffers
         [Fact]
         public void AllocNotNull()
         {
-            var allocator = new PooledByteBufferAllocator(1, 8192, 11, 0, 0, 0);
+            var allocator = new PooledByteBufferAllocator(true, 1, 1, 8192, 11, 0, 0, 0);
             // Huge allocation
             AllocNotNull(allocator, allocator.Metric.ChunkSize + 1);
             // Normal allocation
@@ -162,7 +159,7 @@ namespace NetUV.Core.Tests.Buffers
         public void FreePoolChunk()
         {
             const int ChunkSize = 16 * 1024 * 1024;
-            var allocator = new PooledByteBufferAllocator(1, 8192, 11, 0, 0, 0);
+            var allocator = new PooledByteBufferAllocator(true, 1, 0, 8192, 11, 0, 0, 0);
             IByteBuffer buffer = allocator.HeapBuffer(ChunkSize);
             IReadOnlyList<IPoolArenaMetric> arenas = allocator.Metric.HeapArenas();
             Assert.Equal(1, arenas.Count);

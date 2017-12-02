@@ -74,9 +74,13 @@ namespace NetUV.Core.Buffers
 
         public sealed override IByteBufferAllocator Allocator => this.Unwrap().Allocator;
 
+        public sealed override bool IsDirect => this.Unwrap().IsDirect;
+
         public override bool HasArray => this.Unwrap().HasArray;
 
         public override byte[] Array => this.Unwrap().Array;
+
+        public override bool HasMemoryAddress => this.Unwrap().HasMemoryAddress;
 
         public sealed override int IoBufferCount => this.Unwrap().IoBufferCount;
 
@@ -110,19 +114,33 @@ namespace NetUV.Core.Buffers
 
             protected override int ReferenceCount0() => this.referenceCountDelegate.ReferenceCount;
 
-            protected override IByteBuffer Retain0(int increment = 1)
+            protected override IByteBuffer Retain0()
+            {
+                this.referenceCountDelegate.Retain();
+                return this;
+            }
+
+            protected override IByteBuffer Retain0(int increment)
             {
                 this.referenceCountDelegate.Retain(increment);
                 return this;
             }
 
-            protected override IByteBuffer Touch0(object hint = null)
+            protected override IByteBuffer Touch0()
+            {
+                this.referenceCountDelegate.Touch();
+                return this;
+            }
+
+            protected override IByteBuffer Touch0(object hint)
             {
                 this.referenceCountDelegate.Touch(hint);
                 return this;
             }
 
-            protected override bool Release0(int decrement = 1) => this.referenceCountDelegate.Release(decrement);
+            protected override bool Release0() => this.referenceCountDelegate.Release();
+
+            protected override bool Release0(int decrement) => this.referenceCountDelegate.Release(decrement);
 
             public override IByteBuffer Duplicate() => new PooledNonRetainedDuplicateByteBuffer(this.referenceCountDelegate, this);
 
@@ -152,19 +170,33 @@ namespace NetUV.Core.Buffers
 
             protected override int ReferenceCount0() => this.referenceCountDelegate.ReferenceCount;
 
-            protected override IByteBuffer Retain0(int increment = 1)
+            protected override IByteBuffer Retain0()
+            {
+                this.referenceCountDelegate.Retain();
+                return this;
+            }
+
+            protected override IByteBuffer Retain0(int increment)
             {
                 this.referenceCountDelegate.Retain(increment);
                 return this;
             }
 
-            protected override IByteBuffer Touch0(object hint = null)
+            protected override IByteBuffer Touch0()
+            {
+                this.referenceCountDelegate.Touch();
+                return this;
+            }
+
+            protected override IByteBuffer Touch0(object hint)
             {
                 this.referenceCountDelegate.Touch(hint);
                 return this;
             }
 
-            protected override bool Release0(int decrement = 1) => this.referenceCountDelegate.Release(decrement);
+            protected override bool Release0() => this.referenceCountDelegate.Release();
+
+            protected override bool Release0(int decrement) => this.referenceCountDelegate.Release(decrement);
 
             public override IByteBuffer Duplicate() =>
                 new PooledNonRetainedDuplicateByteBuffer(this.referenceCountDelegate, this.UnwrapCore())

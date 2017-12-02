@@ -78,6 +78,7 @@ namespace NetUV.Core.Buffers
         readonly int maxIndex;
         int index;
         bool decreaseNow;
+        int receiveBufferSize;
 
         public ReceiveBufferSizeEstimate(int minimum = DefaultMinimum, int initial = DefaultInitial, int maximum = DefaultMaximum)
         {
@@ -106,7 +107,7 @@ namespace NetUV.Core.Buffers
             }
 
             this.index = GetSizeTableIndex(initial);
-            this.ReceiveBufferSize = SizeTable[this.index];
+            this.receiveBufferSize = SizeTable[this.index];
         }
 
         internal IByteBuffer Allocate(PooledByteBufferAllocator allocator)
@@ -115,13 +116,11 @@ namespace NetUV.Core.Buffers
 
             if (Log.IsDebugEnabled)
             {
-                Log.DebugFormat("{0} allocate, estimated size = {1}", nameof(ReceiveBufferSizeEstimate), this.ReceiveBufferSize);
+                Log.DebugFormat("{0} allocate, estimated size = {1}", nameof(ReceiveBufferSizeEstimate), this.receiveBufferSize);
             }
 
-            return allocator.HeapBuffer(this.ReceiveBufferSize);
+            return allocator.Buffer(this.receiveBufferSize);
         }
-
-        int ReceiveBufferSize { get; set; }
 
         internal void Record(int actualReadBytes)
         {
@@ -130,7 +129,7 @@ namespace NetUV.Core.Buffers
                 if (this.decreaseNow)
                 {
                     this.index = Math.Max(this.index - IndexDecrement, this.minIndex);
-                    this.ReceiveBufferSize = SizeTable[this.index];
+                    this.receiveBufferSize = SizeTable[this.index];
                     this.decreaseNow = false;
                 }
                 else
@@ -138,16 +137,16 @@ namespace NetUV.Core.Buffers
                     this.decreaseNow = true;
                 }
             }
-            else if (actualReadBytes >= this.ReceiveBufferSize)
+            else if (actualReadBytes >= this.receiveBufferSize)
             {
                 this.index = Math.Min(this.index + IndexIncrement, this.maxIndex);
-                this.ReceiveBufferSize = SizeTable[this.index];
+                this.receiveBufferSize = SizeTable[this.index];
                 this.decreaseNow = false;
             }
 
             if (Log.IsDebugEnabled)
             {
-                Log.DebugFormat("{0} record actual size = {1}, next size = {2}", nameof(ReceiveBufferSizeEstimate), actualReadBytes, this.ReceiveBufferSize);
+                Log.DebugFormat("{0} record actual size = {1}, next size = {2}", nameof(ReceiveBufferSizeEstimate), actualReadBytes, this.receiveBufferSize);
             }
         }
     }
