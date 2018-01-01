@@ -29,6 +29,8 @@ namespace NetUV.Core.Native
         public string Name { get; }
 
         public ErrorCode ErrorCode { get; }
+
+        public override string Message => $"{this.Name} ({this.ErrorCode}) : {base.Message}";
     }
 
     // ReSharper disable InconsistentNaming

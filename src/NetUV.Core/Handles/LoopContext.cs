@@ -14,7 +14,7 @@ namespace NetUV.Core.Handles
         public LoopContext()
         {
             int size = NativeMethods.GetLoopSize();
-            IntPtr handle = Marshal.AllocHGlobal(size);
+            IntPtr handle = Marshal.AllocCoTaskMem(size);
 
             this.Handle = handle;
             try
@@ -23,7 +23,7 @@ namespace NetUV.Core.Handles
             }
             catch
             {
-                Marshal.FreeHGlobal(handle);
+                Marshal.FreeCoTaskMem(handle);
                 throw;
             }
 
@@ -95,32 +95,39 @@ namespace NetUV.Core.Handles
             // Get gc handle before close loop
             IntPtr pHandle = ((uv_loop_t*)handle)->data;
 
-            // Close loop
-            int retry = 0;
-            while (retry < 10)
-            {
-                try
-                {
-                    // Force close all active handles before close the loop
-                    NativeMethods.WalkLoop(handle, WalkCallback);
-                    Log.Info($"Loop {handle} walk all handles completed.");
+            // Fully close the loop, similar to 
+            //https://github.com/libuv/libuv/blob/v1.x/test/task.h#L190
 
-                    // Loop.Run here actually blocks in some intensive situitions 
-                    // and it is highly unpredictable. For now, we rely on the users 
-                    // to do the right things before disposing the loop, 
-                    // e.g. close all handles before calling this.
-                    // NativeMethods.RunLoop(handle, uv_run_mode.UV_RUN_DEFAULT);
-                    if (NativeMethods.CloseLoop(handle))
+            int count = 0;
+            int result;
+            while (true)
+            {
+                Log.Debug($"Loop {handle} walking handles, count = {count}.");
+                NativeMethods.WalkLoop(handle, WalkCallback);
+
+                Log.Debug($"Loop {handle} running default to call close callbacks, count = {count}.");
+                NativeMethods.RunLoop(this.Handle, uv_run_mode.UV_RUN_DEFAULT);
+
+                result = NativeMethods.CloseLoop(handle);
+                Log.Debug($"Loop {handle} close result = {result}, count = {count}.");
+                if (result == 0)
+                {
+                    break;
+                }
+                else
+                {
+                    if (Log.IsTraceEnabled)
                     {
-                        break;
+                        OperationException error = NativeMethods.CreateError((uv_err_code)result);
+                        Log.TraceFormat($"Loop {handle} close error {error}");
                     }
                 }
-                catch (Exception exception)
+                count++;
+                if (count >= 20)
                 {
-                    Log.Warn($"Loop {handle} error attempt to run loop once before closing. {exception}");
+                    Log.Warn($"Loop {handle} close all handles limit 20 times exceeded.");
+                    break;
                 }
-
-                retry++;
             }
 
             Log.Info($"Loop {handle} closed.");
@@ -138,7 +145,7 @@ namespace NetUV.Core.Handles
             }
 
             // Release memory
-            Marshal.FreeHGlobal(handle);
+            Marshal.FreeCoTaskMem(handle);
             this.Handle = IntPtr.Zero;
             Log.Info($"Loop {handle} memory released.");
         }

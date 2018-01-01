@@ -25,7 +25,7 @@ namespace NetUV.Core.Handles
         readonly StreamHandle streamHandle;
         readonly PooledByteBufferAllocator allocator;
         readonly ReceiveBufferSizeEstimate receiveBufferSizeEstimate;
-        readonly PendingReadQueue bufferQueue;
+        readonly PendingRead pendingRead;
         IStreamConsumer<StreamHandle> streamConsumer;
 
         internal Pipeline(StreamHandle streamHandle)
@@ -40,7 +40,7 @@ namespace NetUV.Core.Handles
             this.streamHandle = streamHandle;
             this.allocator = allocator;
             this.receiveBufferSizeEstimate = new ReceiveBufferSizeEstimate();
-            this.bufferQueue = new PendingReadQueue();
+            this.pendingRead = new PendingRead();
         }
 
         internal void Consumer(IStreamConsumer<StreamHandle> consumer)
@@ -50,47 +50,27 @@ namespace NetUV.Core.Handles
             this.streamConsumer = consumer;
         }
 
-        internal WritableBuffer Allocate() => new WritableBuffer(this.allocator.HeapBuffer());
+        internal WritableBuffer Allocate() => new WritableBuffer(this.allocator.Buffer());
 
-        internal ReadBufferRef AllocateReadBuffer()
+        internal uv_buf_t AllocateReadBuffer()
         {
             IByteBuffer buffer = this.receiveBufferSizeEstimate.Allocate(this.allocator);
-
             if (Log.IsTraceEnabled)
             {
                 Log.TraceFormat("{0} receive buffer allocated size = {1}", nameof(Pipeline), buffer.Capacity);
             }
 
-            var bufferRef = new ReadBufferRef(buffer);
-            this.bufferQueue.Enqueue(bufferRef);
-
-            return bufferRef;
+            return this.pendingRead.GetBuffer(buffer);
         }
 
         internal IByteBuffer GetBuffer(ref uv_buf_t buf)
         {
-            IByteBuffer byteBuffer = null;
-            ReadBufferRef bufferRef = null;
-            try
-            {
-                if (this.bufferQueue.TryDequeue(out bufferRef))
-                {
-                    byteBuffer = bufferRef.Buffer;
-                }
-            }
-            finally
-            {
-                bufferRef?.Dispose();
-            }
-
+            IByteBuffer byteBuffer = this.pendingRead.Buffer;
+            this.pendingRead.Reset();
             return byteBuffer;
         }
 
-        internal void OnReadCompleted(IByteBuffer byteBuffer, Exception error = null)
-        {
-            this.bufferQueue.Clear();
-            this.InvokeRead(byteBuffer, 0, error, true);
-        } 
+        internal void OnReadCompleted(IByteBuffer byteBuffer, Exception error) => this.InvokeRead(byteBuffer, 0, error, true);
 
         internal void OnReadCompleted(IByteBuffer byteBuffer, int size)
         {
@@ -102,12 +82,12 @@ namespace NetUV.Core.Handles
 
         void InvokeRead(IByteBuffer byteBuffer, int size, Exception error = null, bool completed = false)
         {
-            if (size == 0)
+            if (size <= 0)
             {
-                byteBuffer?.Release();
+                byteBuffer.Release();
             }
 
-            ReadableBuffer buffer = byteBuffer != null && size > 0 
+            ReadableBuffer buffer = size > 0  
                 ? new ReadableBuffer(byteBuffer, size) 
                 : ReadableBuffer.Empty;
 
@@ -167,7 +147,7 @@ namespace NetUV.Core.Handles
 
         public void Dispose()
         {
-            this.bufferQueue.Dispose();
+            this.pendingRead.Dispose();
             this.streamConsumer = null;
         }
 

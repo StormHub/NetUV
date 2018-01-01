@@ -13,7 +13,7 @@ namespace NetUV.Core.Buffers
 
     sealed class AdvancedLeakAwareByteBuffer : SimpleLeakAwareByteBuffer
     {
-        const string PropAcquireAndReleaseOnly = "io.netty.leakDetection.acquireAndReleaseOnly";
+        const string PropAcquireAndReleaseOnly = "leakDetection.acquireAndReleaseOnly";
         static readonly bool AcquireAndReleaseOnly;
 
         static readonly ILog Logger = LogFactory.ForContext<AdvancedLeakAwareByteBuffer>();

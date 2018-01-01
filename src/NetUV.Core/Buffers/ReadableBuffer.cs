@@ -1,13 +1,13 @@
 ﻿// Copyright (c) Johnny Z. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+// ReSharper disable ConvertToAutoPropertyWhenPossible
 namespace NetUV.Core.Buffers
 {
     using System;
     using System.Collections.Generic;
     using System.Diagnostics.Contracts;
     using System.Text;
-    using NetUV.Core.Common;
 
     public struct ReadableBuffer : IDisposable
     {
@@ -31,6 +31,8 @@ namespace NetUV.Core.Buffers
         }
 
         public int Count => this.buffer.ReadableBytes;
+
+        internal IByteBuffer Buffer => this.buffer;
 
         public ReadableBuffer Retain()
         {
@@ -124,6 +126,12 @@ namespace NetUV.Core.Buffers
 
         public void ReadBytes(byte[] destination, int length) => this.buffer.ReadBytes(destination, 0, length);
 
-        public void Dispose() => this.buffer.SafeRelease();
+        public void Dispose()
+        {
+            if (this.buffer.ReferenceCount > 0)
+            {
+                this.buffer.Release();
+            }
+        }
     }
 }

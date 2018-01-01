@@ -22,7 +22,7 @@ namespace NetUV.Core.Requests
 
             int totalSize = NativeMethods.GetSize(requestType);
             totalSize += size;
-            IntPtr handle = Marshal.AllocHGlobal(totalSize);
+            IntPtr handle = Marshal.AllocCoTaskMem(totalSize);
 
             GCHandle gcHandle = GCHandle.Alloc(target, GCHandleType.Normal);
             *(IntPtr*)handle = GCHandle.ToIntPtr(gcHandle);
@@ -44,7 +44,7 @@ namespace NetUV.Core.Requests
             Contract.Requires(target != null);
 
             int size = NativeMethods.GetSize(requestType);
-            IntPtr handle = Marshal.AllocHGlobal(size);
+            IntPtr handle = Marshal.AllocCoTaskMem(size);
 
             try
             {
@@ -52,7 +52,7 @@ namespace NetUV.Core.Requests
             }
             catch
             {
-                Marshal.FreeHGlobal(handle);
+                Marshal.FreeCoTaskMem(handle);
                 throw;
             }
 
@@ -110,7 +110,7 @@ namespace NetUV.Core.Requests
             }
 
             // Release memory
-            Marshal.FreeHGlobal(handle);
+            Marshal.FreeCoTaskMem(handle);
             this.Handle = IntPtr.Zero;
 
             if (Log.IsDebugEnabled)

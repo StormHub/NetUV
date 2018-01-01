@@ -79,7 +79,7 @@ namespace NetUV.Core.Tests.Buffers
             Assert.Throws<ArgumentException>(() => ByteBufferUtil.Equals(Unpooled.WrappedBuffer(b1), iB1, Unpooled.WrappedBuffer(b2), iB2, -1));
         }
 
-        static IEnumerable<object[]> ReadStringCases()
+        public static IEnumerable<object[]> ReadStringCases()
         {
             string value = "\r\nhello\r\nworld";
             string separator = "\r\n";

@@ -36,13 +36,13 @@ namespace NetUV.Core.Tests.Handles
             this.tcpServer = this.StartServer();
             this.loop.CreateTcp().ConnectTo(this.endPoint, this.OnConnected);
 
-            Assert.Equal(this.writeCount, 0);
-            Assert.Equal(this.closeCount, 0);
+            Assert.Equal(0, this.writeCount);
+            Assert.Equal(0, this.closeCount);
 
             this.loop.RunDefault();
 
-            Assert.Equal(this.writeCount, NumberOfWriteRequests);
-            Assert.Equal(this.closeCount, 1);
+            Assert.Equal(NumberOfWriteRequests, this.writeCount);
+            Assert.Equal(1, this.closeCount);
             Assert.Null(this.writeError);
             Assert.Null(this.connectionError);
         }

@@ -6,7 +6,7 @@
 namespace NetUV.Core.Native
 {
     using System;
-    using System.Diagnostics.Contracts;
+    using System.Diagnostics;
     using System.Runtime.InteropServices;
     using NetUV.Core.Handles;
     using NetUV.Core.Requests;
@@ -32,7 +32,7 @@ namespace NetUV.Core.Native
 
         internal uv_buf_t(IntPtr memory, int length)
         {
-            Contract.Requires(length >= 0);
+            Debug.Assert(length >= 0);
 
             if (isWindows)
             {
@@ -75,93 +75,70 @@ namespace NetUV.Core.Native
     {
         internal static void StreamReadStart(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             int result = uv_read_start(handle, StreamHandle.AllocateCallback, StreamHandle.ReadCallback);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
         }
 
         internal static void StreamReadStop(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             int result = uv_read_stop(handle);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
         }
 
-        internal static bool IsStreamReadable(IntPtr handle) => 
-            handle != IntPtr.Zero && uv_is_readable(handle) == 1;
+        internal static bool IsStreamReadable(IntPtr handle) => handle != IntPtr.Zero && uv_is_readable(handle) == 1;
 
-        internal static bool IsStreamWritable(IntPtr handle) => 
-            handle != IntPtr.Zero && uv_is_writable(handle) == 1;
+        internal static bool IsStreamWritable(IntPtr handle) => handle != IntPtr.Zero && uv_is_writable(handle) == 1;
 
         internal static void TryWriteStream(IntPtr handle, ref uv_buf_t buf)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             var bufs = new [] { buf };
             int result = uv_try_write(handle , bufs, bufs.Length);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
         }
 
         internal static void WriteStream(IntPtr requestHandle, IntPtr streamHandle, ref uv_buf_t[] bufs, ref int size)
         {
-            Contract.Requires(requestHandle != IntPtr.Zero);
-            Contract.Requires(streamHandle != IntPtr.Zero);
-            Contract.Requires(bufs != null && bufs.Length > 0);
+            Debug.Assert(requestHandle != IntPtr.Zero);
+            Debug.Assert(streamHandle != IntPtr.Zero);
+            Debug.Assert(bufs != null && bufs.Length > 0);
 
             int result = uv_write(requestHandle, streamHandle, bufs, size, WriteBufferRequest.WriteCallback);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
         }
 
         internal static void WriteStream(IntPtr requestHandle, IntPtr streamHandle, ref uv_buf_t[] bufs, ref int size, IntPtr sendHandle)
         {
-            Contract.Requires(requestHandle != IntPtr.Zero);
-            Contract.Requires(streamHandle != IntPtr.Zero);
-            Contract.Requires(sendHandle != IntPtr.Zero);
-            Contract.Requires(bufs != null && bufs.Length > 0);
+            Debug.Assert(requestHandle != IntPtr.Zero);
+            Debug.Assert(streamHandle != IntPtr.Zero);
+            Debug.Assert(sendHandle != IntPtr.Zero);
+            Debug.Assert(bufs != null && bufs.Length > 0);
 
             int result = uv_write2(requestHandle, streamHandle, bufs, size, sendHandle, WriteBufferRequest.WriteCallback);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
         }
 
         internal static void StreamListen(IntPtr handle, int backlog)
         {
-            Contract.Requires(handle != IntPtr.Zero);
-            Contract.Requires(backlog > 0);
+            Debug.Assert(handle != IntPtr.Zero);
+            Debug.Assert(backlog > 0);
 
             int result = uv_listen(handle, backlog, ServerStream.ConnectionCallback);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
         }
 
         internal static void StreamAccept(IntPtr serverHandle, IntPtr clientHandle)
         {
-            Contract.Requires(serverHandle != IntPtr.Zero);
-            Contract.Requires(clientHandle != IntPtr.Zero);
+            Debug.Assert(serverHandle != IntPtr.Zero);
+            Debug.Assert(clientHandle != IntPtr.Zero);
 
             int result = uv_accept(serverHandle, clientHandle);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
         }
 
         // If *value == 0, it will return the current send buffer size, 
@@ -169,15 +146,12 @@ namespace NetUV.Core.Native
         // This function works for TCP, pipe and UDP handles on Unix and for TCP and UDP handles on Windows.
         internal static int SendBufferSize(IntPtr handle, int value)
         {
-            Contract.Requires(handle != IntPtr.Zero);
-            Contract.Requires(value >= 0);
+            Debug.Assert(handle != IntPtr.Zero);
+            Debug.Assert(value >= 0);
 
             var size = (IntPtr)value;
             int result = uv_send_buffer_size(handle, ref size);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
 
             return size.ToInt32();
         }
@@ -188,15 +162,12 @@ namespace NetUV.Core.Native
 
         internal static int ReceiveBufferSize(IntPtr handle, int value)
         {
-            Contract.Requires(handle != IntPtr.Zero);
-            Contract.Requires(value >= 0);
+            Debug.Assert(handle != IntPtr.Zero);
+            Debug.Assert(value >= 0);
 
             var size = (IntPtr)value;
             int result = uv_recv_buffer_size(handle, ref size);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
 
             return size.ToInt32();
         }
@@ -210,13 +181,10 @@ namespace NetUV.Core.Native
         // file descriptor so any change to it may lead to malfunction.
         internal static IntPtr GetFileDescriptor(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             int result = uv_fileno(handle, out IntPtr value);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
 
             return value;
         }

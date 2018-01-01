@@ -25,22 +25,17 @@ namespace NetUV.Core.Handles
             Contract.Requires(target != null);
 
             int size = NativeMethods.GetSize(handleType);
-            IntPtr handle = Marshal.AllocHGlobal(size);
+            IntPtr handle = Marshal.AllocCoTaskMem(size);
 
-            int result;
             try
             {
-                result = initializer(loopHandle, handle, args);
+                int result = initializer(loopHandle, handle, args);
+                NativeMethods.ThrowIfError(result);
             }
             catch (Exception)
             {
-                Marshal.FreeHGlobal(handle);
+                Marshal.FreeCoTaskMem(handle);
                 throw;
-            }
-            if (result < 0)
-            {
-                Marshal.FreeHGlobal(handle);
-                throw NativeMethods.CreateError((uv_err_code)result);
             }
 
             GCHandle gcHandle = GCHandle.Alloc(target, GCHandleType.Normal);
@@ -139,7 +134,7 @@ namespace NetUV.Core.Handles
             }
 
             // Release memory
-            Marshal.FreeHGlobal(handle);
+            Marshal.FreeCoTaskMem(handle);
             scheduleHandle?.OnHandleClosed();
             if (Log.IsTraceEnabled)
             {

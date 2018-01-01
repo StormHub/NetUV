@@ -21,10 +21,10 @@ namespace NetUV.Core.Tests.Handles
             this.loop = new Loop();
         }
 
-        static IEnumerable<object[]> IpFamilyCases()
+        public static IEnumerable<object[]> IpFamilyCases()
         {
             yield return new object[] { "0.0.0.0" };
-            if (!Platform.OSSupportsIPv6)
+            if (Platform.OSSupportsIPv6)
             {
                 yield return new object[] { "::" };
             }

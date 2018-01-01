@@ -5,7 +5,7 @@
 namespace NetUV.Core.Native
 {
     using System;
-    using System.Diagnostics.Contracts;
+    using System.Diagnostics;
     using System.Runtime.InteropServices;
     using NetUV.Core.Handles;
 
@@ -77,20 +77,17 @@ namespace NetUV.Core.Native
 
         internal static string FSPollGetPath(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             string path;
             IntPtr buf = IntPtr.Zero;
             try
             {
-                buf = Marshal.AllocHGlobal(FileNameBufferSize);
+                buf = Marshal.AllocCoTaskMem(FileNameBufferSize);
                 var length = (IntPtr)FileNameBufferSize;
 
                 int result = uv_fs_poll_getpath(handle, buf, ref length);
-                if (result < 0)
-                {
-                    throw CreateError((uv_err_code)result);
-                }
+                ThrowIfError(result);
 
                 path = Marshal.PtrToStringAnsi(buf, length.ToInt32());
             }
@@ -98,7 +95,7 @@ namespace NetUV.Core.Native
             {
                 if (buf != IntPtr.Zero)
                 {
-                    Marshal.FreeHGlobal(buf);
+                    Marshal.FreeCoTaskMem(buf);
                 }
             }
 
@@ -107,15 +104,12 @@ namespace NetUV.Core.Native
 
         internal static void FSPollStart(IntPtr handle, string path, int interval)
         {
-            Contract.Requires(handle != IntPtr.Zero);
-            Contract.Requires(!string.IsNullOrEmpty(path));
-            Contract.Requires(interval > 0);
+            Debug.Assert(handle != IntPtr.Zero);
+            Debug.Assert(!string.IsNullOrEmpty(path));
+            Debug.Assert(interval > 0);
 
             int result = uv_fs_poll_start(handle, FSPoll.FSPollCallback, path, interval);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
         }
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
@@ -136,32 +130,26 @@ namespace NetUV.Core.Native
 
         internal static void FSEventStart(IntPtr handle, string path, FSEventMask mask)
         {
-            Contract.Requires(handle != IntPtr.Zero);
-            Contract.Requires(!string.IsNullOrEmpty(path));
+            Debug.Assert(handle != IntPtr.Zero);
+            Debug.Assert(!string.IsNullOrEmpty(path));
 
             int result = uv_fs_event_start(handle, FSEvent.FSEventCallback, path, (int)mask);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
         }
 
         internal static string FSEventGetPath(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             string path;
             IntPtr buf = IntPtr.Zero;
             try
             {
-                buf = Marshal.AllocHGlobal(FileNameBufferSize);
+                buf = Marshal.AllocCoTaskMem(FileNameBufferSize);
                 var length = (IntPtr)FileNameBufferSize;
 
                 int result = uv_fs_event_getpath(handle, buf, ref length);
-                if (result < 0)
-                {
-                    throw CreateError((uv_err_code)result);
-                }
+                ThrowIfError(result);
 
                 path = Marshal.PtrToStringAnsi(buf, length.ToInt32());
             }
@@ -169,7 +157,7 @@ namespace NetUV.Core.Native
             {
                 if (buf != IntPtr.Zero)
                 {
-                    Marshal.FreeHGlobal(buf);
+                    Marshal.FreeCoTaskMem(buf);
                 }
             }
 
