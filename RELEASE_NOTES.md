@@ -35,3 +35,8 @@ First public preview release
 #### 0.1.125 August 17 2017
 - Fixed EventLoop start up
 - Fixed ReadableBuffer read bytes issue.
+
+#### 0.1.140 January 5 2018
+- Added composite buffers support to avoid copy.
+- Added unsafe buffers to improve performance.
+- Improved native Libuv interop performance.
