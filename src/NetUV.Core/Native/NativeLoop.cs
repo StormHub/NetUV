@@ -6,7 +6,7 @@
 namespace NetUV.Core.Native
 {
     using System;
-    using System.Diagnostics.Contracts;
+    using System.Diagnostics;
     using System.Runtime.InteropServices;
 
     enum uv_run_mode
@@ -35,44 +35,19 @@ namespace NetUV.Core.Native
         {
             IntPtr value = uv_loop_size();
             int size = value.ToInt32();
-            Contract.Assert(size > 0);
 
             return size;
         }
 
         internal static void InitializeLoop(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             int result = uv_loop_init(handle);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
         }
 
-        internal static bool CloseLoop(IntPtr handle)
-        {
-            if (handle == IntPtr.Zero)
-            {
-                return false;
-            }
-
-            int result = uv_loop_close(handle);
-            if (result >= 0)
-            {
-                return true;
-            }
-
-            OperationException error = CreateError((uv_err_code)result);
-            // Only retry if loop close return busy
-            if (error.Name == "EBUSY")
-            {
-                return false;
-            }
-
-            throw error;
-        }
+        internal static int CloseLoop(IntPtr handle) => handle == IntPtr.Zero ? 0 : uv_loop_close(handle);
 
         internal static void WalkLoop(IntPtr handle, uv_walk_cb callback)
         {
@@ -87,7 +62,7 @@ namespace NetUV.Core.Native
 
         internal static int RunLoop(IntPtr handle, uv_run_mode mode)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             /*
               UV_RUN_DEFAULT: 
@@ -111,7 +86,7 @@ namespace NetUV.Core.Native
 
         internal static void StopLoop(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             uv_stop(handle);
         }
@@ -121,21 +96,21 @@ namespace NetUV.Core.Native
 
         internal static long LoopNow(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             return uv_now(handle);
         }
 
         internal static long LoopNowInHighResolution(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             return uv_hrtime(handle);
         }
 
         internal static int GetBackendTimeout(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             // The return value is in milliseconds, or -1 for no timeout.
             int timeout = uv_backend_timeout(handle);
@@ -144,7 +119,7 @@ namespace NetUV.Core.Native
 
         internal static void LoopUpdateTime(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             uv_update_time(handle);
         }

@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Johnny Z. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+// ReSharper disable ConvertToAutoProperty
+// ReSharper disable ConvertToAutoPropertyWithPrivateSetter
 namespace NetUV.Core.Handles
 {
     using System;
@@ -26,20 +28,27 @@ namespace NetUV.Core.Handles
 
     class ReadCompletion : IReadCompletion
     {
+        readonly ReadableBuffer readableBuffer;
+        Exception error;
+
         internal ReadCompletion(ref ReadableBuffer data, Exception error)
         {
-            this.Data = data;
-            this.Error = error;
+            this.readableBuffer = data;
+            this.error = error;
         }
 
-        public ReadableBuffer Data { get; }
+        public ReadableBuffer Data => this.readableBuffer;
 
-        public Exception Error { get; private set; }
+        public Exception Error => this.error;
 
         public void Dispose()
         {
-            this.Data.Dispose();
-            this.Error = null;
+            IByteBuffer buffer = this.Data.Buffer;
+            if (buffer.ReferenceCount > 0)
+            {
+                buffer.Release();
+            }
+            this.error = null;
         }
     }
 }

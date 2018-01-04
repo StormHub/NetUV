@@ -18,6 +18,14 @@ namespace NetUV.Core.Buffers
             this.buffer = buffer;
         }
 
+        public int Count => this.buffer.ReadableBytes;
+
+        public WritableBuffer Retain()
+        {
+            this.buffer.Retain();
+            return this;
+        }
+
         public static WritableBuffer From(byte[] array)
         {
             Contract.Requires(array != null);
@@ -79,6 +87,12 @@ namespace NetUV.Core.Buffers
             this.buffer.WriteBytes(bytes);
         }
 
-        public void Dispose() => this.buffer.Release();
+        public void Dispose()
+        {
+            if (this.buffer.ReferenceCount > 0)
+            {
+                this.buffer.Release();
+            }
+        }
     }
 }

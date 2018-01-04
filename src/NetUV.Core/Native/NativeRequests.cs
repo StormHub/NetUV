@@ -6,7 +6,7 @@
 namespace NetUV.Core.Native
 {
     using System;
-    using System.Diagnostics.Contracts;
+    using System.Diagnostics;
     using System.Net;
     using System.Net.Sockets;
     using System.Runtime.CompilerServices;
@@ -186,10 +186,9 @@ namespace NetUV.Core.Native
             string service, 
             uv_getaddrinfo_cb callback)
         {
-            Contract.Requires(loopHandle != IntPtr.Zero);
-            Contract.Requires(handle != IntPtr.Zero);
-            Contract.Requires(!string.IsNullOrEmpty(node) 
-                || !string.IsNullOrEmpty(service));
+            Debug.Assert(loopHandle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
+            Debug.Assert(!string.IsNullOrEmpty(node) || !string.IsNullOrEmpty(service));
 
             int result = uv_getaddrinfo(
                 loopHandle, 
@@ -198,10 +197,7 @@ namespace NetUV.Core.Native
                 node, 
                 service, 
                 null);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
         }
 
         internal static void GetNameInfo(
@@ -211,18 +207,14 @@ namespace NetUV.Core.Native
             NameInfoFlags flags,
             uv_getnameinfo_cb callback)
         {
-            Contract.Requires(loopHandle != IntPtr.Zero);
-            Contract.Requires(handle != IntPtr.Zero);
-            Contract.Requires(endPoint != null);
+            Debug.Assert(loopHandle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
+            Debug.Assert(endPoint != null);
 
-            sockaddr addr;
-            GetSocketAddress(endPoint, out addr);
+            GetSocketAddress(endPoint, out sockaddr addr);
 
             int result = uv_getnameinfo(loopHandle, handle, callback, ref addr, (int)flags);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
         }
 
         internal static unsafe void FreeAddressInfo(ref addrinfo addrinfo)
@@ -236,34 +228,26 @@ namespace NetUV.Core.Native
 
         internal static void Shutdown(IntPtr requestHandle, IntPtr streamHandle)
         {
-            Contract.Requires(requestHandle != IntPtr.Zero);
-            Contract.Requires(streamHandle != IntPtr.Zero);
+            Debug.Assert(requestHandle != IntPtr.Zero);
+            Debug.Assert(streamHandle != IntPtr.Zero);
 
             int result = uv_shutdown(requestHandle, streamHandle, WatcherRequest.WatcherCallback);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
         }
 
         internal static void QueueWork(IntPtr loopHandle, IntPtr handle)
         {
-            Contract.Requires(loopHandle != IntPtr.Zero);
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(loopHandle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             int result = uv_queue_work(loopHandle, handle, Work.WorkCallback, Work.AfterWorkCallback);
-            if (result < 0)
-            {
-                throw CreateError((uv_err_code)result);
-            }
+            ThrowIfError(result);
         }
 
-        internal static bool Cancel(IntPtr handle) => 
-            handle != IntPtr.Zero && uv_cancel(handle) == 0;
+        internal static bool Cancel(IntPtr handle) =>  handle != IntPtr.Zero && uv_cancel(handle) == 0;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static int GetSize(uv_req_type requestType) => 
-            RequestSizeTable[unchecked((int)requestType - 1)];
+        internal static int GetSize(uv_req_type requestType) =>  RequestSizeTable[unchecked((int)requestType - 1)];
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         static extern int uv_getnameinfo(IntPtr loopHandle, IntPtr handle, uv_getnameinfo_cb cb, ref sockaddr addr, int flags);

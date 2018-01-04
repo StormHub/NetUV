@@ -156,10 +156,9 @@ namespace NetUV.Core.Tests.Performance
 
         void OnError(StreamHandle stream, Exception error)
         {
-            var exception = error as OperationException;
-            if (exception != null 
+            if (error is OperationException exception 
                 && (exception.ErrorCode == ErrorCode.ECONNRESET 
-                || exception.ErrorCode == ErrorCode.ETIMEDOUT))
+                    || exception.ErrorCode == ErrorCode.ETIMEDOUT))
             {
                 this.connectionsFailed++;
             }

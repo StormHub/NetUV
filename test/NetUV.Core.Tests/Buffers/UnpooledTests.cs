@@ -92,7 +92,7 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void Equals()
+        public void Equal()
         {
             // Different length.
             IByteBuffer a = WrappedBuffer(new byte[] { 1 });

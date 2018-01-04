@@ -36,11 +36,10 @@ namespace NetUV.Core.Native
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected internal void Validate()
         {
-            if (this.IsValid)
+            if (!this.IsValid)
             {
-                return;
+                ThrowHelper.ThrowObjectDisposedException($"{this.GetType()}");
             }
-            ThrowHelper.ThrowObjectDisposedException($"{this.GetType().Name} has already been disposed");
         }
 
         internal void SetHandleAsInvalid() => this.handle = IntPtr.Zero;

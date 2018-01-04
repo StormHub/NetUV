@@ -7,7 +7,8 @@
 namespace NetUV.Core.Native
 {
     using System;
-    using System.Diagnostics.Contracts;
+    using System.Diagnostics;
+    using System.Runtime.CompilerServices;
     using System.Runtime.InteropServices;
 
     #region uv_err_t
@@ -121,14 +122,14 @@ namespace NetUV.Core.Native
 
         internal static void AddReference(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             uv_ref(handle);
         }
 
         internal static void ReleaseReference(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             uv_unref(handle);
         }
@@ -175,6 +176,18 @@ namespace NetUV.Core.Native
         #endregion Common
 
         #region Error
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void ThrowIfError(int code)
+        {
+            if (code < 0)
+            {
+                ThrowOperationException((uv_err_code)code);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        internal static void ThrowOperationException(uv_err_code error) => throw CreateError(error);
 
         internal static OperationException CreateError(uv_err_code error)
         {

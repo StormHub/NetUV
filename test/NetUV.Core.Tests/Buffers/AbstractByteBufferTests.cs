@@ -321,12 +321,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void RandomShortAccess() => this.RandomShortAccess(true);
+        public void RandomShortAccess() => this.RandomShortAccess0(true);
 
         [Fact]
-        public void RandomShortLEAccess() => this.RandomShortAccess(false);
+        public void RandomShortLEAccess() => this.RandomShortAccess0(false);
 
-        void RandomShortAccess(bool testBigEndian)
+        void RandomShortAccess0(bool testBigEndian)
         {
             for (int i = 0; i < this.buffer.Capacity - 1; i += 2)
             {
@@ -357,12 +357,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void RandomUnsignedShortAccess() => this.RandomUnsignedShortAccess(true);
+        public void RandomUnsignedShortAccess() => this.RandomUnsignedShortAccess0(true);
 
         [Fact]
-        public void RandomUnsignedShortLEAccess() => this.RandomUnsignedShortAccess(false);
+        public void RandomUnsignedShortLEAccess() => this.RandomUnsignedShortAccess0(false);
 
-        void RandomUnsignedShortAccess(bool testBigEndian)
+        void RandomUnsignedShortAccess0(bool testBigEndian)
         {
             for (int i = 0; i < this.buffer.Capacity - 1; i += 2)
             {
@@ -393,12 +393,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void RandomMediumAccess() => this.RandomMediumAccess(true);
+        public void RandomMediumAccess() => this.RandomMediumAccess0(true);
 
         [Fact]
-        public void RandomMediumLEAccess() => this.RandomMediumAccess(false);
+        public void RandomMediumLEAccess() => this.RandomMediumAccess0(false);
 
-        public void RandomMediumAccess(bool testBigEndian)
+        void RandomMediumAccess0(bool testBigEndian)
         {
             for (int i = 0; i < this.buffer.Capacity - 2; i += 3)
             {
@@ -429,12 +429,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void RandomUnsignedMediumAccess() => this.RandomUnsignedMediumAccess(true);
+        public void RandomUnsignedMediumAccess() => this.RandomUnsignedMediumAccess0(true);
 
         [Fact]
-        public void RandomUnsignedMediumLEAccess() => this.RandomUnsignedMediumAccess(false);
+        public void RandomUnsignedMediumLEAccess() => this.RandomUnsignedMediumAccess0(false);
 
-        public void RandomUnsignedMediumAccess(bool testBigEndian)
+        void RandomUnsignedMediumAccess0(bool testBigEndian)
         {
             for (int i = 0; i < this.buffer.Capacity - 2; i += 3)
             {
@@ -465,12 +465,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void RandomIntAccess() => this.RandomIntAccess(true);
+        public void RandomIntAccess() => this.RandomIntAccess0(true);
 
         [Fact]
-        public void RandomIntLEAccess() => this.RandomIntAccess(false);
+        public void RandomIntLEAccess() => this.RandomIntAccess0(false);
 
-        void RandomIntAccess(bool testBigEndian)
+        void RandomIntAccess0(bool testBigEndian)
         {
             for (int i = 0; i < this.buffer.Capacity - 3; i += 4)
             {
@@ -501,12 +501,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void RandomUnsignedIntAccess() => this.RandomUnsignedIntAccess(true);
+        public void RandomUnsignedIntAccess() => this.RandomUnsignedIntAccess0(true);
 
         [Fact]
-        public void RandomUnsignedIntLEAccess() => this.RandomUnsignedIntAccess(false);
+        public void RandomUnsignedIntLEAccess() => this.RandomUnsignedIntAccess0(false);
 
-        void RandomUnsignedIntAccess(bool testBigEndian)
+        void RandomUnsignedIntAccess0(bool testBigEndian)
         {
             for (int i = 0; i < this.buffer.Capacity - 3; i += 4)
             {
@@ -537,12 +537,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void RandomLongAccess() => this.RandomLongAccess(true);
+        public void RandomLongAccess() => this.RandomLongAccess0(true);
 
         [Fact]
-        public void RandomLongLEAccess() => this.RandomLongAccess(false);
+        public void RandomLongLEAccess() => this.RandomLongAccess0(false);
 
-        void RandomLongAccess(bool testBigEndian)
+        void RandomLongAccess0(bool testBigEndian)
         {
             for (int i = 0; i < this.buffer.Capacity - 7; i += 8)
             {
@@ -660,12 +660,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void SequentialShortAccess() => this.SequentialShortAccess(true);
+        public void SequentialShortAccess() => this.SequentialShortAccess0(true);
 
         [Fact]
-        public void SequentialShortLEAccess() => this.SequentialShortAccess(false);
+        public void SequentialShortLEAccess() => this.SequentialShortAccess0(false);
 
-        void SequentialShortAccess(bool testBigEndian)
+        void SequentialShortAccess0(bool testBigEndian)
         {
             this.buffer.SetWriterIndex(0);
             for (int i = 0; i < this.buffer.Capacity; i += 2)
@@ -710,12 +710,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void SequentialUnsignedShortAccess() => this.SequentialUnsignedShortAccess(true);
+        public void SequentialUnsignedShortAccess() => this.SequentialUnsignedShortAccess0(true);
 
         [Fact]
-        public void SequentialUnsignedShortLEAccess() => this.SequentialUnsignedShortAccess(true);
+        public void SequentialUnsignedShortLEAccess() => this.SequentialUnsignedShortAccess0(true);
 
-        void SequentialUnsignedShortAccess(bool testBigEndian)
+        void SequentialUnsignedShortAccess0(bool testBigEndian)
         {
             this.buffer.SetWriterIndex(0);
             for (int i = 0; i < this.buffer.Capacity; i += 2)
@@ -760,12 +760,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void SequentialMediumAccess() => this.SequentialMediumAccess(true);
+        public void SequentialMediumAccess() => this.SequentialMediumAccess0(true);
 
         [Fact]
-        public void SequentialMediumLEAccess() => this.SequentialMediumAccess(false);
+        public void SequentialMediumLEAccess() => this.SequentialMediumAccess0(false);
 
-        void SequentialMediumAccess(bool testBigEndian)
+        void SequentialMediumAccess0(bool testBigEndian)
         {
             this.buffer.SetWriterIndex(0);
             for (int i = 0; i < this.buffer.Capacity / 3 * 3; i += 3)
@@ -809,12 +809,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void SequentialUnsignedMediumAccess() => this.SequentialUnsignedMediumAccess(true);
+        public void SequentialUnsignedMediumAccess() => this.SequentialUnsignedMediumAccess0(true);
 
         [Fact]
-        public void SequentialUnsignedMediumLEAccess() => this.SequentialUnsignedMediumAccess(false);
+        public void SequentialUnsignedMediumLEAccess() => this.SequentialUnsignedMediumAccess0(false);
 
-        void SequentialUnsignedMediumAccess(bool testBigEndian)
+        void SequentialUnsignedMediumAccess0(bool testBigEndian)
         {
             this.buffer.SetWriterIndex(0);
             for (int i = 0; i < this.buffer.Capacity / 3 * 3; i += 3)
@@ -858,12 +858,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void SequentialIntAccess() => this.SequentialIntAccess(true);
+        public void SequentialIntAccess() => this.SequentialIntAccess0(true);
 
         [Fact]
-        public void SequentialIntLEAccess() => this.SequentialIntAccess(false);
+        public void SequentialIntLEAccess() => this.SequentialIntAccess0(false);
 
-        void SequentialIntAccess(bool testBigEndian)
+        void SequentialIntAccess0(bool testBigEndian)
         {
             this.buffer.SetWriterIndex(0);
             for (int i = 0; i < this.buffer.Capacity; i += 4)
@@ -908,12 +908,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void SequentialUnsignedIntAccess() => this.SequentialUnsignedIntAccess(true);
+        public void SequentialUnsignedIntAccess() => this.SequentialUnsignedIntAccess0(true);
 
         [Fact]
-        public void SequentialUnsignedIntLEAccess() => this.SequentialUnsignedIntAccess(false);
+        public void SequentialUnsignedIntLEAccess() => this.SequentialUnsignedIntAccess0(false);
 
-        void SequentialUnsignedIntAccess(bool testBigEndian)
+        void SequentialUnsignedIntAccess0(bool testBigEndian)
         {
             this.buffer.SetWriterIndex(0);
             for (int i = 0; i < this.buffer.Capacity; i += 4)
@@ -958,12 +958,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void SequentialLongAccess() => this.SequentialLongAccess(true);
+        public void SequentialLongAccess() => this.SequentialLongAccess0(true);
 
         [Fact]
-        public void SequentialLongLEAccess() => this.SequentialLongAccess(false);
+        public void SequentialLongLEAccess() => this.SequentialLongAccess0(false);
 
-        void SequentialLongAccess(bool testBigEndian)
+        void SequentialLongAccess0(bool testBigEndian)
         {
             this.buffer.SetWriterIndex(0);
             for (int i = 0; i < this.buffer.Capacity; i += 8)
@@ -1785,7 +1785,7 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void Equals()
+        public void Equal()
         {
             Assert.False(this.buffer.Equals(null));
             Assert.False(this.buffer.Equals(new object()));
@@ -1959,23 +1959,23 @@ namespace NetUV.Core.Tests.Buffers
             set.Add(elemB);
 
             Assert.Equal(2, set.Count);
-            Assert.True(set.Contains(this.ReleaseLater(elemA.Copy())));
+            Assert.Contains(this.ReleaseLater(elemA.Copy()), set);
 
             IByteBuffer elemBCopy = this.ReleaseLater(elemB.Copy());
-            Assert.True(set.Contains(elemBCopy));
+            Assert.Contains(elemBCopy, set);
 
             this.buffer.Clear();
             this.buffer.WriteBytes(elemA.Duplicate());
 
             Assert.True(set.Remove(this.buffer));
-            Assert.False(set.Contains(elemA));
-            Assert.Equal(1, set.Count);
+            Assert.DoesNotContain(elemA, set);
+            Assert.Single(set);
 
             this.buffer.Clear();
             this.buffer.WriteBytes(elemB.Duplicate());
             Assert.True(set.Remove(this.buffer));
-            Assert.False(set.Contains(elemB));
-            Assert.Equal(0, set.Count);
+            Assert.DoesNotContain(elemB, set);
+            Assert.Empty(set);
         }
 
         // Test case for https://github.com/netty/netty/issues/325
@@ -2467,12 +2467,12 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void ReadSliceOutOfBounds() => Assert.Throws<IndexOutOfRangeException>(() => this.ReadSliceOutOfBounds(false));
+        public void ReadSliceOutOfBounds() => Assert.Throws<IndexOutOfRangeException>(() => this.ReadSliceOutOfBounds0(false));
 
         [Fact]
-        public void ReadRetainedSliceOutOfBounds() => Assert.Throws<IndexOutOfRangeException>(() => this.ReadSliceOutOfBounds(true));
+        public void ReadRetainedSliceOutOfBounds() => Assert.Throws<IndexOutOfRangeException>(() => this.ReadSliceOutOfBounds0(true));
 
-        void ReadSliceOutOfBounds(bool retainedSlice)
+        void ReadSliceOutOfBounds0(bool retainedSlice)
         {
             IByteBuffer buf = this.NewBuffer(100);
             try
@@ -2637,7 +2637,7 @@ namespace NetUV.Core.Tests.Buffers
         }
 
         [Fact]
-        public void RetainedSliceContents() => this.SliceContents(true);
+        public void RetainedSliceContents() => this.SliceContents0(true);
 
         [Fact]
         public void MultipleLevelRetainedSlice1() => this.MultipleLevelRetainedSliceWithNonRetained(true, true);
@@ -2700,27 +2700,27 @@ namespace NetUV.Core.Tests.Buffers
         public void MultipleRetainedDuplicateReleaseOriginal4() => this.MultipleRetainedDuplicateReleaseOriginal(false, false);
 
         [Fact]
-        public void SliceContents() => this.SliceContents(false);
+        public void SliceContents() => this.SliceContents0(false);
 
         [Fact]
-        public void RetainedDuplicateContents() => this.DuplicateContents(true);
+        public void RetainedDuplicateContents() => this.DuplicateContents0(true);
 
         [Fact]
-        public void DuplicateContents() => this.DuplicateContents(false);
+        public void DuplicateContents() => this.DuplicateContents0(false);
 
         [Fact]
-        public virtual void DuplicateCapacityChange() => this.DuplicateCapacityChange(false);
+        public virtual void DuplicateCapacityChange() => this.DuplicateCapacityChange0(false);
 
         [Fact]
-        public virtual void RetainedDuplicateCapacityChange() => this.DuplicateCapacityChange(true);
+        public virtual void RetainedDuplicateCapacityChange() => this.DuplicateCapacityChange0(true);
 
         [Fact]
-        public void SliceCapacityChange() => Assert.Throws<NotSupportedException>(() => this.SliceCapacityChange(false));
+        public void SliceCapacityChange() => Assert.Throws<NotSupportedException>(() => this.SliceCapacityChange0(false));
 
         [Fact]
-        public void RetainedSliceCapacityChange() => Assert.Throws<NotSupportedException>(() => this.SliceCapacityChange(true));
+        public void RetainedSliceCapacityChange() => Assert.Throws<NotSupportedException>(() => this.SliceCapacityChange0(true));
 
-        void DuplicateCapacityChange(bool retainedDuplicate)
+        void DuplicateCapacityChange0(bool retainedDuplicate)
         {
             IByteBuffer buf = this.NewBuffer(8);
             IByteBuffer dup = retainedDuplicate ? buf.RetainedDuplicate() : buf.Duplicate();
@@ -2741,7 +2741,7 @@ namespace NetUV.Core.Tests.Buffers
             }
         }
 
-        void SliceCapacityChange(bool retainedSlice)
+        void SliceCapacityChange0(bool retainedSlice)
         {
             IByteBuffer buf = this.NewBuffer(8);
             IByteBuffer slice = retainedSlice ? buf.RetainedSlice(buf.ReaderIndex + 1, 3)
@@ -2791,7 +2791,7 @@ namespace NetUV.Core.Tests.Buffers
             }
         }
 
-        void SliceContents(bool retainedSlice)
+        void SliceContents0(bool retainedSlice)
         {
             IByteBuffer buf = this.NewBuffer(8).ResetWriterIndex();
             IByteBuffer expected = this.NewBuffer(3).ResetWriterIndex();
@@ -3056,7 +3056,7 @@ namespace NetUV.Core.Tests.Buffers
             Assert.Equal(0, dup3.ReferenceCount);
         }
 
-        void DuplicateContents(bool retainedDuplicate)
+        void DuplicateContents0(bool retainedDuplicate)
         {
             IByteBuffer buf = this.NewBuffer(8).ResetWriterIndex();
             buf.WriteBytes(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 });
@@ -3240,8 +3240,8 @@ namespace NetUV.Core.Tests.Buffers
             buf.Clear();
             Assert.False(buf.IsReadable());
             ArraySegment<byte>[] nioBuffers = buf.GetIoBuffers();
-            Assert.Equal(1, nioBuffers.Length);
-            Assert.Equal(0, nioBuffers[0].Count);
+            Assert.Single(nioBuffers);
+            Assert.Empty(nioBuffers[0]);
             buf.Release();
         }
 

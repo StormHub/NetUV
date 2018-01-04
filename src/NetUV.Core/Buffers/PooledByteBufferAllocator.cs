@@ -33,7 +33,7 @@ namespace NetUV.Core.Buffers
 
         static PooledByteBufferAllocator()
         {
-            int defaultPageSize = SystemPropertyUtil.GetInt("io.netty.allocator.pageSize", 8192);
+            int defaultPageSize = SystemPropertyUtil.GetInt("allocator.pageSize", 8192);
             Exception pageSizeFallbackCause = null;
             try
             {
@@ -46,7 +46,7 @@ namespace NetUV.Core.Buffers
             }
             DefaultPageSize = defaultPageSize;
 
-            int defaultMaxOrder = SystemPropertyUtil.GetInt("io.netty.allocator.maxOrder", 11);
+            int defaultMaxOrder = SystemPropertyUtil.GetInt("allocator.maxOrder", 11);
             Exception maxOrderFallbackCause = null;
             try
             {
@@ -67,21 +67,21 @@ namespace NetUV.Core.Buffers
             // deallocation needs to be synchronized on the PoolArena.
             // See https://github.com/netty/netty/issues/3888
             int defaultMinNumArena = Environment.ProcessorCount * 2;
-            DefaultNumHeapArena = Math.Max(0, SystemPropertyUtil.GetInt("io.netty.allocator.numHeapArenas", defaultMinNumArena));
-            DefaultNumDirectArena = Math.Max(0, SystemPropertyUtil.GetInt("io.netty.allocator.numDirectArenas", defaultMinNumArena));
+            DefaultNumHeapArena = Math.Max(0, SystemPropertyUtil.GetInt("allocator.numHeapArenas", defaultMinNumArena));
+            DefaultNumDirectArena = Math.Max(0, SystemPropertyUtil.GetInt("allocator.numDirectArenas", defaultMinNumArena));
 
             // cache sizes
-            DefaultTinyCacheSize = SystemPropertyUtil.GetInt("io.netty.allocator.tinyCacheSize", 512);
-            DefaultSmallCacheSize = SystemPropertyUtil.GetInt("io.netty.allocator.smallCacheSize", 256);
-            DefaultNormalCacheSize = SystemPropertyUtil.GetInt("io.netty.allocator.normalCacheSize", 64);
+            DefaultTinyCacheSize = SystemPropertyUtil.GetInt("allocator.tinyCacheSize", 512);
+            DefaultSmallCacheSize = SystemPropertyUtil.GetInt("allocator.smallCacheSize", 256);
+            DefaultNormalCacheSize = SystemPropertyUtil.GetInt("allocator.normalCacheSize", 64);
 
             // 32 kb is the default maximum capacity of the cached buffer. Similar to what is explained in
             // 'Scalable memory allocation using jemalloc'
-            DefaultMaxCachedBufferCapacity = SystemPropertyUtil.GetInt("io.netty.allocator.maxCachedBufferCapacity", 32 * 1024);
+            DefaultMaxCachedBufferCapacity = SystemPropertyUtil.GetInt("allocator.maxCachedBufferCapacity", 32 * 1024);
 
             // the number of threshold of allocations when cached entries will be freed up if not frequently used
             DefaultCacheTrimInterval = SystemPropertyUtil.GetInt(
-                "io.netty.allocator.cacheTrimInterval",
+                "allocator.cacheTrimInterval",
                 8192);
 
             if (Logger.IsDebugEnabled)

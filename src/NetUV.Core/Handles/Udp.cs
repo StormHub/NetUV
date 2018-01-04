@@ -24,7 +24,7 @@ namespace NetUV.Core.Handles
             new ThreadLocalPool<SendRequest>(handle => new SendRequest(handle), DefaultPoolSize);
 
         readonly PooledByteBufferAllocator allocator;
-        readonly PendingReadQueue bufferQueue;
+        readonly PendingRead pendingRead;
 
         Action<Udp, IDatagramReadCompletion> readAction;
 
@@ -38,7 +38,7 @@ namespace NetUV.Core.Handles
             Contract.Requires(allocator != null);
 
             this.allocator = allocator;
-            this.bufferQueue = new PendingReadQueue();
+            this.pendingRead = new PendingRead();
         }
 
         public int GetSendBufferSize()
@@ -296,6 +296,8 @@ namespace NetUV.Core.Handles
 
         void OnReceivedCallback(IByteBuffer byteBuffer, int status, IPEndPoint remoteEndPoint)
         {
+            Debug.Assert(byteBuffer != null);
+
             // status (nread) 
             //     Number of bytes that have been received. 
             //     0 if there is no more data to read. You may discard or repurpose the read buffer. 
@@ -305,37 +307,37 @@ namespace NetUV.Core.Handles
             // For status = 0 (Nothing to read)
             if (status >= 0)
             {
-                Contract.Assert(byteBuffer != null);
-
                 if (Log.IsDebugEnabled)
                 {
-                    // ReSharper disable once PossibleNullReferenceException
                     Log.DebugFormat("{0} {1} read, buffer length = {2} status = {3}.",
                         this.HandleType, this.InternalHandle, byteBuffer.Capacity, status);
                 }
 
                 this.InvokeRead(byteBuffer, status, remoteEndPoint);
-                return;
             }
-
-            Exception exception = NativeMethods.CreateError((uv_err_code)status);
-            Log.Error($"{this.HandleType} {this.InternalHandle} read error, status = {status}", exception);
-
-            this.bufferQueue.Clear();
-            this.InvokeRead(byteBuffer, 0, remoteEndPoint, exception);
+            else
+            {
+                Exception exception = NativeMethods.CreateError((uv_err_code)status);
+                Log.Error($"{this.HandleType} {this.InternalHandle} read error, status = {status}", exception);
+                this.InvokeRead(byteBuffer, 0, remoteEndPoint, exception);
+            }
         }
 
         void InvokeRead(IByteBuffer byteBuffer, int size, IPEndPoint remoteEndPoint, Exception error = null)
         {
-            if (size == 0 && error == null)
+            if (size <= 0)
             {
-                // Filter out empty data received if not an error
-                //
-                // On windows the udp receive actually been call with empty data 
-                // for broadcast, on Linux, the receive is not called at all.
-                //
-                byteBuffer?.Release();
-                return;
+                byteBuffer.Release();
+
+                if (error == null && size == 0)
+                {
+                    // Filter out empty data received if not an error
+                    //
+                    // On windows the udp receive actually been call with empty data 
+                    // for broadcast, on Linux, the receive is not called at all.
+                    //
+                    return;
+                }
             }
 
             ReadableBuffer buffer = size > 0 ? new ReadableBuffer(byteBuffer, size) : ReadableBuffer.Empty;
@@ -389,28 +391,13 @@ namespace NetUV.Core.Handles
                 Log.TraceFormat("{0} {1} receive buffer allocated size = {2}", this.HandleType, this.InternalHandle, buffer.Capacity);
             }
 
-            var bufferRef = new ReadBufferRef(buffer);
-            this.bufferQueue.Enqueue(bufferRef);
-            buf = bufferRef.Buf;
+            buf = this.pendingRead.GetBuffer(buffer);
         }
 
         IByteBuffer GetBuffer()
         {
-            IByteBuffer byteBuffer = null;
-            ReadBufferRef bufferRef = null;
-
-            try
-            {
-                if (this.bufferQueue.TryDequeue(out bufferRef))
-                {
-                    byteBuffer = bufferRef.Buffer;
-                }
-            }
-            finally
-            {
-                bufferRef?.Dispose();
-            }
-
+            IByteBuffer byteBuffer = this.pendingRead.Buffer;
+            this.pendingRead.Reset();
             return byteBuffer;
         }
 
@@ -423,7 +410,7 @@ namespace NetUV.Core.Handles
         protected override void Close()
         {
             this.readAction = null;
-            this.bufferQueue.Dispose();
+            this.pendingRead.Dispose();
         }
 
         public void CloseHandle(Action<Udp> onClosed = null)

@@ -192,7 +192,7 @@ namespace NetUV.Core.Tests.Handles
 
             this.tinyTimer.Start(this.TinyTimerCallback, 1, 0);
             this.hugeTimer1.Start(this.TinyTimerCallback, 0xffffffffffffL, 0);
-            this.hugeTimer2.Start(this.TinyTimerCallback, 1, unchecked((long)(ulong.MaxValue - 1)));
+            this.hugeTimer2.Start(this.TinyTimerCallback, 1, long.MaxValue - 1);
 
             int result = this.loop.RunDefault();
             Assert.Equal(0, result);
@@ -229,7 +229,7 @@ namespace NetUV.Core.Tests.Handles
             this.hugeTimer1 = this.loop.CreateTimer();
 
             this.tinyTimer.Start(this.HugeTimerCallback, 2, 2);
-            this.hugeTimer1.Start(this.HugeTimerCallback, 1, unchecked((long)(ulong.MaxValue - 1)));
+            this.hugeTimer1.Start(this.HugeTimerCallback, 1, long.MaxValue - 1);
 
             int result = this.loop.RunDefault();
             Assert.Equal(0, result);

@@ -4,6 +4,7 @@
 namespace NetUV.Core.Handles
 {
     using System;
+    using System.Diagnostics;
     using System.Diagnostics.Contracts;
     using NetUV.Core.Buffers;
     using NetUV.Core.Channels;
@@ -26,11 +27,9 @@ namespace NetUV.Core.Handles
             this.pipeline = new Pipeline(this);
         }
 
-        public bool IsReadable =>
-            NativeMethods.IsStreamReadable(this.InternalHandle);
+        public bool IsReadable => NativeMethods.IsStreamReadable(this.InternalHandle);
 
-        public bool IsWritable =>
-            NativeMethods.IsStreamWritable(this.InternalHandle);
+        public bool IsWritable => NativeMethods.IsStreamWritable(this.InternalHandle);
 
         protected int SendBufferSize(int value)
         {
@@ -302,11 +301,11 @@ namespace NetUV.Core.Handles
             //  in that case buf.len and buf.base are both set to 0
             //
 
+            Debug.Assert(byteBuffer != null);
+
             // For status = 0 (Nothing to read)
             if (status >= 0) 
             {
-                Contract.Assert(byteBuffer != null);
-
                 if (Log.IsDebugEnabled)
                 {
                     Log.DebugFormat("{0} {1} read, buffer length = {2} status = {3}.", this.HandleType, this.InternalHandle, byteBuffer?.Capacity, status);
@@ -340,8 +339,7 @@ namespace NetUV.Core.Handles
 
         void OnAllocateCallback(out uv_buf_t buf)
         {
-            ReadBufferRef bufferRef = this.pipeline.AllocateReadBuffer();
-            buf = bufferRef.Buf;
+            buf = this.pipeline.AllocateReadBuffer();
         }
 
         static void OnAllocateCallback(IntPtr handle, IntPtr suggestedSize, out uv_buf_t buf)

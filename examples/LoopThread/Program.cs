@@ -6,6 +6,7 @@ namespace LoopThread
     using System;
     using System.Net;
     using System.Text;
+    using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using NetUV.Core.Buffers;
     using NetUV.Core.Channels;
@@ -26,22 +27,30 @@ namespace LoopThread
             {
                 eventLoop = new EventLoop();
 
-                eventLoop.Schedule(loop => loop
+                Task startTask = eventLoop.ExecuteAsync(state => ((Loop)state)
                     .CreateTcp()
                     .SimultaneousAccepts(true)
-                    .Listen(EndPoint, OnConnection));
+                    .Listen(EndPoint, OnConnection),
+                eventLoop.Loop);
 
-                Console.WriteLine("Waiting for loop to complete.");
-                eventLoop.LoopCompletion.Wait();
-                Console.WriteLine("Loop completed.");
+                Task completion;
+                if (!startTask.Wait(TimeSpan.FromSeconds(10)))
+                {
+                    Console.WriteLine("Tcp listen timed out.");
+                    completion = eventLoop.ShutdownGracefullyAsync();
+                }
+                else
+                {
+                    Console.WriteLine("Tcp listen completed.");
+                    completion = eventLoop.TerminationCompletion;
+                }
+
+                completion.Wait(TimeSpan.FromSeconds(10));
+                Console.WriteLine("EventLoop completed.");
             }
             catch (Exception exception)
             {
                 Console.WriteLine($"Loop thread error {exception}.");
-            }
-            finally
-            {
-                eventLoop?.Dispose();
             }
 
             Console.WriteLine("Press any key to terminate the program.");
@@ -85,7 +94,7 @@ namespace LoopThread
                 }
 
                 Console.WriteLine("Server shutting down.");
-                eventLoop.ScheduleStop();
+                eventLoop.ShutdownGracefullyAsync();
             }
             else
             {

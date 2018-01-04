@@ -101,15 +101,13 @@ namespace NetUV.Core.Tests.Performance
         {
             if (exception != null)
             {
-                var error = exception as OperationException;
-                if (error != null 
+                if (exception is OperationException error 
                     && error.ErrorCode == ErrorCode.ECANCELED)
                 {
                     return;
                 }
 
-                Console.WriteLine(
-                    $"Udp pummel {this.numberOfSenders}v{this.numberOfReceivers} failed, {exception}");
+                Console.WriteLine($"Udp pummel {this.numberOfSenders}v{this.numberOfReceivers} failed, {exception}");
             }
 
             if (this.exiting)
@@ -139,8 +137,7 @@ namespace NetUV.Core.Tests.Performance
 
         void OnReceive(Udp udp, IDatagramReadCompletion completion)
         {
-            var error = completion.Error as OperationException;
-            if (error != null
+            if (completion.Error is OperationException error
                 && error.ErrorCode == ErrorCode.ECANCELED) // UV_ECANCELED
             {
                 return;
@@ -151,8 +148,7 @@ namespace NetUV.Core.Tests.Performance
             if (!string.IsNullOrEmpty(message) 
                 && message != ExpectedMessage)
             {
-                Console.WriteLine(
-                    $"Udp pummel {this.numberOfSenders}v{this.numberOfReceivers} failed, wrong message '{message}' received.");
+                Console.WriteLine($"Udp pummel {this.numberOfSenders}v{this.numberOfReceivers} failed, wrong message '{message}' received.");
             }
 
             this.receiveCount++;
@@ -183,25 +179,26 @@ namespace NetUV.Core.Tests.Performance
 
         public void Dispose()
         {
-            if (this.senders != null)
+            Dictionary<Udp, IPEndPoint> dict = this.senders;
+            this.senders = null;
+            if (dict != null)
             {
-                foreach (Udp handle in this.senders.Keys)
+                foreach (Udp handle in dict.Keys)
                 {
                     handle.Dispose();
                 }
 
-                this.senders.Clear();
-                this.senders = null;
+                dict.Clear();
             }
 
-            if (this.receivers != null)
+            Udp[] handles = this.receivers;
+            this.receivers = null;
+            if (handles != null)
             {
-                foreach (Udp handle in this.receivers)
+                foreach (Udp handle in handles)
                 {
                     handle.Dispose();
                 }
-
-                this.receivers = null;
             }
 
             this.timer?.Dispose();

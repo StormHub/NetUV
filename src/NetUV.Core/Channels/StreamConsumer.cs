@@ -25,7 +25,7 @@ namespace NetUV.Core.Channels
 
             this.onAccept = onAccept;
             this.onError = onError;
-            this.onCompleted = onCompleted;
+            this.onCompleted = onCompleted ?? OnCompleted;
         }
 
         public void Consume(T stream, IStreamReadCompletion readCompletion)
@@ -43,7 +43,7 @@ namespace NetUV.Core.Channels
 
                 if (readCompletion.Completed)
                 {
-                    this.Completed(stream);
+                    this.onCompleted(stream);
                 }
             }
             catch (Exception exception)
@@ -52,17 +52,7 @@ namespace NetUV.Core.Channels
             }
         }
 
-        void Completed(T stream)
-        {
-            if (this.onCompleted != null)
-            {
-                this.onCompleted(stream);
-            }
-            else
-            {
-                stream.CloseHandle(OnClosed);
-            }
-        }
+        static void OnCompleted(T stream) => stream.CloseHandle(OnClosed);
 
         static void OnClosed(StreamHandle streamHandle) => streamHandle.Dispose();
     }
