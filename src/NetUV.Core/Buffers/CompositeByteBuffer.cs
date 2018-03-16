@@ -1469,7 +1469,7 @@ namespace NetUV.Core.Buffers
             return $"{result}, components={this.components.Count})";
         }
 
-        public override IReferenceCounted Touch(object hint = null) => this;
+        public override IReferenceCounted Touch(object hint) => this;
 
         public override IByteBuffer DiscardSomeReadBytes() => this.DiscardReadComponents();
 

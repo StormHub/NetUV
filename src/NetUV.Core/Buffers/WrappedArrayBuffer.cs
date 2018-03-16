@@ -203,6 +203,8 @@ namespace NetUV.Core.Buffers
             return this;
         }
 
+        public string GetString(int index, int length, Encoding encoding) => this.Buf.GetString(index, length, encoding);
+
         public virtual IByteBuffer SetBoolean(int index, bool value)
         {
             this.Buf.SetBoolean(index, value);
@@ -333,6 +335,8 @@ namespace NetUV.Core.Buffers
 
         public virtual Task<int> SetBytesAsync(int index, Stream src, int length, CancellationToken cancellationToken) => this.Buf.SetBytesAsync(index, src, length, cancellationToken);
 
+        public int SetString(int index, string value, Encoding encoding) => this.Buf.SetString(index, value, encoding);
+
         public virtual IByteBuffer SetZero(int index, int length)
         {
             this.Buf.SetZero(index, length);
@@ -424,6 +428,8 @@ namespace NetUV.Core.Buffers
             this.Buf.ReadBytes(output, length);
             return this;
         }
+
+        public string ReadString(int length, Encoding encoding) => this.Buf.ReadString(length, encoding);
 
         public virtual IByteBuffer SkipBytes(int length)
         {
@@ -562,6 +568,8 @@ namespace NetUV.Core.Buffers
             this.Buf.WriteZero(length);
             return this;
         }
+
+        public int WriteString(string value, Encoding encoding) => this.Buf.WriteString(value, encoding);
 
         public virtual int IndexOf(int fromIndex, int toIndex, byte value) => this.Buf.IndexOf(fromIndex, toIndex, value);
 

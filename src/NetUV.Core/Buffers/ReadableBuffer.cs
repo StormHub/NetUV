@@ -72,9 +72,9 @@ namespace NetUV.Core.Buffers
             return ByteBufferUtil.ReadString(this.buffer, buf, encoding);
         }
 
-        public string ReadString(Encoding encoding) => this.ReadString(this.buffer.ReadableBytes, encoding);
+        public string ReadString(Encoding encoding) => this.buffer.ReadString(this.buffer.ReadableBytes, encoding);
 
-        public string ReadString(int length, Encoding encoding) => this.buffer.ToString(this.buffer.ReaderIndex, length, encoding);
+        public string ReadString(int length, Encoding encoding) => this.buffer.ReadString(length, encoding);
 
         public bool ReadBoolean() => this.buffer.ReadBoolean();
 
