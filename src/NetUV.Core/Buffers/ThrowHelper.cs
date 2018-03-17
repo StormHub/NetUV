@@ -11,6 +11,8 @@ namespace NetUV.Core.Buffers
 
         public static void ThrowIllegalReferenceCountException(int count = 0) => throw new IllegalReferenceCountException(count);
 
+        public static void ThrowIllegalReferenceCountException(int refCnt, int increment) => throw new IllegalReferenceCountException(refCnt, increment);
+
         public static void ThrowArgumentNullException(string message) => throw new ArgumentNullException(message);
 
         public static void ThrowArgumentOutOfRangeException(string name, string message) => throw new ArgumentOutOfRangeException(name, message);

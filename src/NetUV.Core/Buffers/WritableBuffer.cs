@@ -78,14 +78,7 @@ namespace NetUV.Core.Buffers
 
         public void WriteDoubleLE(double value) => this.buffer.WriteDoubleLE(value);
 
-        public void WriteString(string value, Encoding encoding)
-        {
-            Contract.Requires(!string.IsNullOrEmpty(value));
-            Contract.Requires(encoding != null);
-
-            byte[] bytes = encoding.GetBytes(value);
-            this.buffer.WriteBytes(bytes);
-        }
+        public void WriteString(string value, Encoding encoding) => this.buffer.WriteString(value, encoding);
 
         public void Dispose()
         {

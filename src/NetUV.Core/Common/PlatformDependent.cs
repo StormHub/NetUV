@@ -44,17 +44,15 @@ namespace NetUV.Core.Common
             if (length > 0)
             {
                 fixed (byte* source = &src[srcIndex])
-                fixed (byte* destination = &dst[dstIndex])
-                {
-                    if (IsLinux)
-                    {
-                        Buffer.MemoryCopy(source, destination, length, length);
-                    }
-                    else
-                    {
-                        Unsafe.CopyBlock(destination, source, unchecked((uint)length));
-                    }
-                }
+                    fixed (byte* destination = &dst[dstIndex])
+                        if (IsLinux)
+                        {
+                            Buffer.MemoryCopy(source, destination, length, length);
+                        }
+                        else
+                        {
+                            Unsafe.CopyBlockUnaligned(destination, source, unchecked((uint)length));
+                        }
             }
         }
 
@@ -63,7 +61,7 @@ namespace NetUV.Core.Common
             if (length > 0)
             {
                 fixed (void* source = &src[srcIndex])
-                    Unsafe.InitBlock(source, default(byte), unchecked((uint)length));
+                    Unsafe.InitBlockUnaligned(source, default(byte), unchecked((uint)length));
             }
         }
 
@@ -77,7 +75,7 @@ namespace NetUV.Core.Common
                 }
                 else
                 {
-                    Unsafe.CopyBlock(dst, src, unchecked((uint)length));
+                    Unsafe.CopyBlockUnaligned(dst, src, unchecked((uint)length));
                 }
             }
         }
@@ -87,7 +85,14 @@ namespace NetUV.Core.Common
             if (length > 0)
             {
                 fixed (byte* destination = &dst[dstIndex])
-                    Unsafe.CopyBlock(destination, src, unchecked((uint)length));
+                    if (IsLinux)
+                    {
+                        Buffer.MemoryCopy(src, destination, length, length);
+                    }
+                    else
+                    {
+                        Unsafe.CopyBlockUnaligned(destination, src, unchecked((uint)length));
+                    }
             }
         }
 
@@ -96,7 +101,14 @@ namespace NetUV.Core.Common
             if (length > 0)
             {
                 fixed (byte* source = &src[srcIndex])
-                    Unsafe.CopyBlock(dst, source, unchecked((uint)length));
+                    if (IsLinux)
+                    {
+                        Buffer.MemoryCopy(source, dst, length, length);
+                    }
+                    else
+                    {
+                        Unsafe.CopyBlockUnaligned(dst, source, unchecked((uint)length));
+                    }
             }
         }
 
@@ -104,7 +116,7 @@ namespace NetUV.Core.Common
         {
             if (length > 0)
             {
-                Unsafe.InitBlock(src, value, unchecked((uint)length));
+                Unsafe.InitBlockUnaligned(src, value, unchecked((uint)length));
             }
         }
 
@@ -113,7 +125,7 @@ namespace NetUV.Core.Common
             if (length > 0)
             {
                 fixed (byte* source = &src[srcIndex])
-                    Unsafe.InitBlock(source, value, unchecked((uint)length));
+                    Unsafe.InitBlockUnaligned(source, value, unchecked((uint)length));
             }
         }
     }

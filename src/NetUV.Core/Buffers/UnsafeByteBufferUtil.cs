@@ -4,8 +4,10 @@
 namespace NetUV.Core.Buffers
 {
     using System;
+    using System.Diagnostics;
     using System.IO;
     using System.Runtime.CompilerServices;
+    using System.Text;
     using NetUV.Core.Common;
 
     static unsafe class UnsafeByteBufferUtil
@@ -183,14 +185,22 @@ namespace NetUV.Core.Buffers
 
         internal static IByteBuffer Copy(AbstractByteBuffer buf, byte* addr, int index, int length)
         {
-            IByteBuffer copy = buf.Allocator.Buffer(length, buf.MaxCapacity);
+            IByteBuffer copy = buf.Allocator.DirectBuffer(length, buf.MaxCapacity);
             if (length != 0)
             {
                 if (copy.HasMemoryAddress)
                 {
-                    fixed (byte* dst = &copy.GetPinnableMemoryAddress())
+                    IntPtr ptr = copy.AddressOfPinnedMemory();
+                    if (ptr != IntPtr.Zero)
                     {
-                        PlatformDependent.CopyMemory(addr, dst, length);
+                        PlatformDependent.CopyMemory(addr, (byte*)ptr, length);
+                    }
+                    else
+                    {
+                        fixed (byte* dst = &copy.GetPinnableMemoryAddress())
+                        {
+                            PlatformDependent.CopyMemory(addr, dst, length);
+                        }
                     }
                     copy.SetIndex(0, length);
                 }
@@ -225,9 +235,11 @@ namespace NetUV.Core.Buffers
 
         internal static void GetBytes(AbstractByteBuffer buf, byte* addr, int index, IByteBuffer dst, int dstIndex, int length)
         {
+            Debug.Assert(dst != null);
+
             if (MathUtil.IsOutOfBounds(dstIndex, length, dst.Capacity))
             {
-                throw new IndexOutOfRangeException($"dstIndex: {dstIndex}");
+                ThrowHelper.ThrowIndexOutOfRangeException($"dstIndex: {dstIndex}");
             }
 
             if (dst.HasMemoryAddress)
@@ -259,7 +271,7 @@ namespace NetUV.Core.Buffers
         {
             if (MathUtil.IsOutOfBounds(dstIndex, length, dst.Length))
             {
-                throw new IndexOutOfRangeException($"dstIndex: {dstIndex}");
+                ThrowHelper.ThrowIndexOutOfRangeException($"dstIndex: {dstIndex}");
             }
             if (length != 0)
             {
@@ -271,7 +283,7 @@ namespace NetUV.Core.Buffers
         {
             if (MathUtil.IsOutOfBounds(srcIndex, length, src.Capacity))
             {
-                throw new IndexOutOfRangeException($"srcIndex: {srcIndex}");
+                ThrowHelper.ThrowIndexOutOfRangeException($"srcIndex: {srcIndex}");
             }
 
             if (length != 0)
@@ -334,8 +346,9 @@ namespace NetUV.Core.Buffers
             PlatformDependent.SetMemory(addr, length, Zero);
         }
 
-        internal static UnpooledUnsafeDirectByteBuffer NewUnsafeDirectByteBuffer(
-            IByteBufferAllocator alloc, int initialCapacity, int maxCapacity) =>
+        internal static string GetString(byte* src, int length, Encoding encoding) => encoding.GetString(src, length);
+
+        internal static UnpooledUnsafeDirectByteBuffer NewUnsafeDirectByteBuffer(IByteBufferAllocator alloc, int initialCapacity, int maxCapacity) =>
                 new UnpooledUnsafeDirectByteBuffer(alloc, initialCapacity, maxCapacity);
     }
 }
