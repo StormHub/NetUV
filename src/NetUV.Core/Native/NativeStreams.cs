@@ -7,6 +7,7 @@ namespace NetUV.Core.Native
 {
     using System;
     using System.Diagnostics;
+    using System.Runtime.CompilerServices;
     using System.Runtime.InteropServices;
     using NetUV.Core.Handles;
     using NetUV.Core.Requests;
@@ -14,7 +15,8 @@ namespace NetUV.Core.Native
     [StructLayout(LayoutKind.Sequential)]
     struct uv_buf_t
     {
-        static readonly bool isWindows = Platform.IsWindows;
+        static readonly bool IsWindows = Platform.IsWindows;
+        static readonly int Size = IntPtr.Size;
         /*
            Windows 
            public int length;
@@ -30,11 +32,27 @@ namespace NetUV.Core.Native
         readonly IntPtr second;
         // ReSharper restore PrivateFieldCanBeConvertedToLocalVariable
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static unsafe void InitMemory(IntPtr buf, IntPtr memory, int length)
+        {
+            var len = (IntPtr)length;
+            if (IsWindows)
+            {
+                *(IntPtr*)buf = len;
+                *(IntPtr*)(buf + Size) = memory;
+            }
+            else
+            {
+                *(IntPtr*)buf = memory;
+                *(IntPtr*)(buf + Size) = len;
+            }
+        }
+
         internal uv_buf_t(IntPtr memory, int length)
         {
             Debug.Assert(length >= 0);
 
-            if (isWindows)
+            if (IsWindows)
             {
                 this.first = (IntPtr)length;
                 this.second = memory;
@@ -102,24 +120,22 @@ namespace NetUV.Core.Native
             ThrowIfError(result);
         }
 
-        internal static void WriteStream(IntPtr requestHandle, IntPtr streamHandle, ref uv_buf_t[] bufs, ref int size)
+        internal static unsafe void WriteStream(IntPtr requestHandle, IntPtr streamHandle, uv_buf_t* bufs, ref int size)
         {
             Debug.Assert(requestHandle != IntPtr.Zero);
             Debug.Assert(streamHandle != IntPtr.Zero);
-            Debug.Assert(bufs != null && bufs.Length > 0);
 
-            int result = uv_write(requestHandle, streamHandle, bufs, size, WriteBufferRequest.WriteCallback);
+            int result = uv_write(requestHandle, streamHandle, bufs, size, WriteRequest.WriteCallback);
             ThrowIfError(result);
         }
 
-        internal static void WriteStream(IntPtr requestHandle, IntPtr streamHandle, ref uv_buf_t[] bufs, ref int size, IntPtr sendHandle)
+        internal static unsafe void WriteStream(IntPtr requestHandle, IntPtr streamHandle, uv_buf_t* bufs, ref int size, IntPtr sendHandle)
         {
             Debug.Assert(requestHandle != IntPtr.Zero);
             Debug.Assert(streamHandle != IntPtr.Zero);
             Debug.Assert(sendHandle != IntPtr.Zero);
-            Debug.Assert(bufs != null && bufs.Length > 0);
 
-            int result = uv_write2(requestHandle, streamHandle, bufs, size, sendHandle, WriteBufferRequest.WriteCallback);
+            int result = uv_write2(requestHandle, streamHandle, bufs, size, sendHandle, WriteRequest.WriteCallback);
             ThrowIfError(result);
         }
 
@@ -226,10 +242,10 @@ namespace NetUV.Core.Native
         static extern int uv_try_write(IntPtr handle, uv_buf_t[] bufs, int bufcnt);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        static extern int uv_write(IntPtr req, IntPtr handle, uv_buf_t[] bufs, int nbufs, uv_watcher_cb cb);
+        static extern unsafe int uv_write(IntPtr req, IntPtr handle, uv_buf_t* bufs, int nbufs, uv_watcher_cb cb);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        static extern int uv_write2(IntPtr req, IntPtr handle, uv_buf_t[] bufs, int nbufs, IntPtr sendHandle, uv_watcher_cb cb);
+        static extern unsafe int uv_write2(IntPtr req, IntPtr handle, uv_buf_t* bufs, int nbufs, IntPtr sendHandle, uv_watcher_cb cb);
 
         #endregion
     }

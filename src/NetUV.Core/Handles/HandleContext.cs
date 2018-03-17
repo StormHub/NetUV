@@ -4,7 +4,7 @@
 namespace NetUV.Core.Handles
 {
     using System;
-    using System.Diagnostics.Contracts;
+    using System.Diagnostics;
     using System.Runtime.InteropServices;
     using NetUV.Core.Native;
 
@@ -20,9 +20,9 @@ namespace NetUV.Core.Handles
             ScheduleHandle target,
             params object[] args)
         {
-            Contract.Requires(loopHandle != IntPtr.Zero);
-            Contract.Requires(initializer != null);
-            Contract.Requires(target != null);
+            Debug.Assert(loopHandle != IntPtr.Zero);
+            Debug.Assert(initializer != null);
+            Debug.Assert(target != null);
 
             int size = NativeMethods.GetSize(handleType);
             IntPtr handle = Marshal.AllocCoTaskMem(size);
@@ -91,7 +91,7 @@ namespace NetUV.Core.Handles
 
         internal static T GetTarget<T>(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             IntPtr inernalHandle = ((uv_handle_t*)handle)->data;
             if (inernalHandle != IntPtr.Zero)

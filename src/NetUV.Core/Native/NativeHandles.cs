@@ -499,12 +499,11 @@ namespace NetUV.Core.Native
             ThrowIfError(result);
         }
 
-        internal static void UdpSend(IntPtr requestHandle, IntPtr handle, IPEndPoint remoteEndPoint, ref uv_buf_t[] bufs, ref int size)
+        internal static unsafe void UdpSend(IntPtr requestHandle, IntPtr handle, IPEndPoint remoteEndPoint, uv_buf_t* bufs, ref int size)
         {
             Debug.Assert(requestHandle != IntPtr.Zero);
             Debug.Assert(handle != IntPtr.Zero);
             Debug.Assert(remoteEndPoint != null);
-            Debug.Assert(bufs != null && bufs.Length > 0);
 
             GetSocketAddress(remoteEndPoint, out sockaddr addr);
 
@@ -514,7 +513,7 @@ namespace NetUV.Core.Native
                 bufs, 
                 size, 
                 ref addr, 
-                WriteBufferRequest.WriteCallback);
+                WriteRequest.WriteCallback);
             ThrowIfError(result);
         }
 
@@ -657,7 +656,7 @@ namespace NetUV.Core.Native
         static extern int uv_udp_recv_stop(IntPtr handle);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        static extern int uv_udp_send(IntPtr req, IntPtr handle, uv_buf_t[] bufs, int nbufs, ref sockaddr addr, uv_watcher_cb cb);
+        static extern unsafe int uv_udp_send(IntPtr req, IntPtr handle, uv_buf_t* bufs, int nbufs, ref sockaddr addr, uv_watcher_cb cb);
 
         #endregion Udp
 
