@@ -5,11 +5,15 @@ namespace NetUV.Core.Handles
 {
     using System;
     using System.Diagnostics.Contracts;
+    using NetUV.Core.Common;
     using NetUV.Core.Native;
     using NetUV.Core.Requests;
 
     public sealed class Loop : IDisposable
     {
+        internal static readonly ThreadLocalPool<WriteRequest> WriteRequestPool = new ThreadLocalPool<WriteRequest>(handle => new WriteRequest(uv_req_type.UV_WRITE, handle));
+        internal static readonly ThreadLocalPool<WriteRequest> SendRequestPool = new ThreadLocalPool<WriteRequest>(handle => new WriteRequest(uv_req_type.UV_UDP_SEND, handle));
+
         readonly LoopContext handle;
 
         public Loop()

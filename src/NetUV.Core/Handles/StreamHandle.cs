@@ -135,8 +135,7 @@ namespace NetUV.Core.Handles
                 return;
             }
 
-            var bufferRef = new WriteBufferRef(buffer);
-            this.pipeline.QueueWrite(bufferRef, completion);
+            this.pipeline.QueueWrite(buffer, completion);
         }
 
         public void QueueWriteStream(WritableBuffer writableBuffer, StreamHandle sendHandle,
@@ -151,8 +150,7 @@ namespace NetUV.Core.Handles
                 return;
             }
 
-            var bufferRef = new WriteBufferRef(buffer);
-            this.pipeline.QueueWrite(bufferRef, sendHandle, completion);
+            this.pipeline.QueueWrite(buffer, sendHandle, completion);
         }
 
         public void QueueWriteStream(byte[] array, Action<StreamHandle, Exception> completion)
@@ -170,8 +168,7 @@ namespace NetUV.Core.Handles
             Contract.Requires((offset + count) <= array.Length);
 
             IByteBuffer buffer = Unpooled.WrappedBuffer(array, offset, count);
-            var bufferRef = new WriteBufferRef(buffer);
-            this.pipeline.QueueWrite(bufferRef, completion);
+            this.pipeline.QueueWrite(buffer, completion);
         }
 
         public void QueueWriteStream(byte[] array, StreamHandle sendHandle, 
@@ -191,13 +188,12 @@ namespace NetUV.Core.Handles
             Contract.Requires((offset + count) <= array.Length);
 
             IByteBuffer buffer = Unpooled.WrappedBuffer(array, offset, count);
-            var bufferRef = new WriteBufferRef(buffer);
-            this.pipeline.QueueWrite(bufferRef, sendHandle, completion);
+            this.pipeline.QueueWrite(buffer, sendHandle, completion);
         }
 
-        internal void WriteStream(WriteRequest request)
+        internal unsafe void WriteStream(WriteRequest request)
         {
-            Contract.Requires(request != null);
+            Debug.Assert(request != null);
 
             this.Validate();
             try
@@ -205,7 +201,7 @@ namespace NetUV.Core.Handles
                 NativeMethods.WriteStream(
                     request.InternalHandle, 
                     this.InternalHandle,
-                    ref request.Bufs, 
+                    request.Bufs, 
                     ref request.Size);
             }
             catch (Exception exception)
@@ -215,10 +211,10 @@ namespace NetUV.Core.Handles
             }
         }
 
-        internal void WriteStream(WriteRequest request, StreamHandle sendHandle)
+        internal unsafe void WriteStream(WriteRequest request, StreamHandle sendHandle)
         {
-            Contract.Requires(request != null);
-            Contract.Requires(sendHandle != null);
+            Debug.Assert(request != null);
+            Debug.Assert(sendHandle != null);
 
             this.Validate();
             try
@@ -226,7 +222,7 @@ namespace NetUV.Core.Handles
                 NativeMethods.WriteStream(
                     request.InternalHandle,
                     this.InternalHandle,
-                    ref request.Bufs,
+                    request.Bufs,
                     ref request.Size,
                     sendHandle.InternalHandle);
             }
@@ -308,7 +304,7 @@ namespace NetUV.Core.Handles
             {
                 if (Log.IsDebugEnabled)
                 {
-                    Log.DebugFormat("{0} {1} read, buffer length = {2} status = {3}.", this.HandleType, this.InternalHandle, byteBuffer?.Capacity, status);
+                    Log.DebugFormat("{0} {1} read, buffer length = {2} status = {3}.", this.HandleType, this.InternalHandle, byteBuffer.Capacity, status);
                 }
 
                 this.pipeline.OnReadCompleted(byteBuffer, status);

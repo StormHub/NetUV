@@ -5,22 +5,15 @@ namespace NetUV.Core.Handles
 {
     using System;
     using System.Diagnostics;
-    using System.Diagnostics.Contracts;
     using NetUV.Core.Buffers;
     using NetUV.Core.Channels;
-    using NetUV.Core.Common;
     using NetUV.Core.Logging;
     using NetUV.Core.Native;
     using NetUV.Core.Requests;
 
     sealed class Pipeline : IDisposable
     {
-        const int DefaultPoolSize = 1024;
-
         static readonly ILog Log = LogFactory.ForContext<Pipeline>();
-
-        static readonly ThreadLocalPool<WriteRequest> Recycler = 
-            new ThreadLocalPool<WriteRequest>(handle => new WriteRequest(handle), DefaultPoolSize);
 
         readonly StreamHandle streamHandle;
         readonly PooledByteBufferAllocator allocator;
@@ -34,8 +27,8 @@ namespace NetUV.Core.Handles
 
         internal Pipeline(StreamHandle streamHandle, PooledByteBufferAllocator allocator)
         {
-            Contract.Requires(streamHandle != null);
-            Contract.Requires(allocator != null);
+            Debug.Assert(streamHandle != null);
+            Debug.Assert(allocator != null);
 
             this.streamHandle = streamHandle;
             this.allocator = allocator;
@@ -45,8 +38,7 @@ namespace NetUV.Core.Handles
 
         internal void Consumer(IStreamConsumer<StreamHandle> consumer)
         {
-            Contract.Requires(consumer != null);
-
+            Debug.Assert(consumer != null);
             this.streamConsumer = consumer;
         }
 
@@ -106,14 +98,14 @@ namespace NetUV.Core.Handles
             }
         }
 
-        internal void QueueWrite(WriteBufferRef bufferRef, Action<StreamHandle, Exception> completion)
+        internal void QueueWrite(IByteBuffer buf, Action<StreamHandle, Exception> completion)
         {
-            Contract.Requires(bufferRef != null);
+            Debug.Assert(buf != null);
 
+            WriteRequest request = Loop.WriteRequestPool.Take();
             try
             {
-                WriteRequest request = Recycler.Take();
-                request.Prepare(bufferRef, 
+                request.Prepare(buf, 
                     (writeRequest, exception) => completion?.Invoke(this.streamHandle, exception));
 
                 this.streamHandle.WriteStream(request);
@@ -121,18 +113,18 @@ namespace NetUV.Core.Handles
             catch (Exception exception)
             {
                 Log.Error($"{nameof(Pipeline)} {this.streamHandle.HandleType} faulted.", exception);
+                request.Release();
                 throw;
             }
         }
 
-        internal void QueueWrite(WriteBufferRef bufferRef, StreamHandle sendHandle, Action<StreamHandle, Exception> completion)
+        internal void QueueWrite(IByteBuffer bufferRef, StreamHandle sendHandle, Action<StreamHandle, Exception> completion)
         {
-            Contract.Requires(bufferRef != null);
-            Contract.Requires(sendHandle != null);
+            Debug.Assert(bufferRef != null && sendHandle != null);
 
+            WriteRequest request = Loop.WriteRequestPool.Take();
             try
             {
-                WriteRequest request = Recycler.Take();
                 request.Prepare(bufferRef,
                     (writeRequest, exception) => completion?.Invoke(this.streamHandle, exception));
 
@@ -141,6 +133,7 @@ namespace NetUV.Core.Handles
             catch (Exception exception)
             {
                 Log.Error($"{nameof(Pipeline)} {this.streamHandle.HandleType} faulted.", exception);
+                request.Release();
                 throw;
             }
         }

@@ -8,20 +8,15 @@ namespace NetUV.Core.Handles
     using System.Diagnostics.Contracts;
     using System.Net;
     using NetUV.Core.Buffers;
-    using NetUV.Core.Common;
     using NetUV.Core.Native;
     using NetUV.Core.Requests;
 
     public sealed class Udp : ScheduleHandle
     {
-        const int DefaultPoolSize = 1024;
         const int FixedBufferSize = 2048;
 
         internal static readonly uv_alloc_cb AllocateCallback = OnAllocateCallback;
         internal static readonly uv_udp_recv_cb ReceiveCallback = OnReceiveCallback;
-
-        static readonly ThreadLocalPool<SendRequest> Recycler =
-            new ThreadLocalPool<SendRequest>(handle => new SendRequest(handle), DefaultPoolSize);
 
         readonly PooledByteBufferAllocator allocator;
         readonly PendingRead pendingRead;
@@ -132,8 +127,7 @@ namespace NetUV.Core.Handles
             Contract.Requires(remoteEndPoint != null);
 
             IByteBuffer buffer = Unpooled.WrappedBuffer(array, offset, count);
-            var bufferRef = new WriteBufferRef(buffer);
-            this.QueueSend(bufferRef, remoteEndPoint, completion);
+            this.QueueSend(buffer, remoteEndPoint, completion);
         }
 
         public void QueueSend(WritableBuffer writableBuffer, 
@@ -148,33 +142,32 @@ namespace NetUV.Core.Handles
                 return;
             }
 
-            var bufferRef = new WriteBufferRef(buffer);
-            this.QueueSend(bufferRef, remoteEndPoint, completion);
+            this.QueueSend(buffer, remoteEndPoint, completion);
         }
 
-        void QueueSend(WriteBufferRef bufferRef, 
+        unsafe void QueueSend(IByteBuffer buffer, 
             IPEndPoint remoteEndPoint, 
             Action<Udp, Exception> completion)
         {
-            Contract.Requires(remoteEndPoint != null);
-            Contract.Requires(bufferRef != null);
+            Debug.Assert(buffer != null);
+            Debug.Assert(remoteEndPoint != null);
 
+            WriteRequest request = Loop.SendRequestPool.Take();
             try
             {
-                SendRequest request = Recycler.Take();
-                Debug.Assert(request != null);
-                request.Prepare(bufferRef,
+                request.Prepare(buffer,
                     (sendRequest, exception) => completion?.Invoke(this, exception));
 
                 NativeMethods.UdpSend(
                     request.InternalHandle, 
                     this.InternalHandle, 
                     remoteEndPoint, 
-                    ref request.Bufs, 
+                    request.Bufs, 
                     ref request.Size);
             }
             catch (Exception exception)
             {
+                request.Release();
                 Log.Error($"{this.HandleType} faulted.", exception);
                 throw;
             }

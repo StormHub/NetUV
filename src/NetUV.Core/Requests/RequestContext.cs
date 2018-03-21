@@ -1,27 +1,30 @@
 ﻿// Copyright (c) Johnny Z. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+// ReSharper disable ConvertToAutoPropertyWhenPossible
 namespace NetUV.Core.Requests
 {
     using System;
-    using System.Diagnostics.Contracts;
+    using System.Diagnostics;
+    using System.Runtime.CompilerServices;
     using System.Runtime.InteropServices;
     using NetUV.Core.Native;
 
     sealed unsafe class RequestContext : NativeHandle
     {
         readonly uv_req_type requestType;
+        readonly int handleSize;
 
         internal RequestContext(
             uv_req_type requestType,
             int size,
             ScheduleRequest target)
         {
-            Contract.Requires(size >= 0);
-            Contract.Requires(target != null);
+            Debug.Assert(size >= 0);
+            Debug.Assert(target != null);
 
-            int totalSize = NativeMethods.GetSize(requestType);
-            totalSize += size;
+            this.handleSize = NativeMethods.GetSize(requestType);
+            int totalSize = this.handleSize + size;
             IntPtr handle = Marshal.AllocCoTaskMem(totalSize);
 
             GCHandle gcHandle = GCHandle.Alloc(target, GCHandleType.Normal);
@@ -40,11 +43,11 @@ namespace NetUV.Core.Requests
             Action<IntPtr> initializer,
             ScheduleRequest target)
         {
-            Contract.Requires(initializer != null);
-            Contract.Requires(target != null);
+            Debug.Assert(initializer != null);
+            Debug.Assert(target != null);
 
-            int size = NativeMethods.GetSize(requestType);
-            IntPtr handle = Marshal.AllocCoTaskMem(size);
+            this.handleSize = NativeMethods.GetSize(requestType);
+            IntPtr handle = Marshal.AllocCoTaskMem(this.handleSize);
 
             try
             {
@@ -67,9 +70,15 @@ namespace NetUV.Core.Requests
             }
         }
 
+        internal int HandleSize
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => this.handleSize;
+        }
+
         internal static T GetTarget<T>(IntPtr handle)
         {
-            Contract.Requires(handle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
 
             IntPtr internalHandle = ((uv_req_t*)handle)->data;
             if (internalHandle != IntPtr.Zero)

@@ -4,7 +4,7 @@
 namespace NetUV.Core.Requests
 {
     using System;
-    using System.Diagnostics.Contracts;
+    using System.Diagnostics;
     using NetUV.Core.Native;
 
     public sealed class WatcherRequest : ScheduleRequest
@@ -21,7 +21,7 @@ namespace NetUV.Core.Requests
             bool closeOnCallback = false)
             : base(requestType)
         {
-            Contract.Requires(size >= 0);
+            Debug.Assert(size >= 0);
 
             this.watcherCallback = watcherCallback;
             this.closeOnCallback = closeOnCallback;
@@ -35,7 +35,7 @@ namespace NetUV.Core.Requests
             bool closeOnCallback = false)
             : base(requestType)
         {
-            Contract.Requires(initializer != null);
+            Debug.Assert(initializer != null);
 
             this.watcherCallback = watcherCallback;
             this.closeOnCallback = closeOnCallback;
