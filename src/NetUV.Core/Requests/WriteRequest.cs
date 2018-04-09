@@ -65,7 +65,7 @@ namespace NetUV.Core.Requests
 
             if (!this.requestContext.IsValid)
             {
-                ThrowHelper.ThrowInvalidOperationException($"{nameof(WriteRequest)} status is invalid.");
+                ThrowHelper.ThrowInvalidOperationException_WriteRequest();
             }
 
             this.completion = callback;

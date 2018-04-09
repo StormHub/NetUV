@@ -38,7 +38,7 @@ namespace NetUV.Core.Native
         {
             if (!this.IsValid)
             {
-                ThrowHelper.ThrowObjectDisposedException($"{this.GetType()}");
+                ThrowHelper.ThrowObjectDisposedException(this.GetType());
             }
         }
 
