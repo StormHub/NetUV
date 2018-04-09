@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Johnny Z. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+// ReSharper disable InconsistentNaming
 namespace NetUV.Core.Buffers
 {
     using System;
@@ -239,7 +240,7 @@ namespace NetUV.Core.Buffers
 
             if (MathUtil.IsOutOfBounds(dstIndex, length, dst.Capacity))
             {
-                ThrowHelper.ThrowIndexOutOfRangeException($"dstIndex: {dstIndex}");
+                ThrowHelper.ThrowIndexOutOfRangeException_DstIndex(dstIndex);
             }
 
             if (dst.HasMemoryAddress)
@@ -271,7 +272,7 @@ namespace NetUV.Core.Buffers
         {
             if (MathUtil.IsOutOfBounds(dstIndex, length, dst.Length))
             {
-                ThrowHelper.ThrowIndexOutOfRangeException($"dstIndex: {dstIndex}");
+                ThrowHelper.ThrowIndexOutOfRangeException_DstIndex(dstIndex);
             }
             if (length != 0)
             {
@@ -283,7 +284,7 @@ namespace NetUV.Core.Buffers
         {
             if (MathUtil.IsOutOfBounds(srcIndex, length, src.Capacity))
             {
-                ThrowHelper.ThrowIndexOutOfRangeException($"srcIndex: {srcIndex}");
+                ThrowHelper.ThrowIndexOutOfRangeException_SrcIndex(srcIndex);
             }
 
             if (length != 0)

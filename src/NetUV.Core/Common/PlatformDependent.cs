@@ -43,25 +43,24 @@ namespace NetUV.Core.Common
         {
             if (length > 0)
             {
-                fixed (byte* source = &src[srcIndex])
-                    fixed (byte* destination = &dst[dstIndex])
-                        if (IsLinux)
-                        {
+                if (IsLinux)
+                {
+                    fixed (byte* source = &src[srcIndex])
+                        fixed (byte* destination = &dst[dstIndex])
                             Buffer.MemoryCopy(source, destination, length, length);
-                        }
-                        else
-                        {
-                            Unsafe.CopyBlockUnaligned(destination, source, unchecked((uint)length));
-                        }
+                }
+                else
+                {
+                    Unsafe.CopyBlockUnaligned(ref dst[dstIndex], ref src[srcIndex], unchecked((uint)length));
+                }
             }
         }
 
-        public static unsafe void Clear(byte[] src, int srcIndex, int length)
+        public static void Clear(byte[] src, int srcIndex, int length)
         {
             if (length > 0)
             {
-                fixed (void* source = &src[srcIndex])
-                    Unsafe.InitBlockUnaligned(source, default(byte), unchecked((uint)length));
+                Unsafe.InitBlockUnaligned(ref src[srcIndex], default(byte), unchecked((uint)length));
             }
         }
 
@@ -120,12 +119,11 @@ namespace NetUV.Core.Common
             }
         }
 
-        public static unsafe void SetMemory(byte[] src, int srcIndex, int length, byte value)
+        public static void SetMemory(byte[] src, int srcIndex, int length, byte value)
         {
             if (length > 0)
             {
-                fixed (byte* source = &src[srcIndex])
-                    Unsafe.InitBlockUnaligned(source, value, unchecked((uint)length));
+                Unsafe.InitBlockUnaligned(ref src[srcIndex], value, unchecked((uint)length));
             }
         }
     }
