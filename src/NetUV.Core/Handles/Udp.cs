@@ -64,10 +64,10 @@ namespace NetUV.Core.Handles
             return NativeMethods.ReceiveBufferSize(this.InternalHandle, value);
         }
 
-        public IntPtr GetFileDescriptor()
+        public void GetFileDescriptor(ref IntPtr value)
         {
             this.Validate();
-            return NativeMethods.GetFileDescriptor(this.InternalHandle);
+            NativeMethods.GetFileDescriptor(this.InternalHandle, ref value);
         }
 
         public WritableBuffer Allocate()

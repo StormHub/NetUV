@@ -119,12 +119,12 @@ namespace EchoClient
         {
             if (exception != null)
             {
-                Console.WriteLine($"{typeof(T).Name}:Echo client error {exception}");
+                Console.WriteLine($"{typeof(T).Name}: Echo client error {exception}");
                 client.CloseHandle(OnClosed);
                 return;
             }
 
-            Console.WriteLine($"{typeof(T).Name}:Echo client connected, request write message.");
+            Console.WriteLine($"{typeof(T).Name}: Echo client connected, sending message.");
             client.OnRead(OnAccept, OnError);
 
             WritableBuffer buffer = CreateMessage();
@@ -157,13 +157,11 @@ namespace EchoClient
 
         static void OnWriteCompleted(StreamHandle stream, Exception error) 
         {
-            if (error == null)
+            if (error != null)
             {
-                return;
+                Console.WriteLine($"Echo client write error {error}");
+                stream.CloseHandle(OnClosed);
             }
-
-            Console.WriteLine($"Echo client write error {error}");
-            stream.CloseHandle(OnClosed);
         }
 
         static void OnClosed(ScheduleHandle handle) => handle.Dispose();

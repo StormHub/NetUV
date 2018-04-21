@@ -54,6 +54,9 @@ namespace NetUV.Core.Handles
                 (state, error) => completion?.Invoke((Tcp)state, error));
         }
 
+        public void QueueWriteStream(WritableBuffer writableBuffer, Action<Tcp, Exception> completion) =>
+            base.QueueWriteStream(writableBuffer, (streamHandle, exception) => completion((Tcp)streamHandle, exception));
+
         public Tcp OnRead(
             Action<Tcp, ReadableBuffer> onAccept,
             Action<Tcp, Exception> onError,

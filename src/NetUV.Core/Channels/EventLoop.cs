@@ -14,14 +14,15 @@ namespace NetUV.Core.Channels
     using NetUV.Core.Handles;
     using NetUV.Core.Logging;
 
-    using Timer = NetUV.Core.Handles.Timer;
+    using Timer = Handles.Timer;
 
     public sealed class EventLoop
     {
         const int DefaultBreakoutTime = 100; //ms
+        static readonly TimeSpan DefaultBreakoutInterval = TimeSpan.FromMilliseconds(DefaultBreakoutTime);
+
         static readonly TimeSpan DefaultShutdownQuietPeriod = TimeSpan.FromSeconds(2);
         static readonly TimeSpan DefaultShutdownTimeout = TimeSpan.FromSeconds(15);
-        static readonly TimeSpan DefaultBreakoutInterval = TimeSpan.FromMilliseconds(DefaultBreakoutTime);
 
         static readonly ILog Logger = LogFactory.ForContext<EventLoop>();
 

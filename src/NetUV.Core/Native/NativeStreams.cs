@@ -195,14 +195,12 @@ namespace NetUV.Core.Native
         // this function will return UV_EBADF.
         // Warning: Be very careful when using this function. libuv assumes it’s in control of the 
         // file descriptor so any change to it may lead to malfunction.
-        internal static IntPtr GetFileDescriptor(IntPtr handle)
+        internal static void GetFileDescriptor(IntPtr handle, ref IntPtr value)
         {
             Debug.Assert(handle != IntPtr.Zero);
 
-            int result = uv_fileno(handle, out IntPtr value);
+            int result = uv_fileno(handle, ref value);
             ThrowIfError(result);
-
-            return value;
         }
 
         #region Stream Status
@@ -218,7 +216,7 @@ namespace NetUV.Core.Native
         #region Read/Write
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        static extern int uv_fileno(IntPtr handle, out IntPtr value);
+        static extern int uv_fileno(IntPtr handle, ref IntPtr value);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         static extern int uv_send_buffer_size(IntPtr handle, ref IntPtr value);
