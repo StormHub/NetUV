@@ -90,6 +90,14 @@ namespace NetUV.Core.Handles
             return this;
         }
 
+        public void QueueWriteStream(WritableBuffer writableBuffer, Action<Pipe, Exception> completion) =>
+            base.QueueWriteStream(writableBuffer, 
+                (streamHandle, exception) => completion((Pipe)streamHandle, exception));
+
+        public void QueueWriteStream(WritableBuffer writableBuffer, Tcp sendHandle, Action<Pipe, Exception> completion) =>
+            base.QueueWriteStream(writableBuffer, sendHandle, 
+                (streamHandle, exception) => completion((Pipe)streamHandle, exception));
+
         public Pipe Bind(string name)
         {
             Contract.Requires(!string.IsNullOrEmpty(name));
@@ -131,7 +139,6 @@ namespace NetUV.Core.Handles
             this.Validate();
 
             StreamHandle handle = null;
-
             int count = this.PendingCount();
             if (count > 0)
             {
@@ -153,6 +160,7 @@ namespace NetUV.Core.Handles
                 }
 
                 NativeMethods.StreamAccept(this.InternalHandle, handle.InternalHandle);
+                handle.ReadStart();
             }
 
             return handle;
@@ -191,6 +199,8 @@ namespace NetUV.Core.Handles
 
             return client;
         }
+
+        public Pipe Listen(Action<Pipe, Exception> onConnection, bool useIpc) => this.Listen(onConnection, DefaultBacklog, useIpc);
 
         public Pipe Listen(Action<Pipe, Exception> onConnection, int backlog = DefaultBacklog, bool useIpc = false)
         {

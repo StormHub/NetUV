@@ -42,10 +42,10 @@ namespace NetUV.Core.Handles
             : base(loop, uv_handle_type.UV_POLL, new object[] { handle })
         { }
 
-        public IntPtr GetFileDescriptor()
+        public void GetFileDescriptor(ref IntPtr value)
         {
             this.Validate();
-            return NativeMethods.GetFileDescriptor(this.InternalHandle);
+            NativeMethods.GetFileDescriptor(this.InternalHandle, ref value);
         }
 
         public Poll Start(PollMask eventMask, Action<Poll, PollStatus> callback)
