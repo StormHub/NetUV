@@ -1,9 +1,10 @@
 ﻿// Copyright (c) Johnny Z. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace LoopThread
+namespace NetUV.Core.Utilities
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
 
@@ -12,12 +13,12 @@ namespace LoopThread
         static readonly TimeSpan StartTimeout = TimeSpan.FromMilliseconds(500);
         readonly Worker[] workers;
 
-        public WorkerGroup(string pipeName) 
-            : this(Environment.ProcessorCount, pipeName)
+        public WorkerGroup(string pipeName, List<ServerTcpContext> callbacks) 
+            : this(Environment.ProcessorCount, pipeName, callbacks)
         {
         }
 
-        public WorkerGroup(int eventLoopCount, string pipeName)
+        public WorkerGroup(int eventLoopCount, string pipeName, List<ServerTcpContext> callbacks)
         {
             this.workers = new Worker[eventLoopCount];
             var terminationTasks = new Task[eventLoopCount];
@@ -27,7 +28,7 @@ namespace LoopThread
                 bool success = false;
                 try
                 {
-                    worker = new Worker(pipeName);
+                    worker = new Worker(pipeName, callbacks);
                     success = worker.StartAsync().Wait(StartTimeout);
                     if (!success)
                     {

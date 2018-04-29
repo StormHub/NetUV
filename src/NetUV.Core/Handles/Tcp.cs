@@ -8,8 +8,9 @@ namespace NetUV.Core.Handles
     using System.Net;
     using NetUV.Core.Buffers;
     using NetUV.Core.Native;
+    using NetUV.Core.Utilities;
 
-    public sealed class Tcp : ServerStream
+    public sealed class Tcp : ServerStream, IAttributeMap
     {
         internal Tcp(LoopContext loop)
             : base(loop, uv_handle_type.UV_TCP)
@@ -164,5 +165,17 @@ namespace NetUV.Core.Handles
 
             base.CloseHandle(handler);
         }
+
+        public IAttribute<T> GetAttribute<T>(AttributeKey<T> key) where T : class
+        {
+            return ((IAttributeMap)attributeMap).GetAttribute(key);
+        }
+
+        public bool HasAttribute<T>(AttributeKey<T> key) where T : class
+        {
+            return ((IAttributeMap)attributeMap).HasAttribute(key);
+        }
+
+        DefaultAttributeMap attributeMap = new DefaultAttributeMap();
     }
 }

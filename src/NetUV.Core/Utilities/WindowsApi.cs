@@ -6,7 +6,7 @@
 // ReSharper disable NotAccessedVariable
 #pragma warning disable 414
 #pragma warning disable 169
-namespace LoopThread
+namespace NetUV.Core.Utilities
 {
     using System;
     using System.Runtime.InteropServices;

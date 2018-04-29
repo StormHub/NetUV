@@ -1,23 +1,28 @@
 ﻿// Copyright (c) Johnny Z. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace LoopThread
+namespace NetUV.Core.Utilities
 {
     using System;
+    using System.Collections.Generic;
     using System.Text;
     using System.Threading.Tasks;
-    using NetUV.Core.Buffers;
     using NetUV.Core.Channels;
     using NetUV.Core.Handles;
+    using NetUV.Core.Logging;
 
     sealed class Worker : IDisposable
     {
+        static readonly ILog Logger = LogFactory.ForContext<EventLoop>();
+
         readonly EventLoop eventLoop;
         readonly string pipeName;
+        readonly List<ServerTcpContext> callbacks;
 
-        public Worker(string pipeName)
+        public Worker(string pipeName, List<ServerTcpContext> callbacks)
         {
             this.pipeName = pipeName;
+            this.callbacks = callbacks;
             this.eventLoop = new EventLoop();
         }
 
@@ -36,12 +41,12 @@ namespace LoopThread
         {
             if (exception != null)
             {
-                Console.WriteLine($"{nameof(Worker)} failed to connect to {this.pipeName}");
+                Logger.Error($"{nameof(Worker)} failed to connect to {this.pipeName}");
                 pipe.CloseHandle(OnClosed);
             }
             else
             {
-                Console.WriteLine($"{nameof(Worker)} connected to {this.pipeName}");
+                Logger.Info($"{nameof(Worker)} connected to {this.pipeName}");
                 pipe.OnRead(this.GetPendingHandle);
             }
         }
@@ -52,56 +57,26 @@ namespace LoopThread
             {
                 if (completion.Error != null)
                 {
-                    Console.WriteLine($"{nameof(Worker)} read pending handle error {completion.Error}");
+                    Logger.Error($"{nameof(Worker)} read pending handle error {completion.Error}");
                 }
                 pipe.CloseHandle(OnClosed);
                 return;
             }
 
             var tcp = (Tcp)pipe.CreatePendingType();
-            tcp.OnRead(this.OnAccept, OnError);
-        }
 
-        void OnAccept(Tcp tcp, ReadableBuffer data)
-        {
-            string message = data.ReadString(Encoding.UTF8);
-            if (string.IsNullOrEmpty(message))
+            var cb = FindTcpCallbackByID(completion.Data.ReadString(Encoding.UTF8));
+            if (cb != null)
             {
-                return;
-            }
-
-            Console.WriteLine($"{nameof(Worker)} received : {message}");
-
-            if (message.StartsWith("Q"))
-            {
-                Console.WriteLine($"{nameof(Worker)} closing tcp client.");
-                tcp.CloseHandle(OnClosed);
+                cb.OnAccept(cb.ServerTcp, tcp);
+                tcp.OnRead(cb.OnRead, cb.OnError);
             }
             else
             {
-                Console.WriteLine($"{nameof(Worker)} sending echo back.");
-
-                WritableBuffer buffer = tcp.Allocate();
-                buffer.WriteString($"ECHO [{message}]", Encoding.UTF8);
-                tcp.QueueWriteStream(buffer, (handle, exception) =>
-                {
-                    buffer.Dispose();
-                    OnWriteCompleted(handle, exception);
-                });
+                Logger.Error("Do not find TcpServeContext");
+                tcp.CloseHandle(OnClosed);
             }
         }
-
-        static void OnWriteCompleted(Tcp handle, Exception error)
-        {
-            if (error != null)
-            {
-                Console.WriteLine($"{nameof(Worker)} server write error {error}");
-                handle.CloseHandle(OnClosed);
-            }
-        }
-
-        static void OnError(Tcp handle, Exception error)
-            => Console.WriteLine($"{nameof(Worker)} read error {error}");
 
         public Task ShutdownAsync() => this.eventLoop.ShutdownGracefullyAsync();
 
@@ -110,6 +85,20 @@ namespace LoopThread
         public void Dispose()
         {
              this.ShutdownAsync().Wait();
+        }
+
+        ServerTcpContext FindTcpCallbackByID(string idString)
+        {
+            try
+            {
+                var id = Convert.ToInt32(idString);
+                return this.callbacks.Find((item) => item.ID == id);
+            }
+            catch (System.Exception ex)
+            {
+                Logger.Error($"FindTcpCallbackByID, Exception:{ex}");
+            }
+            return null;
         }
     }
 }
