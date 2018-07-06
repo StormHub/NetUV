@@ -104,15 +104,22 @@ namespace NetUV.Core.Tests.Handles
 
         public static string GetRandomTempFileName() => Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
-        public static string CreateTempFile(string directory)
+        public static string CreateTempFile(string directory, int count = 0)
         {
-            string fileName = Path.Combine(directory, Path.GetRandomFileName());
-            using (File.Create(fileName))
+            string fullName = Path.Combine(directory, Path.GetRandomFileName());
+            using (FileStream stream = File.Open(fullName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
             {
-                // NOP
+                if (count > 0)
+                {
+                    stream.WriteByte(1);
+                    for (int i = 1; i < count; i++)
+                    {
+                        stream.WriteByte(1);
+                    }
+                }
             }
             
-            return fileName;
+            return fullName;
         }
 
         public static FileStream OpenTempFile()
@@ -142,16 +149,14 @@ namespace NetUV.Core.Tests.Handles
         {
             using (FileStream stream = File.Open(fullName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
             {
-                if (count > 1)
+                if (count > 0)
                 {
-                    for (int i = 0; i < count; i++)
+                    stream.WriteByte(1);
+
+                    for (int i = 1; i < count; i++)
                     {
                         stream.WriteByte(1);
                     }
-                }
-                else
-                {
-                    stream.WriteByte(1);
                 }
             }
         }

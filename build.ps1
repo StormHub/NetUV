@@ -1,5 +1,5 @@
 $Configuration="Release";
-$DotNetVersion = "1.0.4";
+$DotNetVersion = "2.1.301";
 $DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/rel/1.1.0/scripts/obtain/dotnet-install.ps1";
 
 # Make sure tools folder exists
@@ -87,7 +87,7 @@ if ($lastexitcode -ne 0) {
 
 $file="./test/NetUV.Core.Tests.Performance/NetUV.Core.Tests.Performance.csproj"
 Write-Host "Building and running performance tests for project $file..."
-Invoke-Expression "& dotnet run -c $Configuration -f netcoreapp1.1 -p $file"
+Invoke-Expression "& dotnet run -c $Configuration -f netcoreapp2.0 -p $file"
 
 if ($lastexitcode -ne 0) {
     Write-Error "Performance tests failed in project $file"
