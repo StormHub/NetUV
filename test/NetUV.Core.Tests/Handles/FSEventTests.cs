@@ -60,7 +60,8 @@ namespace NetUV.Core.Tests.Handles
 
             this.loop.RunDefault();
 
-            Assert.True(this.fileCreated + this.fileRemoved == this.callbackCount);
+            Assert.True(this.fileCreated + this.fileRemoved == this.callbackCount,
+                $"{nameof(this.fileCreated)}={this.fileCreated} + {nameof(this.fileRemoved)}={this.fileRemoved} [{nameof(this.callbackCount)}={this.callbackCount}]");
             Assert.Equal(2, this.closeCount);
         }
 
@@ -79,7 +80,8 @@ namespace NetUV.Core.Tests.Handles
                 .Start(this.OnTimerCreateFile, 100, 0);
 
             this.loop.RunDefault();
-            Assert.True(this.fileCreated + this.fileRemoved == this.callbackCount);
+            Assert.True(this.fileCreated + this.fileRemoved == this.callbackCount, 
+                $"{nameof(this.fileCreated)}={this.fileCreated} + {nameof(this.fileRemoved)}={this.fileRemoved} [{nameof(this.callbackCount)}={this.callbackCount}]");
             Assert.Equal(2, this.closeCount);
         }
 
@@ -102,48 +104,40 @@ namespace NetUV.Core.Tests.Handles
 
         void OnTimerDeleteFile(Timer handle)
         {
-            if (this.fileRemoved >= FileEventCount)
-            {
-                return;
-            }
-
-            // Remove the file
-            string[] files = TestHelper.GetFiles(this.currentFileName);
-            if (files != null && files.Length > 0)
-            {
-                TestHelper.DeleteFile(files[0]);
-                this.fileRemoved++;
-            }
-
             if (this.fileRemoved < FileEventCount)
             {
-                // Remove another file on a different event loop tick.  We do it this way
-                // to avoid fs events coalescing into one fs event.
-                this.timer.Start(this.OnTimerDeleteFile, 10, 0);
+                // Remove the file
+                string[] files = TestHelper.GetFiles(this.currentFileName);
+                if (files != null && files.Length > 0)
+                {
+                    TestHelper.DeleteFile(files[0]);
+                    this.fileRemoved++;
+                }
+
+                if (this.fileRemoved < FileEventCount)
+                {
+                    // Remove another file on a different event loop tick.  We do it this way
+                    // to avoid fs events coalescing into one fs event.
+                    handle.Start(this.OnTimerDeleteFile, 10, 0);
+                }
             }
         }
 
         void OnTimerCreateFile(Timer handle)
         {
             // Make sure we're not attempting to create files we do not intend
-            if (this.fileCreated >= FileEventCount)
-            {
-                // Close the handle since this is already an indication
-                // the test failed, let the test check for fileCreated
-                handle.CloseHandle(this.OnClose);
-                this.fsEventCurrent?.CloseHandle(this.OnClose);
-                return;
-            }
-
-            // Create the file
-            TestHelper.CreateTempFile(this.currentFileName);
-            this.fileCreated++;
-
             if (this.fileCreated < FileEventCount)
             {
-                // Create another file on a different event loop tick.  We do it this way
-                // to avoid fs events coalescing into one fs event.
-                this.timer.Start(this.OnTimerCreateFile, 10, 0);
+                // Create the file
+                TestHelper.CreateTempFile(this.currentFileName);
+                this.fileCreated++;
+
+                if (this.fileCreated < FileEventCount)
+                {
+                    // Create another file on a different event loop tick.  We do it this way
+                    // to avoid fs events coalescing into one fs event.
+                    handle.Start(this.OnTimerCreateFile, 1, 0);
+                }
             }
         }
 

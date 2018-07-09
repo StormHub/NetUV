@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Johnny Z. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+// ReSharper disable ConvertToAutoProperty
 namespace NetUV.Core.Handles
 {
     using System;
@@ -146,13 +147,15 @@ namespace NetUV.Core.Handles
 
         sealed class StreamReadCompletion : ReadCompletion, IStreamReadCompletion
         {
+            readonly bool completed;
+
             internal StreamReadCompletion(ref ReadableBuffer data, Exception error, bool completed) 
                 : base(ref data, error)
             {
-                this.Completed = completed;
+                this.completed = completed;
             }
 
-            public bool Completed { get; }
+            public bool Completed => this.completed;
         }
     }
 }

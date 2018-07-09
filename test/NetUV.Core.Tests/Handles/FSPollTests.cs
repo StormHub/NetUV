@@ -48,8 +48,7 @@ namespace NetUV.Core.Tests.Handles
             bool checkFailed = false;
             if (this.callbackCount == 0)
             {
-                var error = fsPollStatus.Error as OperationException;
-                if (error != null
+                if (fsPollStatus.Error is OperationException error
                     && error.ErrorCode == ErrorCode.ENOENT)
                 {
                     TestHelper.CreateFile(this.file);
@@ -94,8 +93,7 @@ namespace NetUV.Core.Tests.Handles
             }
             else if (this.callbackCount == 4)
             {
-                var error = fsPollStatus.Error as OperationException;
-                if (error != null
+                if (fsPollStatus.Error is OperationException error
                     && error.ErrorCode == ErrorCode.ENOENT)
                 {
                     fsPoll.CloseHandle(this.OnClose);
