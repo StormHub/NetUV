@@ -15,20 +15,18 @@ namespace NetUV.Core.Common
     static class PlatformDependent
     {
         static readonly ILog Logger = LogFactory.ForContext(typeof(PlatformDependent));
-
-        static readonly bool UseDirectBuffer;
         static readonly bool IsLinux = Platform.IsLinux;
 
         static PlatformDependent()
         {
-            UseDirectBuffer = !SystemPropertyUtil.GetBoolean("io.noPreferDirect", false);
+            DirectBufferPreferred = !SystemPropertyUtil.GetBoolean("io.noPreferDirect", false);
             if (Logger.IsDebugEnabled)
             {
-                Logger.DebugFormat("io.noPreferDirect: {0}", !UseDirectBuffer);
+                Logger.DebugFormat("io.noPreferDirect: {0}", !DirectBufferPreferred);
             }
         }
 
-        public static bool DirectBufferPreferred => UseDirectBuffer;
+        public static bool DirectBufferPreferred { get; }
 
         static int seed = (int)(Stopwatch.GetTimestamp() & 0xFFFFFFFF); //used to safly cast long to int, because the timestamp returned is long and it doesn't fit into an int
         static readonly ThreadLocal<Random> ThreadLocalRandom = new ThreadLocal<Random>(() => new Random(Interlocked.Increment(ref seed))); //used to simulate java ThreadLocalRandom
@@ -46,8 +44,8 @@ namespace NetUV.Core.Common
                 if (IsLinux)
                 {
                     fixed (byte* source = &src[srcIndex])
-                        fixed (byte* destination = &dst[dstIndex])
-                            Buffer.MemoryCopy(source, destination, length, length);
+                    fixed (byte* destination = &dst[dstIndex])
+                        Buffer.MemoryCopy(source, destination, length, length);
                 }
                 else
                 {

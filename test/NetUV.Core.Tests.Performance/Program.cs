@@ -33,14 +33,12 @@ namespace NetUV.Core.Tests.Performance
         public static int Main(string[] args)
         {
             processorCount = Environment.ProcessorCount;
-
             var app = new CommandLineApplication(false)
             {
                 Name = "Benchmark",
                 FullName = "NetUV Benchmark",
                 Description = "NetUV benchmarking tool"
             };
-
             app.HelpOption("-?|-h|--help");
 
             CommandOption debugOption = app.Option("-d|--debug",
