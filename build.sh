@@ -10,6 +10,6 @@ dotnet restore
 
 dotnet build -c $CONFIGURATION -f netstandard2.0 ./src/NetUV.Core/NetUV.Core.csproj
 
-dotnet test -c $CONFIGURATION -f netcoreapp2.0 ./test/NetUV.Core.Tests/NetUV.Core.Tests.csproj
+dotnet test -c $CONFIGURATION -f netcoreapp2.1 ./test/NetUV.Core.Tests/NetUV.Core.Tests.csproj
 
-dotnet run -c $CONFIGURATION -f netcoreapp2.0 -p ./test/NetUV.Core.Tests.Performance/NetUV.Core.Tests.Performance.csproj
+dotnet run -c $CONFIGURATION -f netcoreapp2.1 -p ./test/NetUV.Core.Tests.Performance/NetUV.Core.Tests.Performance.csproj

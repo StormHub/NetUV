@@ -1,5 +1,5 @@
 language: csharp
-dotnet: 2.1.301
+dotnet: 2.1.302
 addons:
   apt:
     packages:
