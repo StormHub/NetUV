@@ -10,7 +10,6 @@ namespace NetUV.Core.Tests.Performance
     using Microsoft.Extensions.CommandLineUtils;
     using NetUV.Core.Common;
     using NetUV.Core.Handles;
-    using NetUV.Core.Logging;
 
     public class Program
     {
@@ -85,7 +84,7 @@ namespace NetUV.Core.Tests.Performance
                             categoryList.AddRange(Benchmarks);
                         }
 
-                        return Run(categoryList, debug, pause);
+                        return Run(categoryList, pause);
                     }
                     catch (Exception e)
                     {
@@ -98,21 +97,14 @@ namespace NetUV.Core.Tests.Performance
             return app.Execute(args);
         }
 
-        static int Run(IReadOnlyCollection<string> list, bool debug, bool pause)
+        static int Run(IReadOnlyCollection<string> list, bool pause)
         {
             Console.WriteLine(
                   $"\n{RuntimeInformation.OSArchitecture} {RuntimeInformation.OSDescription}"
                 + $"\n{RuntimeInformation.ProcessArchitecture} {RuntimeInformation.FrameworkDescription}"
                 + $"\nProcessor Count : {processorCount}\n");
 
-            if (debug)
-            {
-                LogFactory.AddConsoleProvider();
-            }
-            else
-            {
-                ResourceLeakDetector.Level = ResourceLeakDetector.DetectionLevel.Disabled;
-            }
+            ResourceLeakDetector.Level = ResourceLeakDetector.DetectionLevel.Disabled;
 
             Console.WriteLine($"\nLibuv Native version {Loop.NativeVersion}");
             Console.WriteLine($"Buffer leak detection : {nameof(ResourceLeakDetector)}.{ResourceLeakDetector.Level}\n");

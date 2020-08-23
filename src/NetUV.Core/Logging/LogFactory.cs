@@ -15,17 +15,12 @@ namespace NetUV.Core.Logging
             DefaultFactory = new LoggerFactory();
         }
 
-        public static void AddConsoleProvider(LogLevel mininumLevel = LogLevel.Trace) => 
-            DefaultFactory.AddConsole(mininumLevel, false);
-
         public static void AddProvider(ILoggerProvider provider)
         {
-            if (provider == null)
+            if (provider != null)
             {
-                return;
+                DefaultFactory.AddProvider(provider);
             }
-
-            DefaultFactory.AddProvider(provider);
         }
 
         public static ILog ForContext<T>() => ForContext(typeof(T).Name);
@@ -36,7 +31,7 @@ namespace NetUV.Core.Logging
         {
             if (string.IsNullOrEmpty(name))
             {
-                name = $"Unkonwn {Guid.NewGuid()}";
+                name = $"Unknown {Guid.NewGuid()}";
             }
 
             ILogger logger = DefaultFactory.CreateLogger(name);

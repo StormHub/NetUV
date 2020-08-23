@@ -30,8 +30,6 @@ namespace EchoClient
 
         public static void Main(string[] args)
         {
-            LogFactory.AddConsoleProvider();
-
             try
             {
                 if (args.Length == 0

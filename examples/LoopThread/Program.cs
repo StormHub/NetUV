@@ -7,11 +7,9 @@ namespace LoopThread
     using System.Net;
     using System.Text;
     using System.Threading.Tasks;
-    using Microsoft.Extensions.Logging;
     using NetUV.Core.Buffers;
     using NetUV.Core.Channels;
     using NetUV.Core.Handles;
-    using NetUV.Core.Logging;
 
     class Program
     {
@@ -21,8 +19,6 @@ namespace LoopThread
 
         public static void Main(string[] args)
         {
-            LogFactory.AddConsoleProvider(LogLevel.Debug);
-
             try
             {
                 eventLoop = new EventLoop();

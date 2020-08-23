@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>netcoreapp1.1</TargetFrameworks>
+    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
     <AssemblyName>EchoServer</AssemblyName>
     <Description>Example of Echo Server</Description>
     <AssemblyOriginatorKeyFile>../../NetUV.snk</AssemblyOriginatorKeyFile>

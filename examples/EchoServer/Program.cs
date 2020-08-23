@@ -9,7 +9,6 @@ namespace EchoServer
     using System.Text;
     using NetUV.Core.Buffers;
     using NetUV.Core.Handles;
-    using NetUV.Core.Logging;
 
     public class Program
     {
@@ -33,8 +32,6 @@ namespace EchoServer
 
         public static void Main(string[] args)
         {
-            LogFactory.AddConsoleProvider();
-
             try
             {
                 if (args.Length == 0
