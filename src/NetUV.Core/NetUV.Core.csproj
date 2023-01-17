@@ -2,7 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup Label="NuGet">
-    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net6.0;net7.0</TargetFrameworks>
     <IsPackable>true</IsPackable>
     <PackageId>NetUV.Core</PackageId>
     <Description>Libuv .NET/Core binding</Description>
