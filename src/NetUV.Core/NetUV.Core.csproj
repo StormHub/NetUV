@@ -1,41 +1,21 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup Label="NuGet">
+  <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net6.0;net7.0</TargetFrameworks>
+    <Description>Libuv .net binding</Description>
+    <PackageTags>libuv;network;netcore;</PackageTags>
+    <PackageId>TinyToolBox.Configuration</PackageId>
     <IsPackable>true</IsPackable>
-    <PackageId>NetUV.Core</PackageId>
-    <Description>Libuv .NET/Core binding</Description>
-    <Copyright>Copyright © Johnny Z</Copyright>
-    <AssemblyTitle>NetUV: Libuv .NET/Core binding</AssemblyTitle>
-    <NeutralLanguage>en-US</NeutralLanguage>
-    <VersionPrefix>0.1.140</VersionPrefix>
-    <Authors>Johnny Z</Authors>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyName>NetUV.Core</AssemblyName>
-    <AssemblyOriginatorKeyFile>../../NetUV.snk</AssemblyOriginatorKeyFile>
-    <SignAssembly>true</SignAssembly>
-    <PublicSign Condition=" '$(OS)' != 'Windows_NT' ">true</PublicSign>
-    <PackageTags>libuv;asyncio;network;socket;protocol</PackageTags>
-    <PackageProjectUrl>https://github.com/StormHub/NetUV</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/StormHub/NetUV/blob/master/LICENSE.txt</PackageLicenseUrl>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/StormHub/NetUV</RepositoryUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <Version>0.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Libuv" Version="1.10.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.1" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.1" />
-    <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
-    <PackageReference Include="System.Diagnostics.Contracts" Version="4.3.0" />
-    <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
-    <PackageReference Include="System.Diagnostics.StackTrace" Version="4.3.0" />
   </ItemGroup>
-  
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+  </ItemGroup>
+    
 </Project>
